@@ -52,11 +52,12 @@ export namespace Ark {
                 this._data[this._cursor] = {};
             }
         };
-        setData = (key: string, val: any) => {
+        setData = <T>(key: string, val: T): T => {
             if (!this._data[this._cursor]) {
                 throw new Error('Invalid cursor position');
             }
             this._data[this._cursor][key] = val ? val : defaultCursor;
+            return val;
         }
     }
 
