@@ -16,12 +16,15 @@
     "@babel/preset-typescript": "^7.12.1",
     "@types/express": "^4.17.9",
     "@types/jest": "^26.0.15",
+    "@types/mongoose": "^5.10.0",
     "ark-package": "2.0.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "mongoose": "^5.10.15"
   },
   "peerDependencies": {
     "ark-package": "2.0.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "mongoose": "^5.10.15"
   },
   "jest": {
     "verbose": true,

@@ -9,10 +9,12 @@ export namespace Ark {
 
     type PackageFunc = (this: PackageContext, opts?: PackageOpts) => void | Promise<any>;
     type ModuleFunc = (this: PackageContext, opts?: PackageOpts) => void | Promise<any>;
+    type Activator = () => void;
+    type ActivatorAppendOperator = 'last' | 'first' | 'before' | 'after';
 
     type Actuator = {
         class: string,
-        activator: () => void
+        activator: Activator
     }
 
     const defaultCursor = 'default';
@@ -28,13 +30,16 @@ export namespace Ark {
         }
 
         private _cursor: string = defaultCursor;
-        private _data: PackageContextType = {};
+        private _data: PackageContextType = {
+            [defaultCursor]: {}
+        };
         private _actuators: Actuator[] = [];
+        private _hasActivated: boolean = false;
         public _hasPackageInitialized: boolean = false;
         public _isInitializing: boolean = false;
 
         getCursor = () => this._cursor;
-        getData = (key: string, defaultVal: any) => {
+        getData = <T = any>(key: string, defaultVal?: T): T => {
             let result: any = defaultVal;
             if (this._data[this._cursor][key]) {
                 result = this._data[this._cursor][key];
@@ -59,6 +64,51 @@ export namespace Ark {
             this._data[this._cursor][key] = val ? val : defaultCursor;
             return val;
         }
+
+        setActuator = (className: string, func: Activator, op?: ActivatorAppendOperator, opClass?: string) => {
+            op = op ? op : 'last';
+            opClass = opClass ? opClass : null;
+            const _draftActivator: Actuator = {
+                activator: func,
+                class: className
+            }
+
+            switch (op) {
+                case 'before': {
+                    const indexOfFirstOccurence = this._actuators.findIndex((a) => a.class === opClass);
+                    if (indexOfFirstOccurence > -1) {
+                        this._actuators.splice(indexOfFirstOccurence, 0, _draftActivator);
+                        break;
+                    }
+                }
+                case 'first': {
+                    this._actuators.unshift(_draftActivator);
+                    break;
+                }
+                case 'after': {
+                    let indexOfLastOccurence = this._actuators.slice().reverse().findIndex((a) => a.class === opClass);
+                    indexOfLastOccurence = indexOfLastOccurence >= 0 ? this._actuators.length - indexOfLastOccurence : indexOfLastOccurence
+                    if (indexOfLastOccurence > -1) {
+                        this._actuators.splice(indexOfLastOccurence, 0, _draftActivator);
+                        break;
+                    }
+                    break;
+                }
+                case 'last': {
+                    this._actuators.push(_draftActivator);
+                    break;
+                }
+            }
+        }
+
+        getActuators = () => this._actuators;
+
+        activate = async () => {
+            if (this._hasActivated === true) {
+                throw new Error('Package already activated');
+            }
+            return await Promise.all(this._actuators.map((o) => o.activator()));
+        }
     }
 
     export function usePackage() {
@@ -67,7 +117,12 @@ export namespace Ark {
     
     export const _ = usePackage();
 
-    export async function createPackage(func: PackageFunc) {
+    export async function activate() {
+        await _.activate();
+    }
+
+    export async function createPackage(func: PackageFunc, skipActivation?: boolean) {
+        skipActivation = skipActivation ? skipActivation : false;
         if (_._hasPackageInitialized === true) {
             throw new Error('createPackage(...) can only be used once across a project');
         }
@@ -76,6 +131,9 @@ export namespace Ark {
         await Promise.resolve(func.call(_, { app: _ }));
         _._isInitializing = false;
         _._hasPackageInitialized = true;
+        if (skipActivation === false) {
+            await _.activate();
+        }
     }
 
     export function createModule(func: ModuleFunc) {

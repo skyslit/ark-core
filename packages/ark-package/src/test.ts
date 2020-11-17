@@ -41,6 +41,35 @@ describe('Core Functionalities', () => {
         expect(app.getModule('DepInjectionTestModule').foreignModuleTestKey).toBe('testValue');
     });
 
+    const testActivator = () => {};
+    const actuators = app.getActuators();
+
+    test('activator: add', () => {
+        app.setActuator('normal-class', testActivator);
+        expect(actuators).toHaveLength(1);
+    });
+
+    test('activator: insert first', () => {
+        app.setActuator('first-class', testActivator, 'first');
+        expect(actuators[0].class).toBe('first-class');
+    });
+
+    test('activator: insert last', () => {
+        app.setActuator('last-class', testActivator, 'last');
+        expect(actuators[actuators.length - 1].class).toBe('last-class');
+    });
+
+    test('activator: insert before', () => {
+        app.setActuator('before-normal-class', testActivator, 'before', 'normal-class');
+        expect(actuators[1].class).toBe('before-normal-class');
+    });
+
+    test('activator: insert after', () => {
+        app.setActuator('after-normal-class', testActivator, 'after', 'normal-class');
+        console.log(actuators.map((a) => a.class).join(', '));
+        expect(actuators[3].class).toBe('after-normal-class');
+    });
+
     const testPromise = () => new Promise((resolve, reject) => {
         setTimeout(() => {
             resolve('have kept');

@@ -2,11 +2,15 @@ import { Ark } from 'ark-package';
 import Express from 'express';
 import http from 'http';
 import https from 'https';
+import { Schema } from 'mongoose';
 
 const { usePackage } = Ark;
 
 export namespace ArkExpress {
     const _ = usePackage();
+    const DEFAULT_PORT = 3000;
+
+    type RequestType = 'get' | 'post' | 'patch' | 'put' | 'delete';
 
     class AppContainer {
         static instance: AppContainer;
@@ -21,8 +25,15 @@ export namespace ArkExpress {
 
         constructor() {
             this.app = Express();
+            _.setActuator('express-server-activator', () => {
+                const server = _.getData<http.Server>('http');
+                const port = _.getData<number>('port', DEFAULT_PORT);
+                server.listen(port);
+            }, 'last');
         }
     }
+
+    const _container = AppContainer.createApp();
 
     export function useServer(opts?: http.ServerOptions) {
         const server = _.setData('http', http.createServer(opts, AppContainer.createApp().app));
@@ -30,12 +41,28 @@ export namespace ArkExpress {
         return server;
     }
 
+    export function createModel(schema: any) {
+        return schema;
+    }
+
+    export function createRoute(handler: Express.RequestHandler | Array<Express.RequestHandler>) {
+        return handler;
+    }
+
+    export function useRoute(type: RequestType, path: string, handler: Express.RequestHandler | Array<Express.RequestHandler>) {
+        _container.app[type](path, handler);
+    }
+
+    export function useModel(name: string, schema: any) {
+        
+    }
+
     export function setPort(port: number) {
         return _.setData('port', port);
     }
 
     export function setHTTPSPort(port: number) {
-        return _.setData('port', port);
+        return _.setData('securePort', port);
     }
 
     export function useSecureServer(opts?: https.ServerOptions) {
