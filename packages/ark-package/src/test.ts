@@ -1,6 +1,17 @@
-import { Ark } from './index';
+import { createPackage, usePackage, createModule, useModule } from './index';
 
-const { createPackage, usePackage, createModule, useModule } = Ark;
+declare global {
+    namespace Ark {
+        interface Modules {
+            TestModule: any,
+            SampleModule: any,
+            AnotherModule: any,
+            DepInjectionTestModule: any,
+            AsyncTestModule: any,
+        }
+    }
+}
+
 
 describe('Core Functionalities', () => {
     let app = usePackage();
