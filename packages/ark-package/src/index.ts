@@ -1,5 +1,5 @@
-export namespace Ark {
-    interface PackageContextType {
+export module Ark {
+    export interface PackageContextType {
         [key: string]: any
     }
 
@@ -19,7 +19,7 @@ export namespace Ark {
 
     const defaultCursor = 'default';
 
-    class PackageContext {
+    export class PackageContext {
         static instance: PackageContext;
     
         static getInstance() {

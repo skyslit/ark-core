@@ -6,11 +6,12 @@ import { Schema } from 'mongoose';
 
 const { usePackage } = Ark;
 
-export namespace ArkExpress {
+export module ArkExpress {
     const _ = usePackage();
     const DEFAULT_PORT = 3000;
 
     type RequestType = 'get' | 'post' | 'patch' | 'put' | 'delete';
+    type SchemaCreator = Schema | (() => Schema);
 
     class AppContainer {
         static instance: AppContainer;
@@ -41,8 +42,8 @@ export namespace ArkExpress {
         return server;
     }
 
-    export function createModel(schema: any) {
-        return schema;
+    export function createModel(schemaCreator: SchemaCreator) {
+        return schemaCreator;
     }
 
     export function createRoute(handler: Express.RequestHandler | Array<Express.RequestHandler>) {
