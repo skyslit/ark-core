@@ -8,11 +8,11 @@ declare global {
     namespace Ark {
         // These open interfaces may be extended in an application-specific manner via declaration merging.
         interface Package {}
-        interface DefaultModule {
-            hello: string
-        }
+        interface DefaultModule {}
     }
 }
+
+const _ = usePackage();
 
 const DEFAULT_PORT = 3000;
 
