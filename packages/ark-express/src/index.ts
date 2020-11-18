@@ -4,11 +4,16 @@ import http from 'http';
 import https from 'https';
 import { Schema } from 'mongoose';
 
-export module ArkExpress {
-    
+declare global {
+    namespace Ark {
+        // These open interfaces may be extended in an application-specific manner via declaration merging.
+        interface Package {}
+        interface DefaultModule {
+            hello: string
+        }
+    }
 }
 
-const _ = usePackage();
 const DEFAULT_PORT = 3000;
 
 type RequestType = 'get' | 'post' | 'patch' | 'put' | 'delete';

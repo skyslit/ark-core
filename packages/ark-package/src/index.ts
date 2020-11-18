@@ -4,10 +4,13 @@ declare global {
         interface Package {}
         interface DefaultModule {}
         interface Modules {
-            [key: string]: any,
             default: DefaultModule
         }
     }
+}
+
+interface BaseModules {
+    [key: string]: any
 }
 
 export type PackageOpts = {
@@ -37,7 +40,7 @@ export class PackageContext implements Ark.Package {
     }
 
     private _cursor: string = DEFAULT_CURSOR;
-    private _data: Partial<Ark.Modules> = {
+    private _data: BaseModules & Partial<Ark.Modules> = {
         [DEFAULT_CURSOR]: {}
     };
     private _actuators: Actuator[] = [];
