@@ -32,7 +32,7 @@ const DEFAULT_CURSOR: 'default' = 'default';
 export class PackageContext implements Ark.Package {
     static instance: PackageContext;
 
-    static getInstance() {
+    static getInstance(): PackageContext & Ark.Package {
         if (!PackageContext.instance) {
             PackageContext.instance = new PackageContext();
         }
@@ -122,7 +122,7 @@ export class PackageContext implements Ark.Package {
     }
 }
 
-export function usePackage() {
+export function usePackage(): PackageContext & Ark.Package {
     return PackageContext.getInstance();
 }
 
