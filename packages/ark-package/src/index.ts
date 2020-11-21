@@ -17,10 +17,9 @@ export type PackageOpts = {
     app: PackageContext
 };
 
-type PackageFunc = (this: PackageContext, opts?: PackageOpts) => void | Promise<any>;
-type ModuleFunc = (this: PackageContext, opts?: PackageOpts) => void | Promise<any>;
+type PackageFunc = (opts?: PackageOpts) => void | Promise<any>;
+type ModuleFunc = (opts?: PackageOpts) => void | Promise<any>;
 type Activator = () => void;
-type ActivatorAppendOperator = 'last' | 'first' | 'before' | 'after';
 
 type Actuator = {
     cursor: string,
@@ -103,6 +102,7 @@ export class PackageContext implements Ark.Package {
         return PackageContext.instance;
     }
 
+    private _sequel: Sequel = new Sequel();
     private _cursor: string = DEFAULT_CURSOR;
     private _data: BaseModules & Partial<Ark.Modules> = {
         [DEFAULT_CURSOR]: {}
@@ -140,50 +140,25 @@ export class PackageContext implements Ark.Package {
         return val;
     }
 
-    setActuator = (className: string, func: Activator, op?: ActivatorAppendOperator, opClass?: string) => {
-        op = op ? op : 'last';
-        opClass = opClass ? opClass : null;
-        const _draftActivator: Actuator = {
-            activator: func,
-            cursor: className
+    registerModule = (name: string, activator: () => any | Promise<any>) => {
+        const exe = {
+            name,
+            activator
         }
-
-        switch (op) {
-            case 'before': {
-                const indexOfFirstOccurence = this._actuators.findIndex((a) => a.cursor === opClass);
-                if (indexOfFirstOccurence > -1) {
-                    this._actuators.splice(indexOfFirstOccurence, 0, _draftActivator);
-                    break;
-                }
-            }
-            case 'first': {
-                this._actuators.unshift(_draftActivator);
-                break;
-            }
-            case 'after': {
-                let indexOfLastOccurence = this._actuators.slice().reverse().findIndex((a) => a.cursor === opClass);
-                indexOfLastOccurence = indexOfLastOccurence >= 0 ? this._actuators.length - indexOfLastOccurence : indexOfLastOccurence
-                if (indexOfLastOccurence > -1) {
-                    this._actuators.splice(indexOfLastOccurence, 0, _draftActivator);
-                    break;
-                }
-                break;
-            }
-            case 'last': {
-                this._actuators.push(_draftActivator);
-                break;
-            }
-        }
+        this._sequel.push(exe);
+        return exe;
     }
 
-    getActuators = () => this._actuators;
-
-    activate = async () => {
-        if (this._hasActivated === true) {
-            throw new Error('Package already activated');
+    run = (activator: () => any | Promise<any>) => {
+        const exe = {
+            name: this.getCursor(),
+            activator
         }
-        return await Promise.all(this._actuators.map((o) => o.activator()));
+        this._sequel.push(exe);
+        return exe;
     }
+
+    __getQ = () => this._sequel;
 }
 
 export function usePackage(): PackageContext & Ark.Package {
@@ -191,10 +166,6 @@ export function usePackage(): PackageContext & Ark.Package {
 }
 
 export const _ = usePackage();
-
-export async function activate() {
-    await _.activate();
-}
 
 export async function createPackage(func: PackageFunc, skipActivation?: boolean) {
     skipActivation = skipActivation ? skipActivation : false;
@@ -205,17 +176,24 @@ export async function createPackage(func: PackageFunc, skipActivation?: boolean)
     _._isInitializing = true;
     await Promise.resolve(func.call(_, { app: _ }));
     _._isInitializing = false;
+
+    await _.__getQ().start({
+        beforeEach: (exe) => {
+            _.setCursor(exe.name);
+        },
+        afterEach: () => {
+            _.setCursor(null);
+        }
+    })
+
     _._hasPackageInitialized = true;
-    if (skipActivation === false) {
-        await _.activate();
-    }
 }
 
 export function createModule(func: ModuleFunc) {
     return func;
 }
 
-export async function useModule(id: string, func: ModuleFunc) {
+export function useModule(id: string, func: ModuleFunc) {
     if (_._isInitializing === false) {
         throw new Error(`useModule(...) can only be used within a package activator`);
     }
@@ -224,7 +202,9 @@ export async function useModule(id: string, func: ModuleFunc) {
         throw new Error(`Duplicate registration of module ID: '${id}'`);
     }
 
-    _.setCursor(id);
-    await Promise.resolve(func.call(_, { app: _ }));
-    _.setCursor(null);
+    _.registerModule(id, () => func({ app: _ }));
+}
+
+export function run(activator: () => any | Promise<any>) {
+    _.run(activator);
 }

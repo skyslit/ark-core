@@ -195,7 +195,7 @@ describe('Core Functionalities', () => {
         deps.app.setData('foreignModuleTestKey', deps.app.getModule('TestModule').testKey);
     });
 
-    test('non-promise based module -> package registration is good', (done) => {
+    test('module -> package registration is good', (done) => {
         createPackage(() => {
             useModule('TestModule', () => {
                 app.setData('testKey', 'testValue');
@@ -204,13 +204,14 @@ describe('Core Functionalities', () => {
                 app.setData('sampleKey', 'sampleValue');
             });
             useModule('DepInjectionTestModule', isolatedModule);
-
+        })
+        .finally(() => {
             expect(app.getModule('TestModule')).not.toBe(undefined);
             expect(app.getModule('SampleModule')).not.toBe(undefined);
             expect(app.getModule('AnotherModule')).toBe(undefined);
 
             done();
-        });
+        })
     });
 
     test('data set to correct module', () => {
@@ -225,58 +226,6 @@ describe('Core Functionalities', () => {
 
     test('dep injection and foreign module test', () => {
         expect(app.getModule('DepInjectionTestModule').foreignModuleTestKey).toBe('testValue');
-    });
-
-    const testActivator = () => {};
-    const actuators = app.getActuators();
-
-    test('activator: add', () => {
-        app.setActuator('normal-class', testActivator);
-        expect(actuators).toHaveLength(1);
-    });
-
-    test('activator: insert first', () => {
-        app.setActuator('first-class', testActivator, 'first');
-        expect(actuators[0].cursor).toBe('first-class');
-    });
-
-    test('activator: insert last', () => {
-        app.setActuator('last-class', testActivator, 'last');
-        expect(actuators[actuators.length - 1].cursor).toBe('last-class');
-    });
-
-    test('activator: insert before', () => {
-        app.setActuator('before-normal-class', testActivator, 'before', 'normal-class');
-        expect(actuators[1].cursor).toBe('before-normal-class');
-    });
-
-    test('activator: insert after', () => {
-        app.setActuator('after-normal-class', testActivator, 'after', 'normal-class');
-        console.log(actuators.map((a) => a.cursor).join(', '));
-        expect(actuators[3].cursor).toBe('after-normal-class');
-    });
-
-    const testPromise = () => new Promise((resolve, reject) => {
-        setTimeout(() => {
-            resolve('have kept');
-        }, 10);
-    });
-
-    const isolatedAsyncModule = createModule(async (deps) => {
-        const v = await testPromise();
-        deps.app.setData('afterPromise', 'have kept');
-    });
-
-    test('promise based module -> package registration is good', (done) => {
-        app._hasPackageInitialized = false;
-        createPackage(async () => {
-            await useModule('AsyncTestModule', isolatedAsyncModule);
-            done();
-        });
-    });
-
-    test('async / promise module test', () => {
-        expect(app.getModule('AsyncTestModule').afterPromise).toBe('have kept');
     });
 });
 
