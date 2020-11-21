@@ -23,11 +23,75 @@ type Activator = () => void;
 type ActivatorAppendOperator = 'last' | 'first' | 'before' | 'after';
 
 type Actuator = {
-    class: string,
+    cursor: string,
     activator: Activator
 }
 
 const DEFAULT_CURSOR: 'default' = 'default';
+
+type SequelStarterOpt<T> = {
+    resolver: (q: T) => any
+    before?: () => any
+    beforeEach?: (q: T) => any
+    afterEach?: (q: T) => any
+    after?: () => any
+}
+
+export class Sequel<Q = {
+    name?: string
+    activator: () => any | Promise<any>
+}> {
+    static DefaultResolver = (item: any) => item.activator();
+
+    private _q: Array<Q> = [];
+    public push(t: Q): Q {
+        this._q.push(t);
+        return t;
+    }
+
+    public start(opts?: Partial<SequelStarterOpt<Q>>) {
+        opts = Object.assign<SequelStarterOpt<Q>, Partial<SequelStarterOpt<Q>>>({
+            resolver: Sequel.DefaultResolver
+        }, opts);
+
+        if (!this._q || !Array.isArray(this._q)) {
+            return Promise.resolve();
+        }
+
+        return (() => {
+            const outerP = this._q.reduce((p, q) => {
+                return p.then(() => {
+                    if (opts.beforeEach && typeof opts.beforeEach === 'function') {
+                        return p.then(() => opts.beforeEach(q));
+                    }
+
+                    return p;
+                })
+                .then(() => opts.resolver(q))
+                .then(() => {
+                    if (opts.afterEach && typeof opts.afterEach === 'function') {
+                        return p.then(() => opts.afterEach(q));
+                    }
+
+                    return p;
+                });
+            }, (() => {
+                const p = Promise.resolve();
+                if (opts.before && typeof opts.before === 'function') {
+                    p.then(() => opts.before());
+                }
+    
+                return p;
+            })());
+
+            if (opts.after && typeof opts.after === 'function') {
+                outerP.then(() => opts.after());
+            }
+
+            return outerP;
+        })();
+    }
+}
 
 export class PackageContext implements Ark.Package {
     static instance: PackageContext;
@@ -81,12 +145,12 @@ export class PackageContext implements Ark.Package {
         opClass = opClass ? opClass : null;
         const _draftActivator: Actuator = {
             activator: func,
-            class: className
+            cursor: className
         }
 
         switch (op) {
             case 'before': {
-                const indexOfFirstOccurence = this._actuators.findIndex((a) => a.class === opClass);
+                const indexOfFirstOccurence = this._actuators.findIndex((a) => a.cursor === opClass);
                 if (indexOfFirstOccurence > -1) {
                     this._actuators.splice(indexOfFirstOccurence, 0, _draftActivator);
                     break;
@@ -97,7 +161,7 @@ export class PackageContext implements Ark.Package {
                 break;
             }
             case 'after': {
-                let indexOfLastOccurence = this._actuators.slice().reverse().findIndex((a) => a.class === opClass);
+                let indexOfLastOccurence = this._actuators.slice().reverse().findIndex((a) => a.cursor === opClass);
                 indexOfLastOccurence = indexOfLastOccurence >= 0 ? this._actuators.length - indexOfLastOccurence : indexOfLastOccurence
                 if (indexOfLastOccurence > -1) {
                     this._actuators.splice(indexOfLastOccurence, 0, _draftActivator);
