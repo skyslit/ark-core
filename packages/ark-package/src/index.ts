@@ -6,6 +6,7 @@ declare global {
         interface Modules {
             default: DefaultModule
         }
+        interface GlobalServices {}
     }
 }
 
@@ -13,18 +14,15 @@ interface BaseModules {
     [key: string]: any
 }
 
+interface BaseGlobalServices {
+    [key: string]: any
+}
+
 export type PackageOpts = {
     app: PackageContext
 };
 
-type PackageFunc = (opts?: PackageOpts) => void | Promise<any>;
-type ModuleFunc = (opts?: PackageOpts) => void | Promise<any>;
-type Activator = () => void;
-
-type Actuator = {
-    cursor: string,
-    activator: Activator
-}
+type ActivatorFunc = (opts?: PackageOpts) => void | Promise<any>;
 
 const DEFAULT_CURSOR: 'default' = 'default';
 
@@ -107,18 +105,19 @@ export class PackageContext implements Ark.Package {
     private _data: BaseModules & Partial<Ark.Modules> = {
         [DEFAULT_CURSOR]: {}
     };
-    private _actuators: Actuator[] = [];
-    private _hasActivated: boolean = false;
+    private _globalServices: BaseGlobalServices & Ark.GlobalServices = {} as any;
     public _hasPackageInitialized: boolean = false;
     public _isInitializing: boolean = false;
 
     getCursor = () => this._cursor;
     getData = <T = any>(key: string, defaultVal?: T): T => {
-        let result: any = defaultVal;
+        let result: any = null;
         if (this._data[this._cursor][key]) {
             result = this._data[this._cursor][key];
+        } else {
+            this._data[this._cursor][key] = defaultVal;
         }
-        return result;
+        return this._data[this._cursor][key];
     }
     
     getModule = <T extends Ark.Modules, K extends keyof T>(id?: K): T[K] => {
@@ -140,7 +139,7 @@ export class PackageContext implements Ark.Package {
         return val;
     }
 
-    registerModule = (name: string, activator: () => any | Promise<any>) => {
+    registerRunner = (name: string, activator: () => any | Promise<any>) => {
         const exe = {
             name,
             activator
@@ -150,12 +149,22 @@ export class PackageContext implements Ark.Package {
     }
 
     run = (activator: () => any | Promise<any>) => {
-        const exe = {
-            name: this.getCursor(),
-            activator
+        this.registerRunner(this.getCursor(), activator);
+    }
+
+    // Services
+    
+    registerGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svc: T[K]): T[K] => {
+        if (this._globalServices[name]) {
+            throw new Error(`Service with same id already exists, id: ${id}`);
         }
-        this._sequel.push(exe);
-        return exe;
+
+        this._globalServices[(id as any)] = svc;
+        return svc;
+    }
+
+    useGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K): T[K] => {
+        return this._globalServices[(id as any)];
     }
 
     __getQ = () => this._sequel;
@@ -165,16 +174,22 @@ export function usePackage(): PackageContext & Ark.Package {
     return PackageContext.getInstance();
 }
 
+function getActivatorOptions(): PackageOpts {
+    return {
+        app: _
+    }
+}
+
 export const _ = usePackage();
 
-export async function createPackage(func: PackageFunc, skipActivation?: boolean) {
+export async function createPackage(func: ActivatorFunc, skipActivation?: boolean) {
     skipActivation = skipActivation ? skipActivation : false;
     if (_._hasPackageInitialized === true) {
         throw new Error('createPackage(...) can only be used once across a project');
     }
 
     _._isInitializing = true;
-    await Promise.resolve(func.call(_, { app: _ }));
+    await Promise.resolve(func.call(_, getActivatorOptions()));
     _._isInitializing = false;
 
     await _.__getQ().start({
@@ -189,11 +204,11 @@ export async function createPackage(func: PackageFunc, skipActivation?: boolean)
     _._hasPackageInitialized = true;
 }
 
-export function createModule(func: ModuleFunc) {
+export function createModule(func: ActivatorFunc) {
     return func;
 }
 
-export function useModule(id: string, func: ModuleFunc) {
+export function useModule(id: string, func: ActivatorFunc) {
     if (_._isInitializing === false) {
         throw new Error(`useModule(...) can only be used within a package activator`);
     }
@@ -202,9 +217,37 @@ export function useModule(id: string, func: ModuleFunc) {
         throw new Error(`Duplicate registration of module ID: '${id}'`);
     }
 
-    _.registerModule(id, () => func({ app: _ }));
+    _.setCursor(id);
+    func && func(getActivatorOptions());
+    _.setCursor(null);
 }
 
-export function run(activator: () => any | Promise<any>) {
-    _.run(activator);
+export function run(activator: ActivatorFunc) {
+    _.run(() => activator(getActivatorOptions()));
 }
+
+export function init(activator: ActivatorFunc) {
+    return run(activator);
+}
+
+export function main(activator: ActivatorFunc) {
+    return run(activator);
+}
+
+// Service
+
+function getServiceProps() {
+    return {
+        abc: 'hello'
+    }
+}
+
+type ServiceActivatorType = (props: typeof getServiceProps) => void;
+
+export function createService(serviceFn: ServiceActivatorType) {
+
+}
+
+createService((props) => {
+
+})
