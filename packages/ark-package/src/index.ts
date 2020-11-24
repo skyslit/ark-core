@@ -23,10 +23,6 @@ interface BaseModules {
     [key: string]: any
 }
 
-interface BaseGlobalServices {
-    [key: string]: any
-}
-
 export type PackageOpts = {
     app: PackageContext
 };
