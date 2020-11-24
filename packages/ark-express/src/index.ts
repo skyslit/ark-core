@@ -1,7 +1,6 @@
-import { run, usePackage } from 'ark-package';
+import { run, usePackage } from '@skyslit/ark-package';
 import Express from 'express';
 import http from 'http';
-import https from 'https';
 import mongoose from 'mongoose';
 import { Schema, SchemaDefinition, Connection, ConnectionOptions } from 'mongoose';
 
