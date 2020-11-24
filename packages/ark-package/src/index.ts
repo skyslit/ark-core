@@ -7,6 +7,11 @@ declare global {
             default: DefaultModule
         }
         interface GlobalServices {}
+        interface ControllerProps<I, O> {
+            getInput: <T extends I, K extends keyof T>(id: K, defaultVal?: T[K]) => T[K],
+            setOutput: <T extends O, K extends keyof T>(id: K, val: T[K]) => void,
+            app: Ark.Package
+        }
     }
 }
 
@@ -152,21 +157,31 @@ export class PackageContext implements Ark.Package {
         this.registerRunner(this.getCursor(), activator);
     }
 
-    // Services
+    // Global Services Start
     
     registerGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svc: T[K]): T[K] => {
-        if (this._globalServices[name]) {
+        if (this._globalServices[(id as any)]) {
             throw new Error(`Service with same id already exists, id: ${id}`);
         }
 
         this._globalServices[(id as any)] = svc;
-        return svc;
+        return this._globalServices[(id as any)];
+    }
+
+    extendGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svcExtender: (svc: Partial<T[K]>) => T[K]): T[K] => {
+        if (!this._globalServices[(id as any)]) {
+            throw new Error(`No service registered with the ID, id: ${id}`);
+        }
+
+        this._globalServices[(id as any)] = svcExtender(this._globalServices[(id as any)]);
+        return this._globalServices[(id as any)];
     }
 
     useGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K): T[K] => {
         return this._globalServices[(id as any)];
     }
 
+    // Global Services End
     __getQ = () => this._sequel;
 }
 
@@ -236,18 +251,65 @@ export function main(activator: ActivatorFunc) {
 
 // Service
 
-function getServiceProps() {
-    return {
-        abc: 'hello'
+type ControllerActivatorFunc<I, O> = (props: Ark.ControllerProps<I, O>) => void;
+type ControllerIOBase = {
+    [key: string]: any
+} 
+
+class ControllerContext<I extends ControllerIOBase, O extends ControllerIOBase> {
+    activator: ControllerActivatorFunc<I, O>;
+    input: Partial<I> = {};
+    output: Partial<O> = {};
+
+    constructor(fn: ControllerActivatorFunc<I, O>, args?: Partial<I>) {
+        this.activator = fn;
+        this.input = args || {};
+    }
+
+    getInput = <T extends I, K extends keyof T>(id: K, defaultVal?: T[K]): T[K] => {
+        // @ts-ignore
+        return this.input[id] || defaultVal;
+    }
+
+    setOuput = <T extends O, K extends keyof T>(id: K, val: T[K]) => {
+        // @ts-ignore
+        this.input[id] = val;
+    }
+
+    getOutput = <T extends O, K extends keyof T>(id: K, defaultVal?: T[K]): T[K] => {
+        // @ts-ignore
+        return this.input[id] || defaultVal;
+    }
+
+    setInput = <T extends I, K extends keyof T>(id: K, val: T[K]) => {
+        // @ts-ignore
+        this.input[id] = val;
+    }
+
+    getControllerProps = (moduleId: string): Ark.ControllerProps<I, O> => {
+        return {
+            getInput: this.getInput,
+            setOutput: this.setOuput,
+            app: _
+        };
     }
 }
 
-type ServiceActivatorType = (props: typeof getServiceProps) => void;
 
-export function createService(serviceFn: ServiceActivatorType) {
-
+export function createController<I, O>(controllerFn: ControllerActivatorFunc<I, O>): ControllerActivatorFunc<I, O> {
+    return controllerFn;
 }
 
-createService((props) => {
+export function useController() {
+    // TODO: Throw error when used after initialisation
+    const moduleId = _.getCursor();
 
-})
+    const invoke = <I, O>(fn: ControllerActivatorFunc<I, O>, args?: Partial<I>) => {
+        const context = new ControllerContext<I, O>(fn, args);
+        return Promise.resolve(context.activator(context.getControllerProps(moduleId))).then(() => Promise.resolve(context));
+    }
+
+    return {
+        invoke
+    }
+}

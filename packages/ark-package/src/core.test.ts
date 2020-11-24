@@ -1,7 +1,7 @@
 import { createPackage, usePackage, createModule, useModule } from './index';
 
 type TestService = {
-    doSomething: () => void
+    executeTest: () => string
 }
 
 declare global {
@@ -64,13 +64,51 @@ describe('Global Services', () => {
     let app = usePackage();
 
     test('register new service', () => {
+        let result: string = null;
+
         app.registerGlobalService('test', {
-            doSomething: () => {
-                console.log('Doing somethings');
+            executeTest: () => {
+                return 'TestSuccess';
             }
         });
-        const a = app.useGlobalService('test');
-        a.doSomething();
+        const serviceRef = app.useGlobalService('test');
+        result = serviceRef.executeTest();
+
+        expect(result).toEqual('TestSuccess');
+    });
+
+    test('avoid duplicate service registration', () => {
+        const t = () => app.registerGlobalService('test', {
+            executeTest: () => {
+                return 'Hello';
+            }
+        });
+        expect(t).toThrowError();
+    })
+
+    test('extend service', () => {
+        let result: string = null;
+
+        app.extendGlobalService('test', (svc) => ({
+            executeTest: () => {
+                return `Extended${svc.executeTest()}`
+            }
+        }));
+        
+        const serviceRef = app.useGlobalService('test');
+        result = serviceRef.executeTest();
+
+        expect(result).toEqual('ExtendedTestSuccess');
+    });
+
+    test('avoid extending unregister services', () => {
+        const t = () => app.extendGlobalService('test1' as any, () => ({
+            executeTest: () => {
+                return 'ExtendedTestSuccess';
+            }
+        }));
+
+        expect(t).toThrowError();
     })
 });
 
