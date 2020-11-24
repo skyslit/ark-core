@@ -1,7 +1,8 @@
-import { createPackage, usePackage, createModule, useModule } from './index';
+import { createPackage, usePackage, createModule, useModule, _ } from './index';
 
 type TestService = {
-    executeTest: () => string
+    executeTest: () => string,
+    getTestModuleId?: () => string
 }
 
 declare global {
@@ -66,11 +67,11 @@ describe('Global Services', () => {
     test('register new service', () => {
         let result: string = null;
 
-        app.registerGlobalService('test', {
+        app.registerGlobalService('test', () => ({
             executeTest: () => {
                 return 'TestSuccess';
             }
-        });
+        }));
         const serviceRef = app.useGlobalService('test');
         result = serviceRef.executeTest();
 
@@ -78,18 +79,18 @@ describe('Global Services', () => {
     });
 
     test('avoid duplicate service registration', () => {
-        const t = () => app.registerGlobalService('test', {
+        const t = () => app.registerGlobalService('test', () => ({
             executeTest: () => {
                 return 'Hello';
             }
-        });
+        }));
         expect(t).toThrowError();
     })
 
     test('extend service', () => {
         let result: string = null;
 
-        app.extendGlobalService('test', (svc) => ({
+        app.extendGlobalService('test', (svc) => () => ({
             executeTest: () => {
                 return `Extended${svc.executeTest()}`
             }
@@ -102,13 +103,35 @@ describe('Global Services', () => {
     });
 
     test('avoid extending unregister services', () => {
-        const t = () => app.extendGlobalService('test1' as any, () => ({
+        const t = () => app.extendGlobalService('test1' as any, () => (props) => ({
             executeTest: () => {
                 return 'ExtendedTestSuccess';
             }
         }));
 
         expect(t).toThrowError();
+    })
+
+    test('moduleId detection', () => {
+        app.extendGlobalService('test', (svc) => (props) => ({
+            executeTest: () => {
+                return `Extended${svc.executeTest()}`
+            },
+            getTestModuleId: () => props.moduleId
+        }));
+
+        _._hasPackageInitialized = false;
+        createPackage(() => {
+            useModule('moduleId1', () => {
+                const { getTestModuleId } = app.useGlobalService('test');
+                expect(getTestModuleId()).toEqual('moduleId1');
+            });
+            useModule('moduleId2', () => {
+                const { getTestModuleId } = app.useGlobalService('test');
+                expect(getTestModuleId()).toEqual('moduleId2');
+                expect(getTestModuleId()).not.toEqual('moduleId1');
+            });
+        });
     })
 });
 

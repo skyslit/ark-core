@@ -7,10 +7,14 @@ declare global {
             default: DefaultModule
         }
         interface GlobalServices {}
+        interface GlobalServiceProps {
+            moduleId: string
+        }
         interface ControllerProps<I, O> {
             getInput: <T extends I, K extends keyof T>(id: K, defaultVal?: T[K]) => T[K],
             setOutput: <T extends O, K extends keyof T>(id: K, val: T[K]) => void,
             app: Ark.Package
+            useGlobalService: <T extends Ark.GlobalServices, K extends keyof T>(id: K) => T[K]
         }
     }
 }
@@ -110,7 +114,7 @@ export class PackageContext implements Ark.Package {
     private _data: BaseModules & Partial<Ark.Modules> = {
         [DEFAULT_CURSOR]: {}
     };
-    private _globalServices: BaseGlobalServices & Ark.GlobalServices = {} as any;
+    private _globalServices: any = {};
     public _hasPackageInitialized: boolean = false;
     public _isInitializing: boolean = false;
 
@@ -158,8 +162,12 @@ export class PackageContext implements Ark.Package {
     }
 
     // Global Services Start
+
+    private getGlobalServiceProps = (moduleId: string): Ark.GlobalServiceProps => ({
+        moduleId
+    });
     
-    registerGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svc: T[K]): T[K] => {
+    registerGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svc: (props: Ark.GlobalServiceProps) => T[K]): T[K] => {
         if (this._globalServices[(id as any)]) {
             throw new Error(`Service with same id already exists, id: ${id}`);
         }
@@ -168,17 +176,21 @@ export class PackageContext implements Ark.Package {
         return this._globalServices[(id as any)];
     }
 
-    extendGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svcExtender: (svc: Partial<T[K]>) => T[K]): T[K] => {
+    extendGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, svcExtender: (svc: Partial<T[K]>) => (props: Ark.GlobalServiceProps) => T[K]): T[K] => {
         if (!this._globalServices[(id as any)]) {
             throw new Error(`No service registered with the ID, id: ${id}`);
         }
 
-        this._globalServices[(id as any)] = svcExtender(this._globalServices[(id as any)]);
+        this._globalServices[(id as any)] = svcExtender(this._globalServices[(id as any)](this.getGlobalServiceProps(_.getCursor())));
         return this._globalServices[(id as any)];
     }
 
-    useGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K): T[K] => {
-        return this._globalServices[(id as any)];
+    useGlobalService = <T extends Ark.GlobalServices, K extends keyof T>(id: K, moduleId?: string): T[K] => {
+        if (!this._globalServices[(id as any)]) {
+            throw new Error(`No service registered with the ID, id: ${id}`);
+        }
+
+        return this._globalServices[(id as any)](this.getGlobalServiceProps(moduleId || _.getCursor()));
     }
 
     // Global Services End
@@ -290,7 +302,8 @@ class ControllerContext<I extends ControllerIOBase, O extends ControllerIOBase> 
         return {
             getInput: this.getInput,
             setOutput: this.setOuput,
-            app: _
+            app: _,
+            useGlobalService: (id) => _.useGlobalService(id, moduleId)
         };
     }
 }
