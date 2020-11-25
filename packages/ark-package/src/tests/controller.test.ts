@@ -1,4 +1,4 @@
-import { createPackage, usePackage, createModule, useModule, createController, useController, _, run } from './index';
+import { createPackage, usePackage, createModule, useModule, createController, useController, _, run } from '../index';
 
 describe('Controllers', () => {
     let app = usePackage();

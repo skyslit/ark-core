@@ -1,4 +1,4 @@
-import { createPackage, usePackage, createModule, useModule, _ } from './index';
+import { createPackage, usePackage, createModule, useModule, _ } from '../index';
 
 type TestService = {
     executeTest: () => string,
@@ -20,14 +20,14 @@ declare global {
     }
 }
 
-describe('Core Functionalities', () => {
+describe('Normal Usage', () => {
     let app = usePackage();
 
     const isolatedModule = createModule((deps) => {
         deps.app.setData('foreignModuleTestKey', deps.app.getModule('TestModule').testKey);
     });
 
-    test('module -> package registration is good', (done) => {
+    test('useModule normal usage', (done) => {
         createPackage(() => {
             useModule('TestModule', () => {
                 app.setData('testKey', 'testValue');
@@ -46,7 +46,7 @@ describe('Core Functionalities', () => {
         })
     });
 
-    test('data set to correct module', () => {
+    test('check if set data is working', () => {
         expect(app.getModule('TestModule').testKey).toBe('testValue');
         expect(app.getModule('SampleModule').sampleKey).toBe('sampleValue');
     });
@@ -61,7 +61,7 @@ describe('Core Functionalities', () => {
     });
 });
 
-describe('Global Services', () => {
+describe('Global Services usage', () => {
     let app = usePackage();
 
     test('register new service', () => {

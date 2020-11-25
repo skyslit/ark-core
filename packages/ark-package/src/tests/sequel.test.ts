@@ -1,4 +1,4 @@
-import { Sequel } from './index';
+import { Sequel } from '../index';
 
 describe('Sequel', () => {
     test('order of execution', (done) => {

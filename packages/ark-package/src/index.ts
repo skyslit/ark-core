@@ -215,14 +215,18 @@ export async function createPackage(func: ActivatorFunc, skipActivation?: boolea
     await Promise.resolve(func.call(_, getActivatorOptions()));
     _._isInitializing = false;
 
-    await _.__getQ().start({
-        beforeEach: (exe) => {
-            _.setCursor(exe.name);
-        },
-        afterEach: () => {
-            _.setCursor(null);
-        }
-    })
+    try {
+        await _.__getQ().start({
+            beforeEach: (exe) => {
+                _.setCursor(exe.name);
+            },
+            afterEach: () => {
+                _.setCursor(null);
+            }
+        });
+    } catch (e) {
+        throw e;
+    }
 
     _._hasPackageInitialized = true;
 }
