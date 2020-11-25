@@ -51,9 +51,6 @@ export class MongoAdaptor implements Ark.MERN.IQueryBuilder {
     delete: () => Promise<any>;
 }
 
-// Initialize
-_.app = Express();
-
 const DEFAULT_PORT = 3000;
 
 type RequestType = 'get' | 'post' | 'patch' | 'put' | 'delete';
@@ -64,6 +61,14 @@ type ServerOpts = {
     hostname: string,
     backlog?: number,
     listeningListener?: () => void
+}
+
+// Initialize
+let hasInitialized: boolean = false;
+export function useExpress() {
+    if (!hasInitialized) {
+        _.app = Express();
+    }
 }
 
 // Database
@@ -120,15 +125,6 @@ export function createRoute(handlers: Express.RequestHandler | Array<Express.Req
 export function useRoute(type: RequestType, path: string, handlers: Express.RequestHandler | Array<Express.RequestHandler>) {
     _.app[type](path, handlers);
 }
-
-// // Service
-// type ServiceOptions = {
-//     useModel: <T>(name: string) => mongoose.Model<mongoose.Document & T>
-// }
-// type ServiceActivator<A, R> = (opts: ServiceOptions & A) => R | Promise<R>
-// export function createService<A, R>(fn: ServiceActivator<A, R>) {
-//     return (props: A) => fn;
-// }
 
 // Server
 
