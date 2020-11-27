@@ -88,3 +88,14 @@ describe('application context', () => {
     });
   });
 });
+
+describe('real-world usage', () => {
+  test('sample', () => {
+    const context = new ApplicationContext();
+    context.runOn('default', () => {
+      context.runOn('module_1', () => {
+
+      });
+    });
+  });
+});
