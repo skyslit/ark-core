@@ -11,7 +11,7 @@ interface BasePointers {
     use: <T extends (...args: any) => any>
         (creators: T) => ReturnType<T>
     invoke: <T>(fn: ControllerScope<T>,
-        inputMap: object, outputMap: T) => Promise<T>
+        inputMap?: object, outputMap?: (v: T) => any) => Promise<T | any>
 }
 
 declare global {
@@ -109,18 +109,27 @@ class ControllerContext<T> {
   private outputData: any;
   /**
    * Creates new instance of controller context
-   * @param {string} moduleId Module ID
-   * @param {ControllerScope<T>} fn Controller Function
-   * @param {Partial<Ark.Pointers>} pointers Context Pointer
+   * @param {any=} inputData Input Data
    */
-  constructor(
+  constructor(inputData: any = {}) {
+    this.inputData = inputData;
+    this.outputData = {};
+  }
+
+  /**
+   * Invoke controller
+   * @param {string} moduleId
+   * @param {ControllerScope<T>} fn
+   * @param {Partial<Ark.Pointers>} pointers
+   * @return {Promise<T>}
+   */
+  invoke(
       moduleId: string,
       fn: ControllerScope<T>,
-      pointers: Partial<Ark.Pointers>) {
-    this.inputData = {};
-    this.outputData = {};
+      pointers: Partial<Ark.Pointers>
+  ): Promise<T> {
     const controllerPointerCreator:PointerCreator<ControllerProps> =
-      (moduleId) => ({
+      () => ({
         getInput: (id, def) => {
           let result: any = def;
           if (this.inputData[id]) {
@@ -133,7 +142,9 @@ class ControllerContext<T> {
           return v;
         },
       });
-    fn(Object.assign(pointers, controllerPointerCreator(moduleId)));
+    return Promise.resolve(
+        fn(Object.assign(pointers, controllerPointerCreator(moduleId)))
+    ).then(() => Promise.resolve(this.outputData));
   }
 }
 
@@ -170,12 +181,12 @@ export class ApplicationContext {
           return creators(moduleId);
         },
         invoke: <T>(fn: ContextScope<T>,
-          inputMap: object, outputMap: T): Promise<T> => {
-          return new Promise(() => {
-            // eslint-disable-next-line no-unused-vars
-            const controller = new ControllerContext<T>(
-                moduleId, fn, this.generatePointer(moduleId));
-          });
+          inputMap: object,
+          outputMap: (v: T) => any = (v) => v): Promise<T> => {
+          const controller = new ControllerContext<T>(inputMap);
+          return controller.invoke(
+              moduleId, fn, this.generatePointer(moduleId)
+          ).then((v) => Promise.resolve(outputMap(v)));
         },
       }));
     }
@@ -272,5 +283,16 @@ export function runOn(id: string, fn: ContextScope<void>) {
  * @return {ContextScope}
  */
 export function createContext<T = any>(fn: ContextScope<T>): ContextScope<T> {
+  return fn;
+}
+
+/**
+ * Creates an isolated scope for new business logic
+ * @param {ControllerScope<T>} fn Controller Function
+ * @return {ControllerScope<T>}
+ */
+export function createController<T = any>(
+    fn: ControllerScope<T>
+): ControllerScope<T> {
   return fn;
 }

@@ -1,5 +1,5 @@
 /* eslint-disable require-jsdoc */
-import {ApplicationContext, createPointer} from '..';
+import {ApplicationContext, createController, createPointer} from '..';
 
 interface TestDataPointerType {
     useData: () => {
@@ -89,12 +89,28 @@ describe('application context', () => {
   });
 });
 
-describe('real-world usage', () => {
-  test('sample', () => {
+describe('controller', () => {
+  const SampleController = createController(({getInput, setOutput}) => {
+    const inputA = getInput('inputA', 'defA');
+    const inputB = getInput('inputB', 'defB');
+    setOutput('outputA', `${inputA}-O`);
+    setOutput('outputB', `${inputB}-O`);
+  });
+
+  test('invoke() get / set value', (done) => {
     const context = new ApplicationContext();
     context.runOn('default', () => {
-      context.runOn('module_1', () => {
-
+      context.runOn('module_1', ({invoke}) => {
+        invoke(SampleController, {
+          inputB: 'myB',
+        }, (v: any) => Object.assign(v,
+            {modifiedResponse: `${v.outputA}-${v.outputB}`}))
+            .then((v: any) => {
+              expect(v.outputA).toBe('defA-O');
+              expect(v.outputB).toBe('myB-O');
+              expect(v.modifiedResponse).toBe('defA-O-myB-O');
+              done();
+            });
       });
     });
   });
