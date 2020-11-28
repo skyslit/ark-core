@@ -288,7 +288,7 @@ export class ApplicationContext {
 
       if (indexOfExistingPointer > -1) {
         throw new Error(`Duplicate pointer registration is not allowed.
-        Attempted to register pointer with id: ${pid}`);
+Attempted to register pointer with id: ${pid}`);
       }
 
       this.pointers.push({pid, creator});
@@ -304,8 +304,8 @@ export class ApplicationContext {
           (p) => p.pid === pid);
 
       if (indexOfExistingPointer < 0) {
-        throw new Error(`Pointer extension failed because 
-        there is no pointer registered with provided id: ${pid}`);
+        throw new Error(`Pointer extension failed because
+there is no pointer registered with provided id: ${pid}`);
       }
 
       this.pointers.splice(indexOfExistingPointer, 1, {
