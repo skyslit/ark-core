@@ -3,6 +3,8 @@ export type ContextScope<T> = (props: Partial<Ark.Pointers>) => T | Promise<T>;
 export type PointerCreator<T> = (
   id: string, controller: ControllerContext<any>) => T;
 
+export type PointerExtender<O, N> = (original: Partial<O>) => PointerCreator<N>;
+
 interface BasePointers {
     use: <T extends (...args: any) => any>
         (creators: T) => ReturnType<T>
@@ -107,7 +109,7 @@ export class Sequel<Q = {
 /**
  * Isolated scope where controllers live and run
  */
-class ControllerContext<T> {
+export class ControllerContext<T> {
   private inputData: any;
   private outputData: any;
   private queue: Sequel;
@@ -195,7 +197,7 @@ export class ApplicationContext {
     }
 
     private data: { [key: string]: any };
-    private pointers: Array<PointerCreator<any>>;
+    private pointers: Array<{ pid: string, creator: PointerCreator<any> }>;
 
     /**
      * Creates a new instance of Application Context
@@ -204,33 +206,35 @@ export class ApplicationContext {
       this.data = {};
       this.pointers = [];
 
-      this.registerPointer<Partial<BasePointers>>((moduleId, controller) => ({
-        use: <T extends (...args: any) => any>(creators: T): ReturnType<T> => {
-          return creators(moduleId);
-        },
-        useModule: (id: string, fn: ContextScope<void>) => {
-          controller.run(() => this.activate(fn, id));
-        },
-        invoke: <T>(fn: ContextScope<T>,
-          inputMap: object,
-          outputMap: (v: T) => any = (v) => v): Promise<T> => this.invoke(
-            moduleId,
-            fn,
-            inputMap,
-            outputMap
-        ),
-        getData: (id, def) => {
-          let result: any = def;
-          if (this.data[id]) {
-            result = this.data[id];
-          }
-          return result;
-        },
-        setData: (id, v) => {
-          this.data[id] = v;
-          return v;
-        },
-      }));
+      this.registerPointer<Partial<BasePointers>>('core',
+          (moduleId, controller) => ({
+            use: <T extends (...args: any) => any>(creators: T)
+            : ReturnType<T> => {
+              return creators(moduleId);
+            },
+            useModule: (id: string, fn: ContextScope<void>) => {
+              controller.run(() => this.activate(fn, id));
+            },
+            invoke: <T>(fn: ContextScope<T>,
+              inputMap: object,
+              outputMap: (v: T) => any = (v) => v): Promise<T> => this.invoke(
+                moduleId,
+                fn,
+                inputMap,
+                outputMap
+            ),
+            getData: (id, def) => {
+              let result: any = def;
+              if (this.data[id]) {
+                result = this.data[id];
+              }
+              return result;
+            },
+            setData: (id, v) => {
+              this.data[id] = v;
+              return v;
+            },
+          }));
     }
 
     /**
@@ -273,11 +277,57 @@ export class ApplicationContext {
     }
 
     /**
-     * Registers / extends module pointer
+     * Registers new pointer
+     * @param {string} pid An unique ID that represent this pointer
      * @param {PointerCreator} creator Func that creates module pointers
      */
-    registerPointer<T>(creator: PointerCreator<T>) {
-      this.pointers.push(creator);
+    registerPointer<T>(pid: string, creator: PointerCreator<T>) {
+      // Check if pointer with same ID already exists
+      const indexOfExistingPointer = this.pointers.findIndex(
+          (p) => p.pid === pid);
+
+      if (indexOfExistingPointer > -1) {
+        throw new Error(`Duplicate pointer registration is not allowed.
+        Attempted to register pointer with id: ${pid}`);
+      }
+
+      this.pointers.push({pid, creator});
+    }
+
+    /**
+     * Extends existing pointer
+     * @param {string} pid Id of the existsing pointer
+     * @param {PointerExtender} extender
+     */
+    extendPointer<O, N>(pid: string, extender: PointerExtender<O, N>) {
+      const indexOfExistingPointer = this.pointers.findIndex(
+          (p) => p.pid === pid);
+
+      if (indexOfExistingPointer < 0) {
+        throw new Error(`Pointer extension failed because 
+        there is no pointer registered with provided id: ${pid}`);
+      }
+
+      this.pointers.splice(indexOfExistingPointer, 1, {
+        pid,
+        creator: extender(
+            this.pointers[indexOfExistingPointer].creator(
+                'default', new ControllerContext()
+            )
+        ),
+      });
+    }
+
+    /**
+     * Get registered pointers from the context
+     * @param {string} moduleId Module ID
+     * @param {ControllerContext<any>} controller
+     * @return {Partial<Ark.Pointers>}
+     */
+    getPointers(
+        moduleId: string, controller: ControllerContext<any>
+    ): Partial<Ark.Pointers> {
+      return this.generatePointer(moduleId, controller);
     }
 
     /**
@@ -300,7 +350,9 @@ export class ApplicationContext {
     private generatePointer(
         id: string, controller: ControllerContext<any>
     ): Partial<Ark.Pointers> {
-      return this.pointers.reduce((acc, p) =>
+      return this.pointers.map((p) => {
+        return p.creator;
+      }).reduce((acc, p) =>
         ({...acc, ...p(id, controller)}), {});
     }
 

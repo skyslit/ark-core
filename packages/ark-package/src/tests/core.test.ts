@@ -1,6 +1,7 @@
 /* eslint-disable require-jsdoc */
 import {
   ApplicationContext,
+  ControllerContext,
   createContext,
   createController,
   createPointer,
@@ -46,7 +47,7 @@ describe('application context', () => {
     }));
 
     // Register pointer
-    context.registerPointer(TestDataPointer);
+    context.registerPointer('testPointer', TestDataPointer);
 
     context.activate(({useData}) => {
       const {useModel} = useData();
@@ -68,6 +69,42 @@ describe('application context', () => {
         });
       }, 'semi');
     });
+  });
+
+  test('prevent duplicate pointer registration', () => {
+    const context = new ApplicationContext();
+
+    const TestDataPointer = createPointer<TestDataPointerType>((id) => ({
+      useData: () => ({
+        useModel: (modelId: string) => `${modelId} - ${id}`,
+      }),
+    }));
+
+    // Register pointer
+    context.registerPointer('testPointer', TestDataPointer);
+    const t = () => context.registerPointer('testPointer', () => ({}));
+    expect(t).toThrowError();
+  });
+
+  test('extend registred pointers', () => {
+    const context = new ApplicationContext();
+
+    const testDataPointer = createPointer<any>((id) => ({
+      sayHello: () => 'hello',
+    }));
+
+    // Register pointer
+    context.registerPointer('testPointer', testDataPointer);
+    context.extendPointer('testPointer', (orginal: any) => {
+      return () => ({
+        sayHello: () => `${orginal.sayHello()}-modified`,
+      });
+    });
+
+    const pointers: any =
+      context.getPointers('default', new ControllerContext());
+
+    expect(pointers.sayHello()).toBe('hello-modified');
   });
 
   test('use() fn', () => {
@@ -147,7 +184,6 @@ describe('context run / runOn', () => {
 
       useModule('testModule', (testModuleProps) => {
         testModuleProps.setData('testModuleIndexNumber', 420);
-        console.log('dz1', testModuleProps.getData('testModuleIndexNumber'));
       });
 
       useModule('diffModule', (diffModule) => {
