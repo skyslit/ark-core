@@ -1,5 +1,10 @@
 /* eslint-disable require-jsdoc */
-import {ApplicationContext, createController, createPointer} from '..';
+import {
+  ApplicationContext,
+  createContext,
+  createController,
+  createPointer,
+} from '..';
 
 interface TestDataPointerType {
     useData: () => {
@@ -43,12 +48,12 @@ describe('application context', () => {
     // Register pointer
     context.registerPointer(TestDataPointer);
 
-    context.runOn('default', ({useData}) => {
+    context.activate(({useData}) => {
       const {useModel} = useData();
       const modelId = useModel('hello');
       expect(modelId).toBe('hello - default');
 
-      context.runOn('semi', ({useData}) => {
+      context.activate(({useData}) => {
         const {useModel} = useData();
 
         const modelId = useModel('hello');
@@ -61,7 +66,7 @@ describe('application context', () => {
           expect(modelId).toBe('hello - semi');
           done();
         });
-      });
+      }, 'semi');
     });
   });
 
@@ -75,17 +80,17 @@ describe('application context', () => {
       }),
     }));
 
-    context.runOn('default', ({use}) => {
+    context.activate(({use}) => {
       const {useData} = use(TestDataPointer);
       const modelId = useData().useModel('use');
       expect(modelId).toBe('use - default');
 
-      context.runOn('sub', ({use}) => {
+      context.activate(({use}) => {
         const {useData} = use(TestDataPointer);
         const modelId = useData().useModel('use');
         expect(modelId).toBe('use - sub');
-      });
-    });
+      }, 'sub');
+    }, 'default');
   });
 });
 
@@ -99,8 +104,8 @@ describe('controller', () => {
 
   test('invoke() get / set value', (done) => {
     const context = new ApplicationContext();
-    context.runOn('default', () => {
-      context.runOn('module_1', ({invoke}) => {
+    context.activate(() => {
+      context.activate(({invoke}) => {
         invoke(SampleController, {
           inputB: 'myB',
         }, (v: any) => Object.assign(v,
@@ -111,7 +116,60 @@ describe('controller', () => {
               expect(v.modifiedResponse).toBe('defA-O-myB-O');
               done();
             });
+      }, 'module_1');
+    }, 'default');
+  });
+});
+
+describe('context run / runOn', () => {
+  test('multiple runs', (done) => {
+    const output: number[] = [];
+    const appPackage = createContext(({run}) => {
+      run(() => output.push(1));
+      run(() => output.push(2));
+      run(() => output.push(3));
+      run(() => output.push(5));
+      run(() => output.push(4));
+    });
+    const context = new ApplicationContext();
+    context.activate(appPackage).finally(() => {
+      expect(output).toEqual([1, 2, 3, 5, 4]);
+      expect(output).not.toEqual([1, 2, 3, 4, 5]);
+      done();
+    });
+  });
+
+  test('runOn fn', (done) => {
+    const output: number[] = [];
+    const appPackage = createContext(({run, useModule}) => {
+      run(() => output.push(1));
+      run(() => output.push(2));
+
+      useModule('testModule', (testModuleProps) => {
+        testModuleProps.setData('testModuleIndexNumber', 420);
+        console.log('dz1', testModuleProps.getData('testModuleIndexNumber'));
       });
+
+      useModule('diffModule', (diffModule) => {
+        diffModule.run(() => {
+          output.push(11);
+        });
+        diffModule.runOn('testModule', (testModuleProps) => {
+          const dataFromRemoteModule =
+            <number>testModuleProps.getData('testModuleIndexNumber');
+          output.push(dataFromRemoteModule);
+        });
+      });
+
+      run(() => output.push(3));
+      run(() => output.push(5));
+      run(() => output.push(4));
+    });
+    const context = new ApplicationContext();
+    context.activate(appPackage).finally(() => {
+      expect(output).toEqual([1, 2, 11, 420, 3, 5, 4]);
+      expect(output).not.toEqual([1, 2, 3, 5, 4]);
+      done();
     });
   });
 });

@@ -1,17 +1,20 @@
+export type Activator = () => any | Promise<any>;
 export type ContextScope<T> = (props: Partial<Ark.Pointers>) => T | Promise<T>;
-export type ControllerProps = {
-  getInput: <T>(id: string, defaultVal: T) => T,
-  setOutput: <T>(id: string, val: T) => T
-}
-export type ControllerScope<T> =
-  (props: Partial<Ark.Pointers & ControllerProps>) => T | Promise<T>;
-export type PointerCreator<T> = (id: string) => T;
+export type PointerCreator<T> = (
+  id: string, controller: ControllerContext<any>) => T;
 
 interface BasePointers {
     use: <T extends (...args: any) => any>
         (creators: T) => ReturnType<T>
-    invoke: <T>(fn: ControllerScope<T>,
-        inputMap?: object, outputMap?: (v: T) => any) => Promise<T | any>
+    useModule: (id: string, fn: ContextScope<void>) => void
+    invoke: <T>(fn: ContextScope<T>,
+        inputMap?: object, outputMap?: (v: T) => any) => Promise<T | any>,
+    getInput: <T>(id: string, defaultVal?: T) => T,
+    setOutput: <T>(id: string, val: T) => T,
+    getData: <T>(id: string, defaultVal?: T) => T,
+    setData: <T>(id: string, val: T) => T,
+    run: (fn: Activator) => void,
+    runOn: (moduleId: string, fn: ContextScope<void>) => void
 }
 
 declare global {
@@ -36,7 +39,7 @@ type SequelStarterOpt<T> = {
  */
 export class Sequel<Q = {
   name?: string
-  activator: () => any | Promise<any>
+  activator: Activator
 }> {
   static DefaultResolver = (item: any) => item.activator();
 
@@ -107,28 +110,40 @@ export class Sequel<Q = {
 class ControllerContext<T> {
   private inputData: any;
   private outputData: any;
+  private queue: Sequel;
   /**
    * Creates new instance of controller context
    * @param {any=} inputData Input Data
+   * @param {any=} defaultData Default Data
    */
   constructor(inputData: any = {}) {
     this.inputData = inputData;
     this.outputData = {};
+    this.queue = new Sequel();
   }
 
   /**
-   * Invoke controller
+   * Run business logic in self container
+   * @param {Activator} activator Function Activator
+   * @return {{}}
+   */
+  run(activator: Activator) {
+    return this.queue.push({activator});
+  }
+
+  /**
+   * Execute controller
    * @param {string} moduleId
    * @param {ControllerScope<T>} fn
    * @param {Partial<Ark.Pointers>} pointers
    * @return {Promise<T>}
    */
-  invoke(
+  execute(
       moduleId: string,
-      fn: ControllerScope<T>,
+      fn: ContextScope<T>,
       pointers: Partial<Ark.Pointers>
   ): Promise<T> {
-    const controllerPointerCreator:PointerCreator<ControllerProps> =
+    const controllerPointerCreator:PointerCreator<Partial<BasePointers>> =
       () => ({
         getInput: (id, def) => {
           let result: any = def;
@@ -141,10 +156,25 @@ class ControllerContext<T> {
           this.outputData[id] = v;
           return v;
         },
+        run: this.run.bind(this),
+        runOn: (moduleId, activator) => {
+          this.queue.push({
+            activator: () => {
+              Promise.resolve(
+                  activator(
+                      Object.assign(pointers,
+                          controllerPointerCreator(moduleId, this))));
+            },
+          });
+        },
       });
     return Promise.resolve(
-        fn(Object.assign(pointers, controllerPointerCreator(moduleId)))
-    ).then(() => Promise.resolve(this.outputData));
+        fn(Object.assign(pointers, controllerPointerCreator(moduleId, this)))
+    ).then(
+        () => this.queue.start()
+    ).then(
+        () => Promise.resolve(this.outputData)
+    );
   }
 }
 
@@ -166,7 +196,6 @@ export class ApplicationContext {
 
     private data: { [key: string]: any };
     private pointers: Array<PointerCreator<any>>;
-    private queue: Sequel;
 
     /**
      * Creates a new instance of Application Context
@@ -174,19 +203,32 @@ export class ApplicationContext {
     constructor() {
       this.data = {};
       this.pointers = [];
-      this.queue = new Sequel();
 
-      this.registerPointer<BasePointers>((moduleId) => ({
+      this.registerPointer<Partial<BasePointers>>((moduleId, controller) => ({
         use: <T extends (...args: any) => any>(creators: T): ReturnType<T> => {
           return creators(moduleId);
         },
+        useModule: (id: string, fn: ContextScope<void>) => {
+          controller.run(() => this.activate(fn, id));
+        },
         invoke: <T>(fn: ContextScope<T>,
           inputMap: object,
-          outputMap: (v: T) => any = (v) => v): Promise<T> => {
-          const controller = new ControllerContext<T>(inputMap);
-          return controller.invoke(
-              moduleId, fn, this.generatePointer(moduleId)
-          ).then((v) => Promise.resolve(outputMap(v)));
+          outputMap: (v: T) => any = (v) => v): Promise<T> => this.invoke(
+            moduleId,
+            fn,
+            inputMap,
+            outputMap
+        ),
+        getData: (id, def) => {
+          let result: any = def;
+          if (this.data[id]) {
+            result = this.data[id];
+          }
+          return result;
+        },
+        setData: (id, v) => {
+          this.data[id] = v;
+          return v;
         },
       }));
     }
@@ -239,21 +281,44 @@ export class ApplicationContext {
     }
 
     /**
-     * runOn generate activator function with pointer to the appropriate data
-     * @param {string} id Module ID
-     * @param {ContextScope} fn
+     * Start running the application
+     * @param {ContextScope<void>} fn
+     * @param {string=} moduleId Module ID to point
+     * @return {Promise<void>}
      */
-    runOn(id: string, fn: ContextScope<void>) {
-      fn && fn(this.generatePointer(id));
+    activate(
+        fn: ContextScope<void>, moduleId: string = 'default'): Promise<void> {
+      return this.invoke(moduleId, fn, undefined);
     }
 
     /**
      * This function generates pointer to the specified module
      * @param {string} id Module ID
+     * @param {ControllerContext<any>} controller
      * @return {Ark.Pointers} Module Pointers
      */
-    private generatePointer(id: string): Partial<Ark.Pointers> {
-      return this.pointers.reduce((acc, p) => ({...acc, ...p(id)}), {});
+    private generatePointer(
+        id: string, controller: ControllerContext<any>
+    ): Partial<Ark.Pointers> {
+      return this.pointers.reduce((acc, p) =>
+        ({...acc, ...p(id, controller)}), {});
+    }
+
+    /**
+     * Invokes / Activates a context / controller function
+     * @param {string} modId
+     * @param {ContextScope<T>} fn
+     * @param {object} inputMap
+     * @param {object | function} outputMap
+     * @return {Promise<T>}
+     */
+    private invoke<T>(modId: string, fn: ContextScope<T>,
+        inputMap: object,
+        outputMap: (v: T) => any = (v) => v): Promise<T> {
+      const controller = new ControllerContext<T>(inputMap);
+      return controller.execute(
+          modId, fn, this.generatePointer(modId, controller)
+      ).then((v) => Promise.resolve(outputMap(v)));
     }
 }
 
@@ -266,15 +331,6 @@ export function createPointer<T>(
     activatorFn: PointerCreator<T>
 ): PointerCreator<T> {
   return activatorFn;
-}
-
-/**
- * Run code in it's own module isolation
- * @param {string} id Module ID
- * @param {ContextScope} fn Runner function
- */
-export function runOn(id: string, fn: ContextScope<void>) {
-  ApplicationContext.getInstance().runOn(id, fn);
 }
 
 /**
@@ -292,7 +348,7 @@ export function createContext<T = any>(fn: ContextScope<T>): ContextScope<T> {
  * @return {ControllerScope<T>}
  */
 export function createController<T = any>(
-    fn: ControllerScope<T>
-): ControllerScope<T> {
+    fn: ContextScope<T>
+): ContextScope<T> {
   return fn;
 }
