@@ -16,6 +16,7 @@ interface BasePointers {
     setOutput: <T>(id: string, val: T) => T,
     getData: <T>(id: string, defaultVal?: T) => T,
     setData: <T>(id: string, val: T) => T,
+    existData: (id: string) => boolean,
     run: (fn: Activator) => void,
     runOn: (moduleId: string, fn: ContextScope<void>) => void
 }
@@ -122,6 +123,7 @@ export class ControllerContext<T> {
    * @param {any=} defaultData Default Data
    */
   constructor(applicationContext: ApplicationContext, inputData: any = {}) {
+    this.applicationContext = applicationContext;
     this.inputData = inputData;
     this.outputData = {};
     this.queue = new Sequel();
@@ -140,13 +142,13 @@ export class ControllerContext<T> {
    * Execute controller
    * @param {string} moduleId
    * @param {ControllerScope<T>} fn
-   * @param {Partial<Ark.Pointers>} pointers
+   * @param {PointerCreator<any>} pointerCreator
    * @return {Promise<T>}
    */
   execute(
       moduleId: string,
       fn: ContextScope<T>,
-      pointers: Partial<Ark.Pointers>
+      pointerCreator: PointerCreator<any>
   ): Promise<T> {
     const controllerPointerCreator:PointerCreator<Partial<BasePointers>> =
       () => ({
@@ -167,16 +169,19 @@ export class ControllerContext<T> {
             activator: () => {
               Promise.resolve(
                   activator(
-                      Object.assign(pointers,
-                          controllerPointerCreator(moduleId, this,
-                              this.applicationContext))));
+                      Object.assign(pointerCreator(moduleId, this,
+                          this.applicationContext),
+                      controllerPointerCreator(moduleId, this,
+                          this.applicationContext))));
             },
           });
         },
       });
     return Promise.resolve(
-        fn(Object.assign(pointers, controllerPointerCreator(moduleId, this,
-            this.applicationContext)))
+        fn(Object.assign(
+            pointerCreator(moduleId, this, this.applicationContext),
+            controllerPointerCreator(moduleId, this,
+                this.applicationContext)))
     ).then(
         () => this.queue.start()
     ).then(
@@ -212,7 +217,7 @@ export class ApplicationContext {
       this.pointers = [];
 
       this.registerPointer<Partial<BasePointers>>('core',
-          (moduleId, controller) => ({
+          (moduleId, controller, ctx) => ({
             use: <T extends (...args: any) => any>(creators: T)
             : ReturnType<T> => {
               return creators(moduleId);
@@ -228,16 +233,12 @@ export class ApplicationContext {
                 inputMap,
                 outputMap
             ),
-            getData: (id, def) => {
-              let result: any = def;
-              if (this.data[id]) {
-                result = this.data[id];
-              }
-              return result;
-            },
-            setData: (id, v) => {
-              this.data[id] = v;
-              return v;
+            getData: (id, def) => ctx.getData(moduleId, id, def),
+            setData: (id, v) => ctx.setData(moduleId, id, v),
+            existData: (id) => {
+              return ctx.getData(
+                  moduleId, id, null
+              ) === null ? false : true;
             },
           }));
     }
@@ -331,9 +332,10 @@ there is no pointer registered with provided id: ${pid}`);
      * @return {Partial<Ark.Pointers>}
      */
     getPointers(
-        moduleId: string, controller: ControllerContext<any>
+        moduleId: string,
+        controller: ControllerContext<any>
     ): Partial<Ark.Pointers> {
-      return this.generatePointer(moduleId, controller);
+      return this.generatePointer(moduleId, controller, this);
     }
 
     /**
@@ -351,15 +353,18 @@ there is no pointer registered with provided id: ${pid}`);
      * This function generates pointer to the specified module
      * @param {string} id Module ID
      * @param {ControllerContext<any>} controller
+     * @param {ApplicationContext} context
      * @return {Ark.Pointers} Module Pointers
      */
     private generatePointer(
-        id: string, controller: ControllerContext<any>
+        id: string,
+        controller: ControllerContext<any>,
+        context: ApplicationContext
     ): Partial<Ark.Pointers> {
-      return this.pointers.map((p) => {
+      return context.pointers.map((p) => {
         return p.creator;
       }).reduce((acc, p) =>
-        ({...acc, ...p(id, controller, this)}), {});
+        ({...acc, ...p(id, controller, context)}), {});
     }
 
     /**
@@ -375,7 +380,7 @@ there is no pointer registered with provided id: ${pid}`);
         outputMap: (v: T) => any = (v) => v): Promise<T> {
       const controller = new ControllerContext<T>(this, inputMap);
       return controller.execute(
-          modId, fn, this.generatePointer(modId, controller)
+          modId, fn, this.generatePointer
       ).then((v) => Promise.resolve(outputMap(v)));
     }
 }

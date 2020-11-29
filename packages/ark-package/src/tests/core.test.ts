@@ -139,7 +139,7 @@ describe('controller', () => {
     setOutput('outputB', `${inputB}-O`);
   });
 
-  test('invoke() get / set value', (done) => {
+  test('invoke() get / set input / output', (done) => {
     const context = new ApplicationContext();
     context.activate(() => {
       context.activate(({invoke}) => {
@@ -159,6 +159,27 @@ describe('controller', () => {
 });
 
 describe('context run / runOn', () => {
+  test('get / set / exist data', (done) => {
+    let existTestData: boolean = false;
+    let existMockData: boolean = false;
+    const appPackage = createContext(({useModule}) => {
+      useModule('sample', ({setData, getData}) => {
+        setData('testData', 'good');
+      });
+      useModule('sample', ({existData, getData}) => {
+        existTestData = existData('testData');
+        existMockData = existData('mockData');
+      });
+    });
+    const context = new ApplicationContext();
+    context.activate(appPackage)
+        .finally(() => {
+          expect(existTestData).toEqual(true);
+          expect(existMockData).toEqual(false);
+          done();
+        });
+  });
+
   test('multiple runs', (done) => {
     const output: number[] = [];
     const appPackage = createContext(({run}) => {
