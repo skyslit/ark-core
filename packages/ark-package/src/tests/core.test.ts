@@ -102,7 +102,7 @@ describe('application context', () => {
     });
 
     const pointers: any =
-      context.getPointers('default', new ControllerContext());
+      context.getPointers('default', new ControllerContext(context));
 
     expect(pointers.sayHello()).toBe('hello-modified');
   });

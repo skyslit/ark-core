@@ -1,7 +1,8 @@
 export type Activator = () => any | Promise<any>;
 export type ContextScope<T> = (props: Partial<Ark.Pointers>) => T | Promise<T>;
 export type PointerCreator<T> = (
-  id: string, controller: ControllerContext<any>) => T;
+  id: string, controller: ControllerContext<any>,
+  context: ApplicationContext) => T;
 
 export type PointerExtender<O, N> = (original: Partial<O>) => PointerCreator<N>;
 
@@ -113,12 +114,14 @@ export class ControllerContext<T> {
   private inputData: any;
   private outputData: any;
   private queue: Sequel;
+  private applicationContext: ApplicationContext;
   /**
    * Creates new instance of controller context
+   * @param {ApplicationContext} applicationContext
    * @param {any=} inputData Input Data
    * @param {any=} defaultData Default Data
    */
-  constructor(inputData: any = {}) {
+  constructor(applicationContext: ApplicationContext, inputData: any = {}) {
     this.inputData = inputData;
     this.outputData = {};
     this.queue = new Sequel();
@@ -165,13 +168,15 @@ export class ControllerContext<T> {
               Promise.resolve(
                   activator(
                       Object.assign(pointers,
-                          controllerPointerCreator(moduleId, this))));
+                          controllerPointerCreator(moduleId, this,
+                              this.applicationContext))));
             },
           });
         },
       });
     return Promise.resolve(
-        fn(Object.assign(pointers, controllerPointerCreator(moduleId, this)))
+        fn(Object.assign(pointers, controllerPointerCreator(moduleId, this,
+            this.applicationContext)))
     ).then(
         () => this.queue.start()
     ).then(
@@ -312,7 +317,8 @@ there is no pointer registered with provided id: ${pid}`);
         pid,
         creator: extender(
             this.pointers[indexOfExistingPointer].creator(
-                'default', new ControllerContext()
+                'default', new ControllerContext(this),
+                this
             )
         ),
       });
@@ -353,7 +359,7 @@ there is no pointer registered with provided id: ${pid}`);
       return this.pointers.map((p) => {
         return p.creator;
       }).reduce((acc, p) =>
-        ({...acc, ...p(id, controller)}), {});
+        ({...acc, ...p(id, controller, this)}), {});
     }
 
     /**
@@ -367,7 +373,7 @@ there is no pointer registered with provided id: ${pid}`);
     private invoke<T>(modId: string, fn: ContextScope<T>,
         inputMap: object,
         outputMap: (v: T) => any = (v) => v): Promise<T> {
-      const controller = new ControllerContext<T>(inputMap);
+      const controller = new ControllerContext<T>(this, inputMap);
       return controller.execute(
           modId, fn, this.generatePointer(modId, controller)
       ).then((v) => Promise.resolve(outputMap(v)));
@@ -403,4 +409,33 @@ export function createController<T = any>(
     fn: ContextScope<T>
 ): ContextScope<T> {
   return fn;
+}
+
+/**
+ * Creates a new package context
+ * @param {ContextScope<T>} fn
+ * @return {ContextScope<T>}
+ */
+export function createPackage<T>(fn: ContextScope<T>): ContextScope<T> {
+  return fn;
+}
+
+/**
+ * Creates a new module context
+ * @param {ContextScope<T>} fn
+ * @return {ContextScope<T>}
+ */
+export function createModule<T>(fn: ContextScope<T>): ContextScope<T> {
+  return fn;
+}
+
+// Singleton Functions
+
+/**
+ * Run application in singleton context
+ * @param {ContextScope<T>} fn
+ * @return {Promise<void>}
+ */
+export function runApp(fn: ContextScope<void>): Promise<void> {
+  return ApplicationContext.getInstance().activate(fn, 'default');
 }
