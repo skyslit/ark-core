@@ -235,11 +235,7 @@ export class ApplicationContext {
             ),
             getData: (id, def) => ctx.getData(moduleId, id, def),
             setData: (id, v) => ctx.setData(moduleId, id, v),
-            existData: (id) => {
-              return ctx.getData(
-                  moduleId, id, null
-              ) === null ? false : true;
-            },
+            existData: (id) => ctx.existData(moduleId, id),
           }));
     }
 
@@ -280,6 +276,19 @@ export class ApplicationContext {
       }
 
       return result;
+    }
+
+    /**
+     * Check if data exist
+     * @param {string} moduleId Module ID
+     * @param {string} key Data key
+     * @return {boolean} True if exists
+     * value if none matches
+     */
+    existData(moduleId: string, key: string): boolean {
+      return this.getData(
+          moduleId, key, null
+      ) === null ? false : true;
     }
 
     /**
