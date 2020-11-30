@@ -20,6 +20,7 @@
     "@types/mongoose": "^5.10.0",
     "@types/supertest": "^2.0.10",
     "express": "^4.17.1",
+    "mongodb-memory-server": "^6.9.2",
     "mongoose": "^5.10.15",
     "supertest": "^6.0.1"
   },

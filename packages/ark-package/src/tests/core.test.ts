@@ -230,3 +230,44 @@ describe('context run / runOn', () => {
     });
   });
 });
+
+describe('failover', () => {
+  test('async run / runOn command execution', (done) => {
+    let flag = 100;
+    const context = new ApplicationContext();
+    context.activate(({runOn, run, useModule}) => {
+      useModule('test', () => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            flag = 200;
+            resolve();
+          }, 800);
+        });
+      });
+    })
+        .catch(done)
+        .finally(() => {
+          expect(flag).toEqual(200);
+          done();
+        });
+  });
+  test('prevent usage of run command after initialization', async () => {
+    const output: number[] = [];
+    const context = new ApplicationContext();
+    let error: any = null;
+    try {
+      await context.activate(({run}) => {
+        run(() => {
+          output.push(12);
+          run(() => {
+            output.push(13);
+          });
+        });
+      });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).not.toEqual(null);
+    expect(output).toEqual([12]);
+  });
+});

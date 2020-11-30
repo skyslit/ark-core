@@ -1,12 +1,18 @@
 export type Activator = () => any | Promise<any>;
 export type ContextScope<T> = (props: Partial<Ark.Pointers>) => T | Promise<T>;
+
+interface PointerBase {
+  init: () => void | Promise<any>
+}
+
 export type PointerCreator<T> = (
   id: string, controller: ControllerContext<any>,
-  context: ApplicationContext) => T;
+  context: ApplicationContext) => T & Partial<PointerBase>;
 
-export type PointerExtender<O, N> = (original: Partial<O>) => PointerCreator<N>;
+export type PointerExtender<O, N> =
+  (original: Partial<O>) => PointerCreator<N>;
 
-interface BasePointers {
+interface CorePointers {
     use: <T extends (...args: any) => any>
         (creators: T) => ReturnType<T>
     useModule: (id: string, fn: ContextScope<void>) => void
@@ -18,14 +24,16 @@ interface BasePointers {
     setData: <T>(id: string, val: T) => T,
     existData: (id: string) => boolean,
     run: (fn: Activator) => void,
-    runOn: (moduleId: string, fn: ContextScope<void>) => void
+    runOn: (moduleId: string, fn: ContextScope<any>) => void
 }
 
 declare global {
     // eslint-disable-next-line no-unused-vars
     namespace Ark {
         // eslint-disable-next-line no-unused-vars
-        interface Pointers extends BasePointers {}
+        interface Pointers extends CorePointers {}
+        // eslint-disable-next-line no-unused-vars
+        interface IApplicationContext {}
     }
 }
 
@@ -116,6 +124,7 @@ export class ControllerContext<T> {
   private outputData: any;
   private queue: Sequel;
   private applicationContext: ApplicationContext;
+  private hasInitialized: boolean;
   /**
    * Creates new instance of controller context
    * @param {ApplicationContext} applicationContext
@@ -127,6 +136,27 @@ export class ControllerContext<T> {
     this.inputData = inputData;
     this.outputData = {};
     this.queue = new Sequel();
+    this.hasInitialized = false;
+  }
+
+  /**
+   * Throw error if not initialized
+   * @param {string=} msg Error message to throw
+   */
+  ensureInitialized(
+      msg: string = 'Attempted to execute command before initialization'
+  ) {
+    if (!this.hasInitialized) throw new Error(msg);
+  }
+
+  /**
+   * Throw error if already initialized
+   * @param {string=} msg Error message to throw
+   */
+  ensureInitializing(
+      msg: string = 'Attempted to execute command after initialization'
+  ) {
+    if (this.hasInitialized) throw new Error(msg);
   }
 
   /**
@@ -135,6 +165,7 @@ export class ControllerContext<T> {
    * @return {{}}
    */
   run(activator: Activator) {
+    this.ensureInitializing();
     return this.queue.push({activator});
   }
 
@@ -150,8 +181,10 @@ export class ControllerContext<T> {
       fn: ContextScope<T>,
       pointerCreator: PointerCreator<any>
   ): Promise<T> {
-    const controllerPointerCreator:PointerCreator<Partial<BasePointers>> =
+    const controllerPointerCreator:PointerCreator<
+      Partial<CorePointers> & Partial<PointerBase>> =
       () => ({
+        init: () => {},
         getInput: (id, def) => {
           let result: any = def;
           if (this.inputData[id]) {
@@ -166,14 +199,12 @@ export class ControllerContext<T> {
         run: this.run.bind(this),
         runOn: (moduleId, activator) => {
           this.queue.push({
-            activator: () => {
-              Promise.resolve(
-                  activator(
-                      Object.assign(pointerCreator(moduleId, this,
-                          this.applicationContext),
-                      controllerPointerCreator(moduleId, this,
-                          this.applicationContext))));
-            },
+            activator: () => Promise.resolve(
+                activator(
+                    Object.assign(pointerCreator(moduleId, this,
+                        this.applicationContext),
+                    controllerPointerCreator(moduleId, this,
+                        this.applicationContext)))),
           });
         },
       });
@@ -183,7 +214,10 @@ export class ControllerContext<T> {
             controllerPointerCreator(moduleId, this,
                 this.applicationContext)))
     ).then(
-        () => this.queue.start()
+        () => {
+          this.hasInitialized = true;
+          return this.queue.start();
+        }
     ).then(
         () => Promise.resolve(this.outputData)
     );
@@ -193,7 +227,7 @@ export class ControllerContext<T> {
 /**
  * This class enables the transaction of Application State
  */
-export class ApplicationContext {
+export class ApplicationContext implements Ark.IApplicationContext {
     static instance: ApplicationContext;
     /**
      * @return {ApplicationContext} Singleton Instance of current
@@ -208,6 +242,7 @@ export class ApplicationContext {
 
     private data: { [key: string]: any };
     private pointers: Array<{ pid: string, creator: PointerCreator<any> }>;
+    private rollupProcess: Sequel;
 
     /**
      * Creates a new instance of Application Context
@@ -215,12 +250,18 @@ export class ApplicationContext {
     constructor() {
       this.data = {};
       this.pointers = [];
+      this.rollupProcess = new Sequel();
 
-      this.registerPointer<Partial<BasePointers>>('core',
+      this.registerPointer<Partial<CorePointers>>('core',
           (moduleId, controller, ctx) => ({
             use: <T extends (...args: any) => any>(creators: T)
             : ReturnType<T> => {
-              return creators(moduleId);
+              return this.generatePointer(
+                  moduleId,
+                  controller,
+                  ctx,
+                  creators
+              );
             },
             useModule: (id: string, fn: ContextScope<void>) => {
               controller.run(() => this.activate(fn, id));
@@ -237,6 +278,16 @@ export class ApplicationContext {
             setData: (id, v) => ctx.setData(moduleId, id, v),
             existData: (id) => ctx.existData(moduleId, id),
           }));
+    }
+
+    /**
+     * Add deactivator to rollback actions
+     * @param {Activator} deactivator
+     */
+    pushRollbackAction(deactivator: Activator) {
+      this.rollupProcess.push({
+        activator: deactivator,
+      });
     }
 
     /**
@@ -344,36 +395,67 @@ there is no pointer registered with provided id: ${pid}`);
         moduleId: string,
         controller: ControllerContext<any>
     ): Partial<Ark.Pointers> {
-      return this.generatePointer(moduleId, controller, this);
+      return this.generatePointers(moduleId, controller, this);
     }
 
     /**
      * Start running the application
      * @param {ContextScope<void>} fn
      * @param {string=} moduleId Module ID to point
-     * @return {Promise<void>}
+     * @return {Promise<any>}
      */
     activate(
-        fn: ContextScope<void>, moduleId: string = 'default'): Promise<void> {
+        fn: ContextScope<void>, moduleId: string = 'default'): Promise<any> {
       return this.invoke(moduleId, fn, undefined);
     }
 
     /**
-     * This function generates pointer to the specified module
+     * Perform destructive actions and deactivates application
+     * @return {Promise<any>}
+     */
+    deactivate(): Promise<any> {
+      return this.rollupProcess.start();
+    }
+
+    /**
+     * This function generates all pointers to the specified module
      * @param {string} id Module ID
      * @param {ControllerContext<any>} controller
      * @param {ApplicationContext} context
      * @return {Ark.Pointers} Module Pointers
      */
-    private generatePointer(
+    private generatePointers(
         id: string,
         controller: ControllerContext<any>,
         context: ApplicationContext
     ): Partial<Ark.Pointers> {
       return context.pointers.map((p) => {
         return p.creator;
-      }).reduce((acc, p) =>
-        ({...acc, ...p(id, controller, context)}), {});
+      }).reduce((acc, p) => (
+        {...acc, ...context.generatePointer(id, controller, context, p)}
+      ), {});
+    }
+
+    /**
+     * This function generates single pointer to the specified module
+     * @param {string} id Module ID
+     * @param {ControllerContext<any>} controller
+     * @param {ApplicationContext} context
+     * @param {function} pointer
+     * @return {Ark.Pointers} Module Pointers
+     */
+    private generatePointer(
+        id: string,
+        controller: ControllerContext<any>,
+        context: ApplicationContext,
+        pointer: (...args: any[]) => any
+    ): any {
+      const _p = pointer(id, controller, context);
+      // Init
+      if (_p.init && typeof _p.init === 'function') {
+        _p.init();
+      }
+      return _p;
     }
 
     /**
@@ -389,7 +471,7 @@ there is no pointer registered with provided id: ${pid}`);
         outputMap: (v: T) => any = (v) => v): Promise<T> {
       const controller = new ControllerContext<T>(this, inputMap);
       return controller.execute(
-          modId, fn, this.generatePointer
+          modId, fn, this.generatePointers
       ).then((v) => Promise.resolve(outputMap(v)));
     }
 }
@@ -448,8 +530,8 @@ export function createModule<T>(fn: ContextScope<T>): ContextScope<T> {
 /**
  * Run application in singleton context
  * @param {ContextScope<T>} fn
- * @return {Promise<void>}
+ * @return {Promise<any>}
  */
-export function runApp(fn: ContextScope<void>): Promise<void> {
+export function runApp(fn: ContextScope<void>): Promise<any> {
   return ApplicationContext.getInstance().activate(fn, 'default');
 }
