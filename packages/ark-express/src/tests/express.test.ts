@@ -82,12 +82,6 @@ describe('database operations', () => {
         .finally(async () => {
           await appContext.deactivate();
           done();
-          //   supertest(appContext.getData('default', 'express'))
-          //       .get('/')
-          //       .then((res) => {
-          //         expect(res.status).toBe(200);
-          //         done();
-          //       });
         });
   });
 
