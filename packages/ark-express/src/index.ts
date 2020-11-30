@@ -9,32 +9,51 @@ import {
   createConnection,
   Connection,
 } from 'mongoose';
+import http from 'http';
 
 type HttpVerbs = 'all' | 'get' | 'post' |
     'put' | 'delete' | 'patch' | 'options' | 'head';
+
+type ServerOpts = {
+    port: number,
+    hostname: string,
+    backlog?: number,
+    listeningListener?: () => void
+}
 
 declare global {
     // eslint-disable-next-line no-unused-vars
     namespace Ark {
         // eslint-disable-next-line no-unused-vars
-        interface Express {
-            useServer: () => void,
-            useApp: () => expressApp.Application,
-            useRoute: (method: HttpVerbs, path: string,
-                handlers: expressApp.RequestHandler |
-                    Array<expressApp.RequestHandler>) => expressApp.Application,
-        }
-        // eslint-disable-next-line no-unused-vars
-        interface Data {
-            connectDatabase: (
-                name: string,
-                connectionString: string,
-                opts?: ConnectionOptions
-            ) => void,
-            useModel: <T>(
-                name: string,
-                schema?: SchemaDefinition | (() => Schema)
-            ) => Model<T & Document>
+        namespace MERN {
+            // eslint-disable-next-line no-unused-vars
+            interface Express {
+                useServer: (opts?: ServerOpts) => void,
+                useApp: () => expressApp.Application,
+                useRoute: (method: HttpVerbs, path: string,
+                    handlers: expressApp.RequestHandler |
+                        Array<expressApp.RequestHandler>) =>
+                            expressApp.Application,
+            }
+            // eslint-disable-next-line no-unused-vars
+            interface Data {
+                useDatabase: (
+                    name: keyof Ark.MERN.PackageDatabases,
+                    connectionString: string,
+                    opts?: ConnectionOptions
+                ) => void,
+                useModel: <T>(
+                    name: string,
+                    schema?: SchemaDefinition | (() => Schema),
+                    dbName?: keyof Ark.MERN.PackageDatabases
+                ) => Model<T & Document>
+            }
+            // eslint-disable-next-line no-unused-vars
+            interface Databases {}
+            // eslint-disable-next-line no-unused-vars
+            type PackageDatabases = {
+                default: Connection
+            } & Databases
         }
     }
 }
@@ -49,16 +68,16 @@ function getModelName(modId: string, name: string): string {
   return `${modId}_${name}`;
 }
 
-export const Data = createPointer<Partial<Ark.Data>>((
+export const Data = createPointer<Partial<Ark.MERN.Data>>((
     moduleId, controller, context
 ) => ({
-  connectDatabase: (
-      name: string,
+  useDatabase: (
+      name: keyof Ark.MERN.PackageDatabases,
       connectionString: string,
       opts?: ConnectionOptions
   ) => {
     controller.ensureInitializing(
-        'connectDatabase() should be called on context root'
+        'useDatabase() should be called on context root'
     );
     controller.run(() => new Promise((resolve, reject) => {
       const dbId: string = `db/${name}`;
@@ -83,7 +102,6 @@ export const Data = createPointer<Partial<Ark.Data>>((
       context.setData(moduleId, dbId, connection);
 
       connection.on('open', () => {
-        console.log('Database connected');
         resolve();
       });
 
@@ -94,14 +112,15 @@ export const Data = createPointer<Partial<Ark.Data>>((
     }));
   },
   useModel: <T>(name: string,
-    schema?: SchemaDefinition | (() => Schema)) => {
+    schema?: SchemaDefinition | (() => Schema),
+    dbName: keyof Ark.MERN.PackageDatabases = 'default') => {
     const modelName = getModelName(moduleId, name);
     let registeredModel: Model<T & Document> = null;
 
     const modelRegistrationKey: string = `models/${moduleId}`;
     const modelExist = context.existData(moduleId, modelRegistrationKey);
     const mongooseConnection: Connection =
-        context.getData('default', `db/default`, null);
+        context.getData('default', `db/${dbName}`, null);
 
     if (schema) {
       // TODO: Check if already registered
@@ -132,7 +151,7 @@ export const Data = createPointer<Partial<Ark.Data>>((
   },
 }));
 
-export const Express = createPointer<Partial<Ark.Express>>((
+export const Express = createPointer<Partial<Ark.MERN.Express>>((
     moduleId, controller, context
 ) => ({
   init: () => {
@@ -140,8 +159,30 @@ export const Express = createPointer<Partial<Ark.Express>>((
       context.setData(moduleId, 'express', expressApp());
     }
   },
-  useServer: () => {
-    console.log(moduleId);
+  useServer: (opts) => {
+    opts = opts ? opts : {
+      port: 3000,
+      hostname: undefined,
+      backlog: undefined,
+      listeningListener: undefined,
+    };
+    if (!context.existData(moduleId, 'http')) {
+      const httpServer = context.setData(
+          moduleId,
+          'http',
+          http.createServer(
+              context.getData<expressApp.Application>(moduleId, 'express')
+          )
+      );
+      controller.run(() => {
+        httpServer.listen(
+            opts.port, opts.hostname, opts.backlog, opts.listeningListener
+        );
+      });
+      context.pushRollbackAction(() => {
+        httpServer.close();
+      });
+    }
   },
   useApp: () => context.getData(moduleId, 'express'),
   useRoute: (method, path, handlers) => {

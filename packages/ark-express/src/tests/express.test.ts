@@ -1,9 +1,40 @@
 import {ApplicationContext} from '@skyslit/ark-package';
 import {Express, Data} from '../index';
+import {Connection} from 'mongoose';
 import supertest from 'supertest';
+import * as http from 'http';
 import {MongoMemoryServer} from 'mongodb-memory-server';
 
-describe('System Services', () => {
+declare global {
+    // eslint-disable-next-line no-unused-vars
+    namespace Ark {
+        // eslint-disable-next-line no-unused-vars
+        namespace MERN {
+            // eslint-disable-next-line no-unused-vars
+            interface Databases {
+                testDb: Connection
+            }
+        }
+    }
+}
+
+describe('app services', () => {
+  test('useServer() fn', (done) => {
+    const appContext = new ApplicationContext();
+    appContext.activate(({use}) => {
+      const {useServer} = use(Express);
+      useServer();
+    })
+        .catch(done)
+        .finally(async () => {
+          expect(
+              appContext.getData<http.Server>('default', 'http').listening
+          ).toEqual(true);
+          await appContext.deactivate();
+          done();
+        });
+  });
+
   test('useRoute() fn', (done) => {
     const appContext = new ApplicationContext();
     appContext.activate(({use, run}) => {
@@ -33,11 +64,11 @@ describe('database operations', () => {
     done();
   }, 60000);
 
-  test('connectDatabase() fn', (done) => {
+  test('useDatabase() fn', (done) => {
     const appContext = new ApplicationContext();
     appContext.activate(({use}) => {
-      const {connectDatabase} = use(Data);
-      connectDatabase('default', testDbConnectionString);
+      const {useDatabase} = use(Data);
+      useDatabase('default', testDbConnectionString);
     })
         .catch(done)
         .finally(() => {
@@ -50,8 +81,8 @@ describe('database operations', () => {
   test('useModel() fn as remote function', (done) => {
     const appContext = new ApplicationContext();
     appContext.activate(({use, useModule}) => {
-      const {connectDatabase} = use(Data);
-      connectDatabase('default', testDbConnectionString);
+      const {useDatabase} = use(Data);
+      useDatabase('default', testDbConnectionString);
       useModule('testModule', ({use, run}) => {
         const {useModel} = use(Data);
         useModel('StudentSchema', {
@@ -75,6 +106,49 @@ describe('database operations', () => {
           const students = await StudentSchema.find({}).exec();
           expect(students.length).toEqual(1);
           expect((students[0] as any).name).toEqual('John Doe');
+        });
+      });
+    })
+        .catch(done)
+        .finally(async () => {
+          await appContext.deactivate();
+          done();
+        });
+  });
+
+  test('useModel() fn with different database', (done) => {
+    const appContext = new ApplicationContext();
+    appContext.activate(({use, useModule}) => {
+      const {useDatabase} = use(Data);
+      useDatabase('testDb', testDbConnectionString);
+      useModule('testModule', ({use, run}) => {
+        const {useModel} = use(Data);
+        useModel('ProfileSchema', {
+          name: {
+            type: String,
+          },
+          age: {
+            type: Number,
+          },
+        }, 'testDb');
+        run(() => {
+          const {useModel} = use(Data);
+          const ProfileSchema = useModel('ProfileSchema');
+          const newStudent = new ProfileSchema({
+            name: 'John Doe',
+            age: 21,
+          });
+          return newStudent.save();
+        });
+      });
+      useModule('testModule2', ({runOn}) => {
+        runOn('testModule', async ({use}) => {
+          const {useModel} = use(Data);
+          const ProfileSchema = useModel('ProfileSchema');
+          const students = await ProfileSchema.find({}).exec();
+          expect(students.length).toEqual(1);
+          expect((students[0] as any).name).toEqual('John Doe');
+          expect((students[0] as any).age).toEqual(21);
         });
       });
     })
