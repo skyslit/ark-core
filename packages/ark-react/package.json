@@ -1,0 +1,37 @@
+{
+  "name": "@skyslit/ark-react",
+  "version": "2.0.0",
+  "description": "",
+  "main": "./build/index.js",
+  "scripts": {
+    "test": "jest",
+    "start": "jest --watchAll",
+    "build": "tsc --watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-react": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.1",
+    "@skyslit/ark-package": "2.0.0",
+    "@types/jest": "^26.0.15",
+    "@types/react": "^17.0.0",
+    "@types/react-test-renderer": "^17.0.0",
+    "react": "^17.0.1",
+    "react-test-renderer": "^17.0.1"
+  },
+  "peerDependencies": {
+    "@skyslit/ark-package": "2.0.0",
+    "react": "^17.0.1"
+  },
+  "jest": {
+    "verbose": true,
+    "modulePathIgnorePatterns": [
+      "build"
+    ]
+  }
+}
