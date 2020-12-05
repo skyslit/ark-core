@@ -19,6 +19,12 @@
     "@babel/preset-typescript": "^7.12.1",
     "@types/jest": "^26.0.15"
   },
+  "dependencies": {
+    "babel-loader": "^8.2.2",
+    "chalk": "^4.1.0",
+    "log-update": "^4.0.0",
+    "webpack": "^5.10.0"
+  },
   "jest": {
     "verbose": true,
     "modulePathIgnorePatterns": [
