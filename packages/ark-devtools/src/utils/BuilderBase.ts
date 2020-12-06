@@ -1,4 +1,4 @@
-import webpack, {Compilation, Configuration, Stats} from 'webpack';
+import webpack, {Configuration, Stats} from 'webpack';
 import {EventEmitter} from 'events';
 
 type Mode = 'development' | 'production';
@@ -22,9 +22,11 @@ export class BuilderBase extends EventEmitter {
   /**
    * Start build process
    * @param {ConfigurationOptions} opts
-   * @param {any=} fs
+   * @param {any=} ifs Input filesystem
+   * @param {any=} ofs Output filesystem
+   * @param {any=} wfs Watch filesystem
    */
-  build(opts: ConfigurationOptions, fs?: any) {
+  build(opts: ConfigurationOptions, ifs?: any, ofs?: any, wfs?: any) {
     const buildConfiguration = this.getConfiguration(
         Object.assign<
           ConfigurationOptions,
@@ -34,22 +36,25 @@ export class BuilderBase extends EventEmitter {
           cwd: null,
         }, opts)
     );
-    console.log(buildConfiguration);
     if (!buildConfiguration) {
       throw new Error(
           'webpack configuration should not be null'
       );
     }
     this.compiler = webpack(buildConfiguration);
-    // if (fs) {
-    //   this.compiler.inputFileSystem = fs;
-    //   this.compiler.outputFileSystem = fs;
-    //   this.compiler.watchFileSystem = fs;
-    // }
+    if (ifs) {
+      this.compiler.inputFileSystem = ifs;
+    }
+    if (ofs) {
+      this.compiler.outputFileSystem = ofs;
+    }
+    if (wfs) {
+      this.compiler.watchFileSystem = wfs;
+    }
     if (opts.mode === 'development') {
-      this.compiler.watch({}, this.watchHandler.bind(this));
+      this.compiler.watch({}, this.handler.bind(this));
     } else if (opts.mode === 'production') {
-      this.compiler.compile(this.handler.bind(this));
+      this.compiler.run(this.handler.bind(this));
     }
   }
 
@@ -79,7 +84,7 @@ export class BuilderBase extends EventEmitter {
    * @param {Error} err
    * @param {Stats} result
    */
-  private watchHandler(err?: Error, result?: Stats): void {
+  private handler(err?: Error, result?: Stats): void {
     if (err) {
       this.emit('error', [{
         message: err.message,
@@ -99,33 +104,6 @@ export class BuilderBase extends EventEmitter {
         );
       } else {
         this.emit('success', result.compilation, result);
-      }
-    }
-  }
-
-  /**
-   * Handler
-   * @param {Error} err
-   * @param {Stats} result
-   */
-  private handler(err?: Error, result?: Compilation): void {
-    if (err) {
-      this.emit('error', [{
-        message: err.message,
-      }]);
-    } else {
-      if (result.errors.length > 0) {
-        this.emit('error',
-            result.errors,
-            result
-        );
-      } else if (result.warnings.length > 0) {
-        this.emit('warning',
-            result.warnings,
-            result
-        );
-      } else {
-        this.emit('success', result);
       }
     }
   }
