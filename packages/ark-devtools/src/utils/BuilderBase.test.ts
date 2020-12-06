@@ -75,7 +75,6 @@ describe('build stage: production', () => {
       [`${testRoot}/admin.client.js`]: `console.log('Admin client program');`,
     }, cwd);
     outputFileSystem = memfs.createFsFromVolume(vol);
-    outputFileSystem = fs;
 
     // Setup Input Filesystem
     inputFileSystem = new Union();
@@ -110,9 +109,9 @@ describe('build stage: production', () => {
       cwd: process.cwd(),
     }, inputFileSystem, outputFileSystem);
   });
-  test('warnings operation', () => {
+  // test('warnings operation', () => {
 
-  });
+  // });
   test('error operation', (done) => {
     const builderInstance = new SampleBuilder(
         path.join(cwd, testRoot, 'main-error.server.ts')
@@ -131,17 +130,5 @@ describe('build stage: production', () => {
       mode: 'production',
       cwd: process.cwd(),
     }, inputFileSystem, outputFileSystem);
-  });
-});
-
-describe('build stage: development', () => {
-  test('success operation', () => {
-
-  });
-  test('warnings operation', () => {
-
-  });
-  test('error operation', () => {
-
   });
 });
