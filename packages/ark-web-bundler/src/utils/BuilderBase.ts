@@ -1,5 +1,6 @@
 import webpack, {Compilation, Configuration, Stats} from 'webpack';
 import {EventEmitter} from 'events';
+
 type Mode = 'development' | 'production';
 export type ConfigurationOptions = {
   mode: Mode,
@@ -11,10 +12,19 @@ export type ConfigurationOptions = {
 export class BuilderBase extends EventEmitter {
   private compiler: webpack.Compiler;
   /**
-   * Start build process
-   * @param {ConfigurationOptions=} opts
+   * Creates a new builder base instance
+   * @param {EventEmitterOptions} options
    */
-  build(opts: ConfigurationOptions) {
+  constructor(options?: any) {
+    super(options);
+  }
+
+  /**
+   * Start build process
+   * @param {ConfigurationOptions} opts
+   * @param {any=} fs
+   */
+  build(opts: ConfigurationOptions, fs?: any) {
     const buildConfiguration = this.getConfiguration(
         Object.assign<
           ConfigurationOptions,
@@ -24,16 +34,22 @@ export class BuilderBase extends EventEmitter {
           cwd: null,
         }, opts)
     );
+    console.log(buildConfiguration);
     if (!buildConfiguration) {
       throw new Error(
           'webpack configuration should not be null'
       );
     }
     this.compiler = webpack(buildConfiguration);
+    // if (fs) {
+    //   this.compiler.inputFileSystem = fs;
+    //   this.compiler.outputFileSystem = fs;
+    //   this.compiler.watchFileSystem = fs;
+    // }
     if (opts.mode === 'development') {
-      this.compiler.watch({}, this.watchHandler);
+      this.compiler.watch({}, this.watchHandler.bind(this));
     } else if (opts.mode === 'production') {
-      this.compiler.compile(this.handler);
+      this.compiler.compile(this.handler.bind(this));
     }
   }
 
@@ -56,29 +72,6 @@ export class BuilderBase extends EventEmitter {
    */
   getConfiguration(opts: ConfigurationOptions): Configuration {
     return null;
-  }
-
-  /**
-   * @param {ConfigurationOptions} opts
-   * @return {Configuration}
-   */
-  getFullyQualifiedConfiguration(opts: ConfigurationOptions): Configuration {
-    return Object.assign<
-      Configuration,
-      Configuration,
-      Configuration
-    >({}, this.getBaseConfiguration(opts), this.getConfiguration(opts));
-  }
-
-  /**
-   * Gets base configuration
-   * @param {ConfigurationOptions} opts
-   * @return {Configuration}
-   */
-  private getBaseConfiguration(opts: ConfigurationOptions): Configuration {
-    return {
-
-    };
   }
 
   /**
