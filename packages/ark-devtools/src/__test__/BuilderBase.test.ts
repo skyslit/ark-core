@@ -1,6 +1,6 @@
 /* eslint-disable require-jsdoc */
 import {Compilation, Configuration} from 'webpack';
-import {BuilderBase, ConfigurationOptions} from './BuilderBase';
+import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
 import path from 'path';
 import memfs from 'memfs';
 import {Union} from 'unionfs';
