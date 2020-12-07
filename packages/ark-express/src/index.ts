@@ -1,4 +1,4 @@
-import {createPointer} from '@skyslit/ark-package';
+import {createPointer} from '@skyslit/ark-core';
 import expressApp from 'express';
 import {
   SchemaDefinition,

@@ -1,4 +1,4 @@
-import {ApplicationContext} from '@skyslit/ark-package';
+import {ApplicationContext} from '@skyslit/ark-core';
 import {Express, Data} from '../index';
 import {Connection} from 'mongoose';
 import supertest from 'supertest';

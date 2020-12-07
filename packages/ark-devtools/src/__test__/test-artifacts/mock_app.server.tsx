@@ -1,1 +1,1 @@
-console.log('Server program');
+import {} from '@skyslit/ark-core';
