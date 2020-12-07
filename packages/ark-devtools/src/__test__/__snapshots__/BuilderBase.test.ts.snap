@@ -1,3 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`build stage: production success operation 1`] = `"console.log(\\"Server program\\");"`;

@@ -1,4 +1,5 @@
-import {Configuration} from 'webpack';
+import {Configuration, IgnorePlugin} from 'webpack';
+import nodeExternals from 'webpack-node-externals';
 import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
 import path from 'path';
 
@@ -27,8 +28,6 @@ export class ExpressBuilder extends BuilderBase {
           '.json',
           '.ts',
           '.tsx',
-          '.css',
-          '.scss',
         ],
       },
       entry: this.entryFilePath,
@@ -36,6 +35,13 @@ export class ExpressBuilder extends BuilderBase {
         filename: 'main.js',
         path: path.resolve(cwd, 'build', 'server'),
       },
+      target: 'node',
+      externals: [nodeExternals()],
+      plugins: [
+        new IgnorePlugin({
+          resourceRegExp: /s?css/gm,
+        }),
+      ],
       module: {
         rules: [
           {
@@ -45,6 +51,9 @@ export class ExpressBuilder extends BuilderBase {
                 loader: path.resolve(
                     __dirname, '../../node_modules', 'babel-loader'
                 ),
+                options: {
+                  compact: false,
+                },
               },
             ],
           },

@@ -6,26 +6,15 @@ import memfs from 'memfs';
 import {Union} from 'unionfs';
 import * as fs from 'fs';
 
-const appServerFile = fs.readFileSync(
-    path.join(__dirname, './test-artifacts/mock_app.server.tsx'),
-    'utf8'
-);
-
 describe('express app builder', () => {
   const cwd: string = process.cwd();
-  const testRoot: string = 'src';
   let vol: any;
   let outputFileSystem: any;
   let inputFileSystem: any;
 
   beforeEach(() => {
     // Setup Output Filesystem
-    vol = memfs.Volume.fromJSON({
-      [`${testRoot}/app.server.ts`]: appServerFile,
-      [`${testRoot}/dashboard.client.ts`]:
-        `console.log('Dashboard client program');`,
-      [`${testRoot}/admin.client.ts`]: `console.log('Admin client program');`,
-    }, cwd);
+    vol = memfs.Volume.fromJSON({}, cwd);
     outputFileSystem = memfs.createFsFromVolume(vol);
 
     // Setup Input Filesystem
@@ -33,9 +22,9 @@ describe('express app builder', () => {
     inputFileSystem.use(fs).use(vol as any);
   });
 
-  test('success operation', (done) => {
+  test('successfull build', (done) => {
     const builderInstance = new ExpressBuilder(
-        path.join(cwd, testRoot, 'app.server.ts')
+        path.join(__dirname, './test-project/mock.server.tsx')
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {
