@@ -6,6 +6,11 @@ import memfs from 'memfs';
 import {Union} from 'unionfs';
 import * as fs from 'fs';
 
+const appServerFile = fs.readFileSync(
+    path.join(__dirname, './test-artifacts/mock_app.server.tsx'),
+    'utf8'
+);
+
 describe('express app builder', () => {
   const cwd: string = process.cwd();
   const testRoot: string = 'src';
@@ -16,7 +21,7 @@ describe('express app builder', () => {
   beforeEach(() => {
     // Setup Output Filesystem
     vol = memfs.Volume.fromJSON({
-      [`${testRoot}/app.server.ts`]: `console.log('Server program');`,
+      [`${testRoot}/app.server.ts`]: appServerFile,
       [`${testRoot}/dashboard.client.ts`]:
         `console.log('Dashboard client program');`,
       [`${testRoot}/admin.client.ts`]: `console.log('Admin client program');`,
@@ -30,7 +35,7 @@ describe('express app builder', () => {
 
   test('success operation', (done) => {
     const builderInstance = new ExpressBuilder(
-        path.join(cwd, testRoot, 'main.server.ts')
+        path.join(cwd, testRoot, 'app.server.ts')
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {
@@ -39,7 +44,6 @@ describe('express app builder', () => {
             'utf-8'
         );
         expect(buildOutput).toContain('Server program');
-        expect(buildOutput).toMatchSnapshot();
         done();
       } catch (e) {
         done(e);

@@ -6,6 +6,15 @@ import path from 'path';
  * Express Builder
  */
 export class ExpressBuilder extends BuilderBase {
+  private entryFilePath: string;
+  /**
+   * Creates a new express builder instance
+   * @param {string} entryFilePath
+   */
+  constructor(entryFilePath: string) {
+    super();
+    this.entryFilePath = entryFilePath;
+  }
   /**
    * @param {ConfigurationOptions} opts
    * @return {Configuration}
@@ -22,7 +31,7 @@ export class ExpressBuilder extends BuilderBase {
           '.scss',
         ],
       },
-      entry: './src/app.server.ts',
+      entry: this.entryFilePath,
       output: {
         filename: 'main.js',
         path: path.resolve(cwd, 'build', 'server'),
