@@ -39,7 +39,12 @@ export class ExpressBuilder extends BuilderBase {
       externals: [nodeExternals()],
       plugins: [
         new IgnorePlugin({
-          resourceRegExp: /s?css/gm,
+          // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4
+          checkResource: (res) => {
+            // eslint-disable-next-line no-unused-vars
+            const regex = /.(s?css|jpe?g|png|svg|gif|mp(3|4)|webp)/gmi;
+            return regex.test(res).valueOf() ? true : false;
+          },
         }),
       ],
       module: {

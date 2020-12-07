@@ -3,23 +3,17 @@ import {Compilation} from 'webpack';
 import {ExpressBuilder} from '../builders/ExpressBuilder';
 import path from 'path';
 import memfs from 'memfs';
-import {Union} from 'unionfs';
 import * as fs from 'fs';
 
 describe('express app builder', () => {
   const cwd: string = process.cwd();
   let vol: any;
   let outputFileSystem: any;
-  let inputFileSystem: any;
 
   beforeEach(() => {
     // Setup Output Filesystem
     vol = memfs.Volume.fromJSON({}, cwd);
     outputFileSystem = memfs.createFsFromVolume(vol);
-
-    // Setup Input Filesystem
-    inputFileSystem = new Union();
-    inputFileSystem.use(fs).use(vol as any);
   });
 
   test('successfull build', (done) => {
@@ -49,6 +43,6 @@ describe('express app builder', () => {
     builderInstance.build({
       mode: 'production',
       cwd: process.cwd(),
-    }, inputFileSystem, outputFileSystem);
+    }, fs, outputFileSystem);
   });
 });

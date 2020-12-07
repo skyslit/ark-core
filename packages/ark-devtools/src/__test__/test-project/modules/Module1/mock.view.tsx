@@ -1,4 +1,5 @@
 import React from 'react';
+import pngImage from './assets/cover-art.png';
 import './mock_style.scss';
 
 /**
@@ -7,6 +8,8 @@ import './mock_style.scss';
  */
 export function TestComponent(): JSX.Element {
   return (
-    <div></div>
+    <div>
+      <img src={pngImage} />
+    </div>
   );
 }
