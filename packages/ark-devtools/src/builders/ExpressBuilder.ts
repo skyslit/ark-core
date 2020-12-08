@@ -34,6 +34,7 @@ export class ExpressBuilder extends BuilderBase {
       output: {
         filename: 'main.js',
         path: path.resolve(cwd, 'build', 'server'),
+        assetModuleFilename: '../assets/[hash][ext][query]',
       },
       target: 'node',
       externals: [nodeExternals()],
@@ -42,7 +43,8 @@ export class ExpressBuilder extends BuilderBase {
           // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4
           checkResource: (res) => {
             // eslint-disable-next-line no-unused-vars
-            const regex = /.(s?css|jpe?g|png|svg|gif|mp(3|4)|webp)/gmi;
+            // const regex = /.(s?css|jpe?g|png|svg|gif|mp(3|4)|webp)/gmi;
+            const regex = /.(s?css)/gmi;
             return regex.test(res).valueOf() ? true : false;
           },
         }),
@@ -61,6 +63,10 @@ export class ExpressBuilder extends BuilderBase {
                 },
               },
             ],
+          },
+          {
+            test: /\.(png|svg|jpg|jpeg|gif)$/i,
+            type: 'asset/resource',
           },
         ],
       },

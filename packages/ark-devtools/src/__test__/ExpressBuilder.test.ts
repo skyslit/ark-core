@@ -14,6 +14,7 @@ describe('express app builder', () => {
     // Setup Output Filesystem
     vol = memfs.Volume.fromJSON({}, cwd);
     outputFileSystem = memfs.createFsFromVolume(vol);
+    outputFileSystem = fs;
   });
 
   test('successfull build', (done) => {
@@ -42,7 +43,7 @@ describe('express app builder', () => {
     });
     builderInstance.build({
       mode: 'production',
-      cwd: process.cwd(),
+      cwd: path.join(__dirname, './test-project'),
     }, fs, outputFileSystem);
   });
 });
