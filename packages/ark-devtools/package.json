@@ -25,11 +25,13 @@
     "express": "^4.17.1",
     "memfs": "^3.2.0",
     "mongoose": "^5.10.15",
-    "react": "^17.0.1"
+    "react": "^17.0.1",
+    "unionfs": "^4.4.0"
   },
   "dependencies": {
     "babel-loader": "^8.2.2",
     "chalk": "^4.1.0",
+    "html-webpack-plugin": "^5.0.0-alpha.3",
     "log-update": "^4.0.0",
     "webpack": "^5.10.0",
     "webpack-node-externals": "^2.5.2"

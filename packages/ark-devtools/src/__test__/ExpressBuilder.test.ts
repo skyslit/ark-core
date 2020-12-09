@@ -19,7 +19,7 @@ describe('express app builder', () => {
 
   test('successfull build', (done) => {
     const builderInstance = new ExpressBuilder(
-        path.join(__dirname, './test-project/mock.server.tsx')
+        path.join(__dirname, './test-project/src/mock.server.tsx')
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {

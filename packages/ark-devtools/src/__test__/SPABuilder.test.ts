@@ -20,7 +20,7 @@ describe('SPA app builder', () => {
   test('successfull build', (done) => {
     const builderInstance = new SPABuilder(
         'admin',
-        path.join(__dirname, './test-project/admin.client.tsx')
+        path.join(__dirname, './test-project/src/admin.client.tsx')
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {

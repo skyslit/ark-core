@@ -1,6 +1,7 @@
 import {Configuration} from 'webpack';
 import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
 import path from 'path';
+import HTMLWebpackPlugin from 'html-webpack-plugin';
 
 /**
  * SPA Builder
@@ -44,6 +45,11 @@ export class SPABuilder extends BuilderBase {
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',
       },
+      plugins: [
+        new HTMLWebpackPlugin({
+          filename: `${this.appId}.html`,
+        }),
+      ],
       module: {
         rules: [
           {
