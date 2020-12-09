@@ -1,10 +1,13 @@
 import React from 'react';
 import {createContext} from '@skyslit/ark-core';
-import {TestComponent} from './modules/Module1/mock.view';
+// import {TestComponent} from './modules/Module1/mock.view';
 
-// TODO
+// // TODO
 const useRoute = (path: string, _: any) => _;
 
 export default createContext(() => {
-  useRoute('/', <TestComponent />);
+//   useRoute('/', <TestComponent />);
+  useRoute('', <div></div>);
 });
+
+console.log('hello');

@@ -1,20 +1,26 @@
-import {Configuration, IgnorePlugin} from 'webpack';
-import nodeExternals from 'webpack-node-externals';
+import {Configuration} from 'webpack';
 import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
 import path from 'path';
 
 /**
- * Express Builder
+ * SPA Builder
  */
-export class ExpressBuilder extends BuilderBase {
+export class SPABuilder extends BuilderBase {
   private entryFilePath: string;
+  private appId: string;
   /**
-   * Creates a new express builder instance
+   * Creates a new SPA builder instance
+   * @param {string} id
    * @param {string} entryFilePath
    */
-  constructor(entryFilePath: string) {
+  constructor(id: string, entryFilePath: string) {
     super();
+    this.appId = id;
     this.entryFilePath = entryFilePath;
+
+    if (!this.appId) {
+      throw new Error('App ID should not be null');
+    }
   }
   /**
    * @param {ConfigurationOptions} opts
@@ -34,23 +40,10 @@ export class ExpressBuilder extends BuilderBase {
       },
       entry: this.entryFilePath,
       output: {
-        filename: 'main.js',
-        path: path.resolve(cwd, 'build', 'server'),
-        assetModuleFilename: '../assets/[hash][ext][query]',
+        filename: `${this.appId}.js`,
+        path: path.resolve(cwd, 'build'),
+        assetModuleFilename: './assets/[hash][ext][query]',
       },
-      target: 'node',
-      externals: [nodeExternals()],
-      plugins: [
-        new IgnorePlugin({
-          // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4
-          checkResource: (res) => {
-            // eslint-disable-next-line no-unused-vars
-            // const regex = /.(s?css|jpe?g|png|svg|gif|mp(3|4)|webp)/gmi;
-            const regex = /.(s?css)/gmi;
-            return regex.test(res).valueOf() ? true : false;
-          },
-        }),
-      ],
       module: {
         rules: [
           {
@@ -60,9 +53,6 @@ export class ExpressBuilder extends BuilderBase {
                 loader: path.resolve(
                     __dirname, '../../node_modules', 'babel-loader'
                 ),
-                options: {
-                  compact: false,
-                },
               },
             ],
           },
