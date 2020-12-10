@@ -4,9 +4,12 @@ import {ExpressBuilder} from '../builders/ExpressBuilder';
 import path from 'path';
 import memfs from 'memfs';
 import * as fs from 'fs';
+import execa from 'execa';
+import createRequest from 'supertest';
 
 describe('express app builder', () => {
   const cwd: string = process.cwd();
+  const testProjectDir: string = path.join(__dirname, './test-project');
   let vol: any;
   let outputFileSystem: any;
 
@@ -43,7 +46,28 @@ describe('express app builder', () => {
     });
     builderInstance.build({
       mode: 'production',
-      cwd: path.join(__dirname, './test-project'),
+      cwd: testProjectDir,
     }, fs, outputFileSystem);
+  });
+
+  test('artifacts should run without error', (done) => {
+    const testProcess = execa('node', [
+      path.join(testProjectDir, 'build', 'server', 'main.js'),
+    ]);
+
+    testProcess.catch((e) => done(e));
+
+    setTimeout(() => {
+      const request = createRequest('http://localhost:3001');
+      request.get('/').then((res) => {
+        testProcess.kill();
+        expect(res.status).toBe(200);
+        done();
+      })
+          .catch((err) => {
+            testProcess.kill();
+            done(err);
+          });
+    }, 1000);
   });
 });

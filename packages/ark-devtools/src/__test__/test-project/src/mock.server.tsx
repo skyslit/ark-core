@@ -1,4 +1,4 @@
-import {createContext, runApp} from '@skyslit/ark-core';
+import {createContext, runApp, ApplicationContext} from '@skyslit/ark-core';
 import {Express} from '@skyslit/ark-express';
 import TestModule from './modules/Module1/mock.module';
 // Client application
@@ -24,3 +24,13 @@ const app = createContext(({use, useModule}) => {
 });
 
 runApp(app);
+
+process.on('SIGTERM', () => {
+  ApplicationContext.getInstance().deactivate()
+      .then(() => {
+        process.exit(0);
+      })
+      .catch(() => {
+        process.exit(1);
+      });
+});
