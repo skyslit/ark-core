@@ -48,6 +48,7 @@ export class SPABuilder extends BuilderBase {
       plugins: [
         new HTMLWebpackPlugin({
           filename: `${this.appId}.html`,
+          template: path.resolve(__dirname, './assets/index.template.html'),
         }),
       ],
       module: {

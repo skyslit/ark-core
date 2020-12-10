@@ -9,5 +9,3 @@ export default createContext(() => {
 //   useRoute('/', <TestComponent />);
   useRoute('', <div></div>);
 });
-
-console.log('hello');
