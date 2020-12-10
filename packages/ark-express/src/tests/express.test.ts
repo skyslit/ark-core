@@ -18,7 +18,7 @@ declare global {
     }
 }
 
-describe('app services', () => {
+describe('Express services', () => {
   test('useServer() fn', (done) => {
     const appContext = new ApplicationContext();
     appContext.activate(({use}) => {
@@ -55,7 +55,7 @@ describe('app services', () => {
   });
 });
 
-describe('database operations', () => {
+describe('Data services', () => {
   const mongod = new MongoMemoryServer();
   let testDbConnectionString: string = '';
 
