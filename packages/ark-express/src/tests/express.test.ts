@@ -163,3 +163,13 @@ describe('Data services', () => {
     await mongod.stop();
   });
 });
+
+describe('Frontend services', () => {
+  test('defineSPA()', () => {
+
+  });
+
+  test('serveSPA()', () => {
+
+  });
+});
