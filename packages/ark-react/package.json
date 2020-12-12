@@ -18,20 +18,30 @@
     "@babel/preset-react": "^7.12.7",
     "@babel/preset-typescript": "^7.12.1",
     "@skyslit/ark-core": "2.0.0",
+    "@testing-library/react": "^11.2.2",
     "@types/jest": "^26.0.15",
     "@types/react": "^17.0.0",
-    "@types/react-test-renderer": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@types/react-router-dom": "^5.1.6",
     "react": "^17.0.1",
-    "react-test-renderer": "^17.0.1"
+    "react-dom": "^17.0.1",
+    "react-helmet-async": "^1.0.7",
+    "react-router-dom": "^5.2.0"
   },
   "peerDependencies": {
     "@skyslit/ark-core": "2.0.0",
-    "react": "^17.0.1"
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-helmet-async": "^1.0.7",
+    "react-router-dom": "^5.2.0"
   },
   "jest": {
     "verbose": true,
     "modulePathIgnorePatterns": [
       "build"
     ]
+  },
+  "dependencies": {
+    "redux": "^4.0.5"
   }
 }
