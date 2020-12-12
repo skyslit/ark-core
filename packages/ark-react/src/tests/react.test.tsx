@@ -144,6 +144,49 @@ describe('functionality tests', () => {
         .catch(done);
   });
 
+  test('useLayout() should work seemlessly across multiple modules', (done) => {
+    const TestLayout = createComponent(({currentModuleId, children}) => {
+      return (
+        <div>
+          <h1>
+            {`Layout A ${currentModuleId}`}
+          </h1>
+          {children}
+        </div>
+      );
+    });
+
+    const TestView = createComponent(({currentModuleId}) => {
+      return (
+        <h1>
+          {`View A ${currentModuleId}`}
+        </h1>
+      );
+    });
+
+    const testModuleA = createModule(({use}) => {
+      const {mapRoute, useComponent} = use(Frontend);
+      const TestViewComponent = useComponent('test-view', TestView);
+
+      mapRoute('/', TestViewComponent, 'default/test-compo');
+    });
+
+    const testContext = createReactApp(({use, useModule}) => {
+      const {useLayout} = use(Frontend);
+      useLayout('test-compo', TestLayout);
+      useModule('modA', testModuleA);
+    });
+
+    makeApp('csr', testContext, ctx)
+        .then((App) => {
+          const {getByText} = render(<App />);
+          expect(getByText(/View/i).textContent).toBe('View A modA');
+          expect(getByText(/Layout/i).textContent).toBe('Layout A default');
+          done();
+        })
+        .catch(done);
+  });
+
   test('mapRoute() should work under BrowserRouter', (done) => {
     const TestComponentA = createComponent(() => {
       return (

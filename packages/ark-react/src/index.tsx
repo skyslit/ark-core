@@ -3,6 +3,7 @@ import {createStore, Store} from 'redux';
 import {
   ApplicationContext,
   ContextScope,
+  ControllerContext,
   createPointer,
 } from '@skyslit/ark-core';
 import {HelmetProvider} from 'react-helmet-async';
@@ -19,6 +20,7 @@ export type ComponentPropType = {
   use: <T extends (...args: any) => any>
     (creators: T) => ReturnType<T>
   currentModuleId: string
+  children?: any
 }
 
 export type ArkReactComponent<T> =
@@ -37,9 +39,12 @@ declare global {
         ],
         useComponent: <T>(refId: string, component?: ArkReactComponent<T>) =>
           React.FunctionComponent<T>,
+        useLayout: <T>(refId: string, component?: ArkReactComponent<T>) =>
+          React.FunctionComponent<T>,
         mapRoute: (
           path: string,
           component: React.ComponentClass | React.FunctionComponent,
+          layoutRefId?: string,
           opts?: RouteProps) => void,
       }
     }
@@ -89,7 +94,7 @@ const createReducer = (initialState = {}) => (
 };
 
 /**
- * Run react applicat
+ * Run react application
  * @param {RenderMode} mode
  * @param {ContextScope<any>} scope
  * @param {ApplicationContext} ctx
@@ -142,6 +147,65 @@ export function makeApp(
             )
         );
       });
+}
+
+/**
+ * Finds resource by reference ID
+ * @param {string} typeLabel
+ * @param {string} refId
+ * @param {string} moduleId
+ * @param {ApplicationContext} context
+ * @param {T} defValue
+ * @return {T} Returns matched object or throws error
+ */
+export function findResourceByRef<T>(
+    typeLabel: string,
+    refId: string,
+    moduleId: string,
+    context: ApplicationContext,
+    defValue?: T
+): T {
+  const ref = extractRef(refId, moduleId);
+  const components: any = context.getData(
+      ref.moduleName, typeLabel.toLowerCase(), {});
+
+  if (defValue) {
+    components[ref.refId] = defValue;
+    return components[ref.refId];
+  } else {
+    if (components[ref.refId]) {
+      return components[ref.refId];
+    } else {
+      // eslint-disable-next-line max-len
+      throw new Error(`${typeLabel} '${ref.refId}' is not found under module '${ref.moduleName}'`);
+    }
+  }
+}
+
+/**
+ * Converts Ark Component to Connected React Component
+ * @param {ArkReactComponent<any>} creator
+ * @param {string} refId
+ * @param {string} moduleId
+ * @param {ControllerContext<any>} controller
+ * @param {ApplicationContext} context
+ * @return {React.FunctionComponent} Returns connected react component
+ */
+export function arkToReactComponent(
+    creator: ArkReactComponent<any>,
+    refId: string,
+    moduleId: string,
+    controller: ControllerContext<any>,
+    context: ApplicationContext
+): React.FunctionComponent<any> {
+  if (!creator) {
+    throw new Error('creator is required');
+  }
+  const ref = extractRef(refId, moduleId);
+  return (props: any) => creator({...props, ...{
+    use: context.getPointers(ref.moduleName, controller).use,
+    currentModuleId: ref.moduleName,
+  }});
 }
 
 /**
@@ -198,29 +262,52 @@ createPointer<Ark.MERN.React>((moduleId, controller, context) => ({
       },
     ];
   },
-  useComponent: (refId, componentCreator = null): any => {
-    const ref = extractRef(refId, moduleId);
-    const components: any = context.getData(ref.moduleName, 'components', {});
-
-    if (componentCreator) {
-      components[ref.refId] = (props: any) => componentCreator({...props, ...{
-        use: context.getPointers(ref.moduleName, controller).use,
-        currentModuleId: ref.moduleName,
-      }});
-      return components[ref.refId];
-    } else {
-      if (components[ref.refId]) {
-        return components[ref.refId];
-      } else {
-        // eslint-disable-next-line max-len
-        throw new Error(`Component '${ref.refId}' is not found under module '${ref.moduleName}'`);
-      }
+  useComponent: (refId, componentCreator = null) => findResourceByRef(
+      'Component',
+      refId,
+      moduleId,
+      context,
+    componentCreator ? arkToReactComponent(
+        componentCreator,
+        refId,
+        moduleId,
+        controller,
+        context
+    ) : null
+  ),
+  useLayout: (refId, componentCreator = null) => findResourceByRef(
+      'Layout',
+      refId,
+      moduleId,
+      context,
+      componentCreator ? arkToReactComponent(
+          componentCreator,
+          refId,
+          moduleId,
+          controller,
+          context
+      ) : null
+  ),
+  mapRoute: (path, Component, layoutRefId = null, opts = {}) => {
+    let Layout: any = null;
+    if (layoutRefId) {
+      Layout = findResourceByRef(
+          'Layout',
+          layoutRefId,
+          moduleId,
+          context
+      );
     }
-  },
-  mapRoute: (path, component, opts = {}) => {
+
     const routes: any = context.getData(moduleId, 'routes', {});
     routes[path] = Object.assign<Partial<RouteProps>, RouteProps>({
-      component,
+      component: Layout ? (
+        (props: any) => (
+          <Layout {...props}>
+            <Component {...props}/>
+          </Layout>
+        )
+      ) : Component,
       path,
     }, opts);
   },
