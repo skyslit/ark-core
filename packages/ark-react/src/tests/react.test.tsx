@@ -2,7 +2,6 @@ import React from 'react';
 import {render, cleanup} from '@testing-library/react';
 import {
   ApplicationContext,
-  createContext,
   createModule,
 } from '@skyslit/ark-core';
 import {
@@ -12,20 +11,6 @@ import {
   makeApp,
   extractRef,
 } from '../index';
-
-type TestPropType = {
-  hello: string
-};
-const TestComponent = createComponent<TestPropType>((props) => {
-  const [sample, setSample] = React.useState('Click Action');
-  return (
-    <div className={props.hello}>
-      <button onClick={() =>
-        setSample('Click Action Result')}>Click Me!</button>
-      <span>{sample}</span>
-    </div>
-  );
-});
 
 describe('utils', () => {
   test('extractRef() should extract info from relative address', () => {
@@ -48,41 +33,12 @@ describe('utils', () => {
   });
 });
 
-describe('real-world usage', () => {
+describe('functionality tests', () => {
+  let ctx: ApplicationContext;
+
   afterEach(() => {
     cleanup();
   });
-
-  test('sample-test', (done) => {
-    const testModule = createContext(({use}) => {
-      const {useComponent} = use(Frontend);
-      const App = useComponent('test', TestComponent);
-
-      const {getByText} = render(<App hello="123" />);
-      getByText(/Click Me!/).click();
-      expect(getByText(/Click Action/i).textContent)
-          .toBe('Click Action Result');
-    });
-
-    const app = createReactApp(({useModule}) => {
-      useModule('test', testModule);
-    });
-
-    const ctx = new ApplicationContext();
-    ctx.activate(app)
-        .then(() => {
-          setTimeout(() => {
-            done();
-          }, 1000);
-        })
-        .catch((er) => {
-          done(er);
-        });
-  });
-});
-
-describe('functionality tests', () => {
-  let ctx: ApplicationContext;
 
   beforeEach(() => {
     ctx = new ApplicationContext();
@@ -188,7 +144,7 @@ describe('functionality tests', () => {
         .catch(done);
   });
 
-  test('mapRoute()', (done) => {
+  test('mapRoute() should work under BrowserRouter', (done) => {
     const TestComponentA = createComponent(() => {
       return (
         <h1>
