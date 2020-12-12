@@ -240,7 +240,7 @@ export class ApplicationContext implements Ark.IApplicationContext {
       return ApplicationContext.instance;
     }
 
-    private data: { [key: string]: any };
+    public data: { [key: string]: any };
     private pointers: Array<{ pid: string, creator: PointerCreator<any> }>;
     private rollupProcess: Sequel;
 
