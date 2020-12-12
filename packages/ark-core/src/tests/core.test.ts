@@ -30,11 +30,23 @@ describe('application context', () => {
     const noKeyResult = context.getData('test_module',
         'test_key2', 'no_match');
     const noIdResult = context.getData('test_module',
-        'test_key2', 'no_id_match');
+        'test_key3', 'no_id_match');
 
     expect(testKeyResult).toBe('test_value');
     expect(noKeyResult).toBe('no_match');
     expect(noIdResult).toBe('no_id_match');
+  });
+
+  test('getData() default should set value', () => {
+    const context = new ApplicationContext();
+
+    const ref1 = context.getData('test_module',
+        'test_key2', 'result1');
+    const ref2 = context.getData('test_module',
+        'test_key2', 'result2');
+
+    expect(ref1).toBe('result1');
+    expect(ref2).toBe('result1');
   });
 
   test('pointer registration and usage (with promise)', (done) => {

@@ -320,12 +320,17 @@ export class ApplicationContext implements Ark.IApplicationContext {
     getData<T>(id: string, _key: string, defaultVal?: T): T {
       const result:T = defaultVal || null;
 
+      if (!this.data[id]) {
+        this.data[id] = {};
+      }
+
       if (this.data[id]) {
         if (this.data[id][_key]) {
           return this.data[id][_key];
         }
       }
 
+      this.data[id][_key] = result;
       return result;
     }
 
