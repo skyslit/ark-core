@@ -282,4 +282,12 @@ describe('failover', () => {
     expect(error).not.toEqual(null);
     expect(output).toEqual([12]);
   });
+
+  test('useModule() should not accept slash / backslash', () => {
+    const context = new ApplicationContext();
+    context.activate(({useModule}) => {
+      const t = () => useModule('/test', () => {});
+      expect(t).toThrowError();
+    });
+  });
 });

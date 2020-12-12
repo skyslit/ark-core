@@ -264,6 +264,10 @@ export class ApplicationContext implements Ark.IApplicationContext {
               );
             },
             useModule: (id: string, fn: ContextScope<void>) => {
+              if (/\//.test(id)) {
+                // eslint-disable-next-line max-len
+                throw new Error(`illegal module id '${id}', only use alpha-numeric characters`);
+              }
               controller.run(() => this.activate(fn, id));
             },
             invoke: <T>(fn: ContextScope<T>,
