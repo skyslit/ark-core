@@ -18,6 +18,7 @@ export type RenderMode = 'ssr' | 'csr';
 export type ComponentPropType = {
   use: <T extends (...args: any) => any>
     (creators: T) => ReturnType<T>
+  currentModuleId: string
 }
 
 export type ArkReactComponent<T> =
@@ -30,16 +31,16 @@ declare global {
     namespace MERN {
       // eslint-disable-next-line no-unused-vars
       interface React {
+        useStore: <T>(refId: string, defaultVal?: T) => [
+          T,
+          (val: T) => void
+        ],
+        useComponent: <T>(refId: string, component?: ArkReactComponent<T>) =>
+          React.FunctionComponent<T>,
         mapRoute: (
           path: string,
           component: React.ComponentClass | React.FunctionComponent,
           opts?: RouteProps) => void,
-        useComponent: <T>(refId: string, component?: ArkReactComponent<T>) =>
-          React.FunctionComponent<T>,
-        useStore: <T>(refId: string, defaultVal?: T) => [
-          T,
-          (val: T) => void
-        ]
       }
     }
   }
@@ -166,36 +167,12 @@ export function createReactApp(fn: ContextScope<any>):
 export const Frontend =
 createPointer<Ark.MERN.React>((moduleId, controller, context) => ({
   init: () => {},
-  mapRoute: (path, component, opts = {}) => {
-    const routes: any = context.getData(moduleId, 'routes', {});
-    routes[path] = Object.assign<Partial<RouteProps>, RouteProps>({
-      component,
-      path,
-    }, opts);
-  },
-  useComponent: (refId, componentCreator = null): any => {
-    const ref = extractRef(refId, moduleId);
-    const components: any = context.getData(ref.moduleName, 'components', {});
-
-    if (componentCreator) {
-      components[ref.refId] = (props: any) => componentCreator({...props, ...{
-        use: context.getPointers(ref.moduleName, controller).use,
-      }});
-      return components[ref.refId];
-    } else {
-      if (components[ref.refId]) {
-        return components[ref.refId];
-      } else {
-        // eslint-disable-next-line max-len
-        throw new Error(`Component '${ref.refId}' is not found under module '${ref.moduleName}'`);
-      }
-    }
-  },
   useStore: (refId, defaultVal = null) => {
-    const fullyQualifiedRefId = `default/${refId}`;
+    const ref = extractRef(refId, moduleId);
+    const fullyQualifiedRefId = `${ref.moduleName}/${ref.refId}`;
     const store = context.getData<Store>('default', 'store');
     const [localStateVal, updateLocalStateVal] =
-      React.useState(defaultVal);
+      React.useState(store.getState()[fullyQualifiedRefId] || defaultVal);
 
     React.useEffect(() => {
       const unsubscribe = store.subscribe(() => {
@@ -220,5 +197,31 @@ createPointer<Ark.MERN.React>((moduleId, controller, context) => ({
         });
       },
     ];
+  },
+  useComponent: (refId, componentCreator = null): any => {
+    const ref = extractRef(refId, moduleId);
+    const components: any = context.getData(ref.moduleName, 'components', {});
+
+    if (componentCreator) {
+      components[ref.refId] = (props: any) => componentCreator({...props, ...{
+        use: context.getPointers(ref.moduleName, controller).use,
+        currentModuleId: ref.moduleName,
+      }});
+      return components[ref.refId];
+    } else {
+      if (components[ref.refId]) {
+        return components[ref.refId];
+      } else {
+        // eslint-disable-next-line max-len
+        throw new Error(`Component '${ref.refId}' is not found under module '${ref.moduleName}'`);
+      }
+    }
+  },
+  mapRoute: (path, component, opts = {}) => {
+    const routes: any = context.getData(moduleId, 'routes', {});
+    routes[path] = Object.assign<Partial<RouteProps>, RouteProps>({
+      component,
+      path,
+    }, opts);
   },
 }));

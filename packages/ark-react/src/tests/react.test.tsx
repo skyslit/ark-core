@@ -13,7 +13,6 @@ import {
   extractRef,
 } from '../index';
 
-// eslint-disable-next-line no-unused-vars
 type TestPropType = {
   hello: string
 };
@@ -28,21 +27,21 @@ const TestComponent = createComponent<TestPropType>((props) => {
   );
 });
 
-describe('extractRef()', () => {
-  test('should extract info from relative address', () => {
+describe('utils', () => {
+  test('extractRef() should extract info from relative address', () => {
     const data = extractRef('hello', 'default');
     expect(data.moduleName).toBe('default');
     expect(data.refId).toBe('hello');
   });
 
-  test('should extract info from absolute address', () => {
+  test('extractRef() should extract info from absolute address', () => {
     const data = extractRef('test/hello', 'default');
     expect(data.moduleName).toBe('test');
     expect(data.refId).toBe('hello');
   });
 
   // eslint-disable-next-line max-len
-  test('should extract info from absolute address (with multiple parts)', () => {
+  test('extractRef() should extract info from absolute address (with multiple parts)', () => {
     const data = extractRef('test/hello/sample', 'default');
     expect(data.moduleName).toBe('test');
     expect(data.refId).toBe('hello/sample');
@@ -57,7 +56,7 @@ describe('real-world usage', () => {
   test('sample-test', (done) => {
     const testModule = createContext(({use}) => {
       const {useComponent} = use(Frontend);
-      const App = useComponent('/test', TestComponent);
+      const App = useComponent('test', TestComponent);
 
       const {getByText} = render(<App hello="123" />);
       getByText(/Click Me!/).click();
@@ -66,7 +65,7 @@ describe('real-world usage', () => {
     });
 
     const app = createReactApp(({useModule}) => {
-      useModule('/test', testModule);
+      useModule('test', testModule);
     });
 
     const ctx = new ApplicationContext();
@@ -89,7 +88,7 @@ describe('functionality tests', () => {
     ctx = new ApplicationContext();
   });
 
-  test('useStore()', (done) => {
+  test('useStore() should work seemlessly across multiple modules', (done) => {
     const TestComponent = createComponent(({use}) => {
       const {useStore} = use(Frontend);
       const [data, updateData] = useStore('testData', 'Welcome');
@@ -105,7 +104,7 @@ describe('functionality tests', () => {
 
     const testModule = createModule(({use}) => {
       const {useComponent} = use(Frontend);
-      const TestComp = useComponent('/test-compo', TestComponent);
+      const TestComp = useComponent('test-compo', TestComponent);
       const {getByText, getByTestId} = render(<TestComp />);
       // Testing UI change
       expect(getByTestId('msgbox').textContent).toBe('Welcome');
@@ -113,12 +112,34 @@ describe('functionality tests', () => {
       expect(getByTestId('msgbox').textContent).toBe('Welcome Dameem');
       // Testing redux state
       expect(ctx.getData<any>('default', 'store')
-          .getState()['default/testData'])
+          .getState()['module1/testData'])
           .toBe('Welcome Dameem');
     });
 
+    const TestComponentB = createComponent(({use}) => {
+      const {useStore} = use(Frontend);
+      const [data, updateData] = useStore('module1/testData', 'Welcome 2');
+      return (
+        <div>
+          <p data-testid="msgbox2">{data}</p>
+          <button onClick={
+            () => updateData('Welcome 2 Again')
+          }>Say Hola</button>
+        </div>
+      );
+    });
+
+    const testModule2 = createModule(({use}) => {
+      const {useComponent} = use(Frontend);
+      const TestComp2 = useComponent('test-compo', TestComponentB);
+      const {getByTestId} = render(<TestComp2 />);
+      // Testing UI change
+      expect(getByTestId('msgbox2').textContent).toBe('Welcome Dameem');
+    });
+
     const testContext = createReactApp(({useModule}) => {
-      useModule('/test', testModule);
+      useModule('module1', testModule);
+      useModule('module2', testModule2);
     });
 
     makeApp('csr', testContext, ctx)
@@ -128,6 +149,44 @@ describe('functionality tests', () => {
         .catch(done);
   });
 
+  // eslint-disable-next-line max-len
+  test('useComponent() should work seemlessly across multiple modules', (done) => {
+    const TestComponentA = createComponent(({currentModuleId}) => {
+      return (
+        <h1>
+          {`Component A ${currentModuleId}`}
+        </h1>
+      );
+    });
+
+    const testModuleA = createModule(({use}) => {
+      const {useComponent} = use(Frontend);
+      useComponent('test-compo', TestComponentA);
+    });
+
+    const testModuleB = createModule(({use}) => {
+      const {useComponent} = use(Frontend);
+      let TestCompB: any = null;
+      const t = () => TestCompB = useComponent('test-compo');
+      expect(t).toThrowError();
+
+      TestCompB = useComponent('modA/test-compo');
+
+      const {getByText} = render(<TestCompB />);
+      expect(getByText(/Compo/i).textContent).toContain('modA');
+    });
+
+    const testContext = createReactApp(({useModule}) => {
+      useModule('modA', testModuleA);
+      useModule('modB', testModuleB);
+    });
+
+    makeApp('csr', testContext, ctx)
+        .then(() => {
+          done();
+        })
+        .catch(done);
+  });
 
   test('mapRoute()', (done) => {
     const TestComponentA = createComponent(() => {
