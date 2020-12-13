@@ -46,5 +46,5 @@ describe('SPA app builder', () => {
       mode: 'production',
       cwd: path.join(__dirname, './test-project'),
     }, fs, outputFileSystem);
-  });
+  }, 10 * 1000);
 });

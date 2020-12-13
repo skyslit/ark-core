@@ -6,6 +6,42 @@ import memfs from 'memfs';
 import {Union} from 'unionfs';
 import * as fs from 'fs';
 
+describe('builder utils', () => {
+  test('mapPeerDependencies() default behaviour', () => {
+    const builder = new BuilderBase();
+    const processCwd = process.cwd();
+    const result = builder.mapPeerDependencies([
+      'react-router-dom',
+      'react',
+    ]);
+    expect(result['react-router-dom']).toContain(processCwd);
+    expect(result['react']).toContain(processCwd);
+  });
+
+  test('mapPeerDependencies() custom cwd should map to process.cwd', () => {
+    const builder = new BuilderBase();
+    const processCwd = process.cwd();
+    const customCwd = path.resolve(__dirname, '../__test__/test-project');
+    const result = builder.mapPeerDependencies([
+      'react-router-dom',
+      'react',
+    ], customCwd);
+    expect(result['react-router-dom']).toContain(processCwd);
+    expect(result['react']).toContain(processCwd);
+  });
+
+  test('mapPeerDependencies() custom cwd should map to custom cwd', () => {
+    const builder = new BuilderBase();
+    const customCwd = path.resolve(__dirname, '../../../ark-react');
+    const result = builder.mapPeerDependencies([
+      'react-router-dom',
+      'react',
+    ], customCwd);
+    expect(result['react-router-dom']).toContain(customCwd);
+    expect(result['react']).toContain(customCwd);
+  });
+});
+
 describe('builder base configuration', () => {
   class SampleBuilder extends BuilderBase {
     getConfiguration({cwd, mode}: ConfigurationOptions): Configuration {

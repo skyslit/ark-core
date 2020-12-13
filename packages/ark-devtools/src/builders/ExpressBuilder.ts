@@ -31,6 +31,13 @@ export class ExpressBuilder extends BuilderBase {
           '.js',
           '.jsx',
         ],
+        alias: {
+          ...this.mapPeerDependencies([
+            'react',
+            'react-dom',
+            'react-router-dom',
+          ], cwd),
+        },
       },
       entry: this.entryFilePath,
       output: {

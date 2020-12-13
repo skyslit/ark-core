@@ -13,6 +13,7 @@ import {
   Route,
   RouteProps,
 } from 'react-router-dom';
+export {Link} from 'react-router-dom';
 
 export type RenderMode = 'ssr' | 'csr';
 

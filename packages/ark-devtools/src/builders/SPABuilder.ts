@@ -38,6 +38,13 @@ export class SPABuilder extends BuilderBase {
           '.js',
           '.jsx',
         ],
+        alias: {
+          ...this.mapPeerDependencies([
+            'react',
+            'react-dom',
+            'react-router-dom',
+          ], cwd),
+        },
       },
       entry: this.entryFilePath,
       output: {
@@ -60,6 +67,9 @@ export class SPABuilder extends BuilderBase {
                 loader: path.resolve(
                     __dirname, '../../node_modules', 'babel-loader'
                 ),
+                options: {
+                  compact: false,
+                },
               },
             ],
           },

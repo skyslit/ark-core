@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import webpack, {Configuration, Stats} from 'webpack';
 import {EventEmitter} from 'events';
 
@@ -77,6 +79,29 @@ export class BuilderBase extends EventEmitter {
    */
   getConfiguration(opts: ConfigurationOptions): Configuration {
     return null;
+  }
+
+  /**
+   * Create alias mapping with peer dependencies
+   * @param {string[]} dependencies
+   * @param {string=} cwd Defaults to process.cwd()
+   * @return {any}
+   */
+  mapPeerDependencies(dependencies: string[], cwd?: string): {
+    [key: string]: string
+  } {
+    return dependencies.reduce((acc, dependency) => {
+      cwd = cwd || process.cwd();
+      let peerNodeModulesPath = path.resolve(cwd, 'node_modules', dependency);
+      if (!fs.existsSync(peerNodeModulesPath)) {
+        cwd = process.cwd();
+        peerNodeModulesPath = path.resolve(cwd, 'node_modules', dependency);
+      }
+      return {
+        [dependency]: peerNodeModulesPath,
+        ...acc,
+      };
+    }, {});
   }
 
   /**
