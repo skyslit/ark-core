@@ -29,6 +29,7 @@ export class SPABuilder extends BuilderBase {
    */
   getConfiguration({cwd}: ConfigurationOptions): Configuration {
     return {
+      context: cwd,
       mode: 'development',
       resolve: {
         extensions: [

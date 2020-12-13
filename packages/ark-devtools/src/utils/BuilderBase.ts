@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import ejs from 'ejs';
 import webpack, {Configuration, Stats} from 'webpack';
 import {EventEmitter} from 'events';
 
@@ -102,6 +103,35 @@ export class BuilderBase extends EventEmitter {
         ...acc,
       };
     }, {});
+  }
+
+  /**
+   * Generate file from template / retreives optional file
+   * @param {string} cwd Current Working Directory
+   * @param {string} relativePath Relative path of the file from project root
+   * @param {string} ejsFilePath Template file path
+   * @param {object=} data (Optional) template render options
+   * @return {string} Optional file from project dir / template output
+   */
+  getOptionalFile(
+      cwd: string,
+      relativePath: string,
+      ejsFilePath: string,
+      data?: any
+  ): string {
+    const optionalFile: string = path.join(cwd, relativePath);
+    if (fs.existsSync(optionalFile)) {
+      // Output read file from projects dir
+      return fs.readFileSync(optionalFile, 'utf-8');
+    } else {
+      if (fs.existsSync(ejsFilePath)) {
+        // Read template file
+        const template = fs.readFileSync(ejsFilePath, 'utf-8');
+        return ejs.render(template, data);
+      }
+      // eslint-disable-next-line max-len
+      throw new Error('Failed to compile replacement file. This indicates an error with Ark Build System, you may create an issue for this on GitHub.');
+    }
   }
 
   /**

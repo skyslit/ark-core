@@ -40,6 +40,56 @@ describe('builder utils', () => {
     expect(result['react-router-dom']).toContain(customCwd);
     expect(result['react']).toContain(customCwd);
   });
+
+  test('getVirtualFile() should output existing file', () => {
+    const projectCwd = path.join(__dirname, './test-project');
+    const templatePath =
+      path.join(__dirname, './test-assets/virtual-optional-file.template.ejs');
+    const builder = new BuilderBase();
+    const data = builder.getOptionalFile(
+        projectCwd,
+        './src/optional.admin.client.tsx',
+        templatePath,
+        {
+          message: 'Hello John Doe',
+        }
+    );
+    expect(data).toContain(`console.log('Hello there');`);
+  });
+
+  test('getVirtualFile() should render template if file not exist', () => {
+    const projectCwd = path.join(__dirname, './test-project');
+    const templatePath =
+      path.join(__dirname, './test-assets/virtual-optional-file.template.ejs');
+    const builder = new BuilderBase();
+    const data = builder.getOptionalFile(
+        projectCwd,
+        './src/optional-missing.admin.client.tsx',
+        templatePath,
+        {
+          message: 'Hello John Doe',
+        }
+    );
+    expect(data).toContain(`console.log('Hello John Doe');`);
+  });
+
+  // eslint-disable-next-line max-len
+  test('getVirtualFile() should throw error if no template file is found', () => {
+    const projectCwd = path.join(__dirname, './test-project');
+    const templatePath =
+      // eslint-disable-next-line max-len
+      path.join(__dirname, './test-assets/virtual-optional-missing-file.template.ejs');
+    const builder = new BuilderBase();
+    const t = () => builder.getOptionalFile(
+        projectCwd,
+        './src/optional-missing.admin.client.tsx',
+        templatePath,
+        {
+          message: 'Hello John Doe',
+        }
+    );
+    expect(t).toThrowError();
+  });
 });
 
 describe('builder base configuration', () => {

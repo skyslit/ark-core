@@ -1,8 +1,8 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+// import ReactDOM from 'react-dom';
 import {Link} from 'react-router-dom';
 import {createContext, createModule} from '@skyslit/ark-core';
-import {createComponent, Frontend, makeApp} from '@skyslit/ark-react';
+import {createComponent, Frontend} from '@skyslit/ark-react';
 
 const layoutCreator = createComponent(({children}) => {
   return (
@@ -57,11 +57,11 @@ const _package = createContext(({useModule, use}) => {
 
 export default _package;
 
-makeApp('csr', _package)
-    .then((App) => {
-      ReactDOM.render(<App />,
-          document.getElementById('root'));
-    })
-    .catch((err) => {
-      console.error(err);
-    });
+// makeApp('csr', _package)
+//     .then((App) => {
+//       ReactDOM.render(<App />,
+//           document.getElementById('root'));
+//     })
+//     .catch((err) => {
+//       console.error(err);
+//     });
