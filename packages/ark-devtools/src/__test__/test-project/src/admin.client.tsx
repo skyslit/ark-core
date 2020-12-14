@@ -1,5 +1,4 @@
 import React from 'react';
-// import ReactDOM from 'react-dom';
 import {Link} from 'react-router-dom';
 import {createContext, createModule} from '@skyslit/ark-core';
 import {createComponent, Frontend} from '@skyslit/ark-react';

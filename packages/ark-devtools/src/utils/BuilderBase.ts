@@ -59,7 +59,7 @@ export class BuilderBase extends EventEmitter {
     }
 
     // Set ghost files
-    const volume = this.getGhostFiles().reduce((acc, ghostFile) => {
+    const volume = this.getGhostFiles(opts).reduce((acc, ghostFile) => {
       return {
         ...acc,
         ...ghostFile.provide(opts.cwd),
@@ -67,11 +67,12 @@ export class BuilderBase extends EventEmitter {
     }, {});
 
     if (Object.keys(volume).length > 0) {
-      this.compiler.inputFileSystem = ufs
+      const _ufs = ufs
           .use(memfs.createFsFromVolume(
-              memfs.Volume.fromJSON(volume)
+              memfs.Volume.fromJSON(volume, opts.cwd)
           ) as any)
           .use(this.compiler.inputFileSystem as any);
+      this.compiler.inputFileSystem = _ufs;
     }
 
     if (opts.mode === 'development') {
@@ -83,9 +84,10 @@ export class BuilderBase extends EventEmitter {
 
   /**
    * Gets input ghost files
+   * @param {ConfigurationOptions} opts
    * @return {GhostFileActions[]}
    */
-  getGhostFiles(): GhostFileActions[] {
+  getGhostFiles(opts: ConfigurationOptions): GhostFileActions[] {
     return [];
   }
 

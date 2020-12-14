@@ -2,26 +2,46 @@ import {Configuration} from 'webpack';
 import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
 import path from 'path';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
+import {GhostFileActions, createGhostFile} from '../utils/ghostFile';
 
 /**
  * SPA Builder
  */
 export class SPABuilder extends BuilderBase {
-  private entryFilePath: string;
+  private appFilePath: string;
   private appId: string;
   /**
    * Creates a new SPA builder instance
    * @param {string} id
-   * @param {string} entryFilePath
+   * @param {string} appFilePath
    */
-  constructor(id: string, entryFilePath: string) {
+  constructor(id: string, appFilePath: string) {
     super();
     this.appId = id;
-    this.entryFilePath = entryFilePath;
+    this.appFilePath = appFilePath;
 
     if (!this.appId) {
       throw new Error('App ID should not be null');
     }
+  }
+  /**
+   * Get Ghost Files
+   * @param {ConfigurationOptions} opts
+   * @return {GhostFileActions[]}
+   */
+  getGhostFiles(opts: ConfigurationOptions): GhostFileActions[] {
+    return [
+      createGhostFile(
+          path.join(__dirname, './assets/SPA/root.tsx.ejs'),
+          'src/index.tsx',
+          {
+            relativeAppFilePath: path.relative(
+                path.join(opts.cwd, 'src'),
+                path.join(this.appFilePath)
+            ),
+          }
+      ),
+    ];
   }
   /**
    * @param {ConfigurationOptions} opts
@@ -47,7 +67,7 @@ export class SPABuilder extends BuilderBase {
           ], cwd),
         },
       },
-      entry: this.entryFilePath,
+      entry: path.join(cwd, 'src', 'index.tsx'),
       output: {
         filename: `${this.appId}.js`,
         path: path.resolve(cwd, 'build'),
