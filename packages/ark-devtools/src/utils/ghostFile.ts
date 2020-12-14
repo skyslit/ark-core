@@ -2,14 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import ejs from 'ejs';
 
-type GhostFileActions = {
+export type GhostFileActions = {
   eject: (
-    contextPath: string,
-    relPath: string,
+    contextPath: string
   ) => void,
   provide: (
-    contextPath: string,
-    relPath: string,
+    contextPath: string
   ) => {[key: string]: string},
 }
 
@@ -25,17 +23,18 @@ function readTemplate(templatePath: string): string {
 /**
  * Creates Ghost file
  * @param {string} templatePath
+ * @param {string} relPath
  * @param {any=} data
  * @return {GhostFileActions}
  */
 export function createGhostFile(
     templatePath: string,
+    relPath: string,
     data?: any
 ): GhostFileActions {
   return {
     eject: (
-        contextPath: string,
-        relPath: string,
+        contextPath: string
     ) => {
       const output = ejs.render(readTemplate(templatePath), data);
       const targetDirPath = path.dirname(path.join(contextPath, relPath));
@@ -51,7 +50,6 @@ export function createGhostFile(
     },
     provide: (
         contextPath: string,
-        relPath: string,
     ) => {
       // Check if file already exists
       const targetFilePath = path.join(contextPath, relPath);

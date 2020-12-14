@@ -3,6 +3,9 @@ import path from 'path';
 import ejs from 'ejs';
 import webpack, {Configuration, Stats} from 'webpack';
 import {EventEmitter} from 'events';
+import {GhostFileActions} from './ghostFile';
+import memfs from 'memfs';
+import {ufs} from 'unionfs';
 
 type Mode = 'development' | 'production';
 export type ConfigurationOptions = {
@@ -54,11 +57,36 @@ export class BuilderBase extends EventEmitter {
     if (wfs) {
       this.compiler.watchFileSystem = wfs;
     }
+
+    // Set ghost files
+    const volume = this.getGhostFiles().reduce((acc, ghostFile) => {
+      return {
+        ...acc,
+        ...ghostFile.provide(opts.cwd),
+      };
+    }, {});
+
+    if (Object.keys(volume).length > 0) {
+      this.compiler.inputFileSystem = ufs
+          .use(memfs.createFsFromVolume(
+              memfs.Volume.fromJSON(volume)
+          ) as any)
+          .use(this.compiler.inputFileSystem as any);
+    }
+
     if (opts.mode === 'development') {
       this.compiler.watch({}, this.handler.bind(this));
     } else if (opts.mode === 'production') {
       this.compiler.run(this.handler.bind(this));
     }
+  }
+
+  /**
+   * Gets input ghost files
+   * @return {GhostFileActions[]}
+   */
+  getGhostFiles(): GhostFileActions[] {
+    return [];
   }
 
   /**

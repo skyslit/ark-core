@@ -14,11 +14,12 @@ describe('ghostFile', () => {
   test('should eject rendered file', () => {
     const {eject} = createGhostFile(
         '/test.template.ejs',
+        'src/index.js',
         {
           message: 'This is rendered from template',
         }
     );
-    eject('/', 'src/index.js');
+    eject('/');
     const ejectedFileOutput = fs.readFileSync('/src/index.js', 'utf-8');
     expect(ejectedFileOutput)
         .toBe(`console.log('This is rendered from template');`);
@@ -27,13 +28,13 @@ describe('ghostFile', () => {
   test('should provide rendered file to virtual volume', () => {
     const {provide} = createGhostFile(
         '/test.template.ejs',
+        'src/new.index.js',
         {
           message: 'This is provided from template',
         }
     );
     const volSnapshot = provide(
-        '/',
-        'src/new.index.js'
+        '/'
     );
     expect(
         volSnapshot['src/new.index.js']
@@ -43,13 +44,13 @@ describe('ghostFile', () => {
   test('should not provide rendered file to virtual volume', () => {
     const {provide} = createGhostFile(
         '/test.template.ejs',
+        'src/index.js',
         {
           message: 'This is provided from template',
         }
     );
     const volSnapshot = provide(
-        '/',
-        'src/index.js'
+        '/'
     );
     expect(
         Object.keys(volSnapshot)
