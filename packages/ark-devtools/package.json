@@ -19,7 +19,7 @@
     "@babel/preset-typescript": "^7.12.1",
     "@skyslit/ark-core": "2.0.0",
     "@skyslit/ark-backend": "2.0.0",
-    "@skyslit/ark-react": "2.0.0",
+    "@skyslit/ark-frontend": "2.0.0",
     "@types/ejs": "^3.0.5",
     "@types/jest": "^26.0.15",
     "@types/react": "^17.0.0",

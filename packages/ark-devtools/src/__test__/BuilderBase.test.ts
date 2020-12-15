@@ -32,7 +32,7 @@ describe('builder utils', () => {
 
   test('mapPeerDependencies() custom cwd should map to custom cwd', () => {
     const builder = new BuilderBase();
-    const customCwd = path.resolve(__dirname, '../../../ark-react');
+    const customCwd = path.resolve(__dirname, '../../../ark-frontend');
     const result = builder.mapPeerDependencies([
       'react-router-dom',
       'react',

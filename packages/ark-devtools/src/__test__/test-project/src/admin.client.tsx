@@ -1,7 +1,7 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
 import {createContext, createModule} from '@skyslit/ark-core';
-import {createComponent, Frontend} from '@skyslit/ark-react';
+import {createComponent, Frontend} from '@skyslit/ark-frontend';
 
 const layoutCreator = createComponent(({children}) => {
   return (
