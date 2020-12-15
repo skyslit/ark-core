@@ -107,7 +107,7 @@ export const Data = createPointer<Partial<Ark.MERN.Data>>((
       context.setData(moduleId, dbId, connection);
 
       connection.on('open', () => {
-        resolve();
+        resolve(null);
       });
 
       connection.on('error', (err) => {
