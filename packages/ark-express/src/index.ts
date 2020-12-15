@@ -1,4 +1,4 @@
-import {createPointer} from '@skyslit/ark-core';
+import {ContextScope, createPointer} from '@skyslit/ark-core';
 import expressApp from 'express';
 import {
   SchemaDefinition,
@@ -34,6 +34,12 @@ declare global {
                     handlers: expressApp.RequestHandler |
                         Array<expressApp.RequestHandler>) =>
                             expressApp.Application,
+                useWebApp: (
+                  appId: string,
+                  ctx?: ContextScope<any>,
+                ) => {
+                  render: (initialState?: any) => void,
+                },
             }
             // eslint-disable-next-line no-unused-vars
             interface Data {
@@ -54,11 +60,6 @@ declare global {
             type PackageDatabases = {
                 default: Connection
             } & Databases
-            // eslint-disable-next-line no-unused-vars
-            interface Frontend {
-              defineSPA: (spaId: string, app: any) => void,
-              serveSPA: (spaId: string, initialState: any) => void
-            }
         }
     }
 }
@@ -195,9 +196,4 @@ export const Express = createPointer<Partial<Ark.MERN.Express>>((
         moduleId, 'express'
     )[method](path, handlers);
   },
-}));
-
-// TODO: Frontend pointer functions, to continue after creating frontend library
-export const Frontend = createPointer<Partial<Ark.MERN.Frontend>>(() => ({
-
 }));
