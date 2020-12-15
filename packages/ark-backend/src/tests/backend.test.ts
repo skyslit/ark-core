@@ -1,28 +1,25 @@
 import {ApplicationContext} from '@skyslit/ark-core';
-import {Express, Data} from '../index';
+import {Backend, Data} from '../index';
 import {Connection} from 'mongoose';
 import supertest from 'supertest';
 import * as http from 'http';
 import {MongoMemoryServer} from 'mongodb-memory-server';
 
 declare global {
+  // eslint-disable-next-line no-unused-vars
+  namespace Ark {
     // eslint-disable-next-line no-unused-vars
-    namespace Ark {
-        // eslint-disable-next-line no-unused-vars
-        namespace MERN {
-            // eslint-disable-next-line no-unused-vars
-            interface Databases {
-                testDb: Connection
-            }
-        }
+    interface Databases {
+      testDb: Connection
     }
+  }
 }
 
-describe('Express services', () => {
+describe('Backend services', () => {
   test('useServer() fn', (done) => {
     const appContext = new ApplicationContext();
     appContext.activate(({use}) => {
-      const {useServer} = use(Express);
+      const {useServer} = use(Backend);
       useServer();
     })
         .catch(done)
@@ -38,7 +35,7 @@ describe('Express services', () => {
   test('useRoute() fn', (done) => {
     const appContext = new ApplicationContext();
     appContext.activate(({use, run}) => {
-      const {useRoute} = use(Express);
+      const {useRoute} = use(Backend);
       run(() => {
         useRoute('get', '/', (req, res, next) => {
           res.send('hello');

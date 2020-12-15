@@ -1,5 +1,5 @@
 import {createContext, runApp, ApplicationContext} from '@skyslit/ark-core';
-import {Express} from '@skyslit/ark-backend';
+import {Backend} from '@skyslit/ark-backend';
 import TestModule from './modules/Module1/mock.module';
 // Client application
 import AdminClientApp from './admin.client';
@@ -8,7 +8,7 @@ import AdminClientApp from './admin.client';
 const registerSPA = (id: string, _: any) => _;
 
 const app = createContext(({use, useModule}) => {
-  const {useServer, useRoute} = use(Express);
+  const {useServer, useRoute} = use(Backend);
 
   registerSPA('admin', AdminClientApp);
 

@@ -24,43 +24,40 @@ type ServerOpts = {
 declare global {
     // eslint-disable-next-line no-unused-vars
     namespace Ark {
-        // eslint-disable-next-line no-unused-vars
-        namespace MERN {
-            // eslint-disable-next-line no-unused-vars
-            interface Express {
-                useServer: (opts?: ServerOpts) => void,
-                useApp: () => expressApp.Application,
-                useRoute: (method: HttpVerbs, path: string,
-                    handlers: expressApp.RequestHandler |
-                        Array<expressApp.RequestHandler>) =>
-                            expressApp.Application,
-                useWebApp: (
-                  appId: string,
-                  ctx?: ContextScope<any>,
-                ) => {
-                  render: (initialState?: any) => void,
-                },
-            }
-            // eslint-disable-next-line no-unused-vars
-            interface Data {
-                useDatabase: (
-                    name: keyof Ark.MERN.PackageDatabases,
-                    connectionString: string,
-                    opts?: ConnectionOptions
-                ) => void,
-                useModel: <T>(
-                    name: string,
-                    schema?: SchemaDefinition | (() => Schema),
-                    dbName?: keyof Ark.MERN.PackageDatabases
-                ) => Model<T & Document>
-            }
-            // eslint-disable-next-line no-unused-vars
-            interface Databases {}
-            // eslint-disable-next-line no-unused-vars
-            type PackageDatabases = {
-                default: Connection
-            } & Databases
-        }
+      // eslint-disable-next-line no-unused-vars
+      interface Backend {
+        useServer: (opts?: ServerOpts) => void,
+        useApp: () => expressApp.Application,
+        useRoute: (method: HttpVerbs, path: string,
+          handlers: expressApp.RequestHandler |
+            Array<expressApp.RequestHandler>) =>
+          expressApp.Application,
+        useWebApp: (
+          appId: string,
+          ctx?: ContextScope<any>,
+        ) => {
+          render: (initialState?: any) => void,
+        },
+      }
+      // eslint-disable-next-line no-unused-vars
+      interface Data {
+        useDatabase: (
+          name: keyof Ark.PackageDatabases,
+          connectionString: string,
+          opts?: ConnectionOptions
+        ) => void,
+        useModel: <T>(
+          name: string,
+          schema?: SchemaDefinition | (() => Schema),
+          dbName?: keyof Ark.PackageDatabases
+        ) => Model<T & Document>
+      }
+      // eslint-disable-next-line no-unused-vars
+      interface Databases { }
+      // eslint-disable-next-line no-unused-vars
+      type PackageDatabases = {
+        default: Connection
+      } & Databases
     }
 }
 
@@ -74,11 +71,11 @@ function getModelName(modId: string, name: string): string {
   return `${modId}_${name}`;
 }
 
-export const Data = createPointer<Partial<Ark.MERN.Data>>((
+export const Data = createPointer<Partial<Ark.Data>>((
     moduleId, controller, context
 ) => ({
   useDatabase: (
-      name: keyof Ark.MERN.PackageDatabases,
+      name: keyof Ark.PackageDatabases,
       connectionString: string,
       opts?: ConnectionOptions
   ) => {
@@ -119,7 +116,7 @@ export const Data = createPointer<Partial<Ark.MERN.Data>>((
   },
   useModel: <T>(name: string,
     schema?: SchemaDefinition | (() => Schema),
-    dbName: keyof Ark.MERN.PackageDatabases = 'default') => {
+    dbName: keyof Ark.PackageDatabases = 'default') => {
     const modelName = getModelName(moduleId, name);
     let registeredModel: Model<T & Document> = null;
 
@@ -157,7 +154,7 @@ export const Data = createPointer<Partial<Ark.MERN.Data>>((
   },
 }));
 
-export const Express = createPointer<Partial<Ark.MERN.Express>>((
+export const Backend = createPointer<Partial<Ark.Backend>>((
     moduleId, controller, context
 ) => ({
   init: () => {
