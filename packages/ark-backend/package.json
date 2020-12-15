@@ -29,13 +29,6 @@
     "express": "^4.17.1",
     "mongoose": "^5.10.15"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "verbose": true,
-    "modulePathIgnorePatterns": [
-      "build"
-    ]
-  },
   "dependencies": {
     "@skyslit/ark-core": "^2.0.0"
   }
