@@ -32,7 +32,7 @@ export class SPABuilder extends BuilderBase {
   getGhostFiles(opts: ConfigurationOptions): GhostFileActions[] {
     return [
       createGhostFile(
-          path.join(__dirname, './assets/SPA/root.tsx.ejs'),
+          path.join(__dirname, './assets/Frontend/root.tsx.ejs'),
           'src/index.tsx',
           {
             relativeAppFilePath: path.relative(

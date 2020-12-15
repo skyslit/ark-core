@@ -1,13 +1,13 @@
 /* eslint-disable require-jsdoc */
 import {Compilation} from 'webpack';
-import {ExpressBuilder} from '../builders/ExpressBuilder';
+import {BackendBuilder} from '../builders/BackendBuilder';
 import path from 'path';
 import memfs from 'memfs';
 import * as fs from 'fs';
 import execa from 'execa';
 import createRequest from 'supertest';
 
-describe('express app builder', () => {
+describe('backend builder', () => {
   const cwd: string = process.cwd();
   const testProjectDir: string = path.join(__dirname, './test-project');
   let vol: any;
@@ -21,7 +21,7 @@ describe('express app builder', () => {
   });
 
   test('successfull build', (done) => {
-    const builderInstance = new ExpressBuilder(
+    const builderInstance = new BackendBuilder(
         path.join(__dirname, './test-project/src/mock.server.tsx')
     );
     builderInstance.on('success', (compilation: Compilation) => {

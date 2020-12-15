@@ -1,6 +1,6 @@
 /* eslint-disable require-jsdoc */
 import {Compilation} from 'webpack';
-import {SPABuilder} from '../builders/SPABuilder';
+import {SPABuilder} from '../builders/FrontendBuilder';
 import path from 'path';
 import memfs from 'memfs';
 import * as fs from 'fs';

@@ -4,12 +4,12 @@ import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
 import path from 'path';
 
 /**
- * Express Builder
+ * Backend Builder
  */
-export class ExpressBuilder extends BuilderBase {
+export class BackendBuilder extends BuilderBase {
   private entryFilePath: string;
   /**
-   * Creates a new express builder instance
+   * Creates a new backend builder instance
    * @param {string} entryFilePath
    */
   constructor(entryFilePath: string) {
