@@ -9,29 +9,7 @@ import {
   Frontend,
   createComponent,
   makeApp,
-  extractRef,
 } from '../index';
-
-describe('utils', () => {
-  test('extractRef() should extract info from relative address', () => {
-    const data = extractRef('hello', 'default');
-    expect(data.moduleName).toBe('default');
-    expect(data.refId).toBe('hello');
-  });
-
-  test('extractRef() should extract info from absolute address', () => {
-    const data = extractRef('test/hello', 'default');
-    expect(data.moduleName).toBe('test');
-    expect(data.refId).toBe('hello');
-  });
-
-  // eslint-disable-next-line max-len
-  test('extractRef() should extract info from absolute address (with multiple parts)', () => {
-    const data = extractRef('test/hello/sample', 'default');
-    expect(data.moduleName).toBe('test');
-    expect(data.refId).toBe('hello/sample');
-  });
-});
 
 describe('functionality tests', () => {
   let ctx: ApplicationContext;
