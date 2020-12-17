@@ -24,7 +24,24 @@ interface CorePointers {
     setData: <T>(id: string, val: T) => T,
     existData: (id: string) => boolean,
     run: (fn: Activator) => void,
-    runOn: (moduleId: string, fn: ContextScope<any>) => void
+    runOn: (moduleId: string, fn: ContextScope<any>) => void,
+    put: <T>(
+      refId: string,
+      val?: T,
+      overrite?: boolean,
+      groupId?: string,
+    ) => T,
+    take: <T>(
+      moduleId: string,
+      refId: string,
+      groupId?: string,
+    ) => T,
+    useDataFromContext: <T>(
+      refId: string,
+      val?: T,
+      overrite?: boolean,
+      groupId?: string,
+    ) => T
 }
 
 declare global {
@@ -224,6 +241,42 @@ export class ControllerContext<T> {
   }
 }
 
+type RefInfo = {moduleName: string, refId: string};
+/**
+ * Extracts reference information
+ * @param {string} refId
+ * @param {string=} moduleName
+ * @param {string=} groupId
+ * @return {RefInfo}
+ */
+export function extractRef(
+    refId: string,
+    moduleName: string,
+    groupId: string = null
+): RefInfo {
+  const info: RefInfo = {
+    moduleName,
+    refId,
+  };
+
+  if (refId.includes('/')) {
+    info.refId = refId.substring(
+        refId.indexOf('/') + 1,
+        refId.length
+    );
+    info.moduleName = refId.substring(
+        0,
+        refId.indexOf('/')
+    );
+  }
+
+  if (groupId) {
+    info.refId = `${groupId}_${info.refId}`;
+  }
+
+  return info;
+}
+
 /**
  * This class enables the transaction of Application State
  */
@@ -281,6 +334,22 @@ export class ApplicationContext implements Ark.IApplicationContext {
             getData: (id, def) => ctx.getData(moduleId, id, def),
             setData: (id, v) => ctx.setData(moduleId, id, v),
             existData: (id) => ctx.existData(moduleId, id),
+            put: (refId, val, overrite, groupId) => ctx.put(
+                moduleId, refId, val, overrite, groupId
+            ),
+            take: (refId, groupId) => ctx.take(moduleId, refId, groupId),
+            useDataFromContext: (
+                refId,
+                val?,
+                overrite?,
+                groupId?,
+            ) => ctx.useDataFromContext(
+                moduleId,
+                refId,
+                val,
+                overrite,
+                groupId,
+            ),
           }));
     }
 
@@ -336,6 +405,71 @@ export class ApplicationContext implements Ark.IApplicationContext {
 
       this.data[id][_key] = result;
       return result;
+    }
+
+    /**
+     * Put anything in context
+     * @param {string} moduleId Module ID
+     * @param {string} refId Address of the item e.g. {moduleId?}/{itemKey}
+     * @param {T} val Item to put
+     * @param {boolean=} overrite On False,
+     * @param {string=} groupId Group ID e.g. components or services
+     * it will throw error if item already exists
+     * @return {T} Returns set value
+     */
+    put<T = any>(
+        moduleId: string,
+        refId: string,
+        val: T,
+        overrite: boolean = false,
+        groupId: string = null): T {
+      const ref = extractRef(refId, moduleId, groupId);
+      if (!overrite) {
+        if (this.getData(ref.moduleName, ref.refId)) {
+          throw new Error(`'${ref.refId}' already exists on ${ref.moduleName}`);
+        }
+      }
+      return this.setData(ref.moduleName, ref.refId, val);
+    }
+
+    /**
+     * Take anything from context
+     * @param {string} moduleId Module ID
+     * @param {string} refId Address of the item e.g. {moduleId?}/{itemKey}
+     * @param {string=} groupId Group ID e.g. components or services
+     * @return {T}
+     */
+    take<T>(
+        moduleId: string,
+        refId: string,
+        groupId: string = null
+    ): T {
+      const ref = extractRef(refId, moduleId, groupId);
+      return this.getData(ref.moduleName, ref.refId);
+    }
+
+    /**
+     * Generic useData() fn
+     * @param {string} moduleId Module ID
+     * @param {string} refId Address of the item e.g. {moduleId?}/{itemKey}
+     * to get
+     * @param {T=} val (Optional) Item to put
+     * @param {boolean=} overrite (Optional) On False,
+     * @param {string=} groupId Group ID e.g. components or services
+     * it will throw error if item already exists
+     * @return {T}
+     */
+    useDataFromContext<T>(
+        moduleId: string,
+        refId: string,
+        val: T = undefined,
+        overrite: boolean = false,
+        groupId: string = null
+    ): T {
+      if (val !== undefined) {
+        return this.put(moduleId, refId, val, overrite, groupId);
+      }
+      return this.take(moduleId, refId, groupId);
     }
 
     /**

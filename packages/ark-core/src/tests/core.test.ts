@@ -5,6 +5,7 @@ import {
   createContext,
   createController,
   createPointer,
+  extractRef,
 } from '..';
 
 interface TestDataPointerType {
@@ -290,4 +291,101 @@ describe('failover', () => {
       expect(t).toThrowError();
     });
   });
+});
+
+describe('utils', () => {
+  test('extractRef() should extract info from relative address', () => {
+    const data = extractRef('hello', 'default');
+    expect(data.moduleName).toBe('default');
+    expect(data.refId).toBe('hello');
+  });
+
+  test('extractRef() should extract info from absolute address', () => {
+    const data = extractRef('test/hello', 'default');
+    expect(data.moduleName).toBe('test');
+    expect(data.refId).toBe('hello');
+  });
+
+  // eslint-disable-next-line max-len
+  test('extractRef() should extract info from absolute address (with multiple parts)', () => {
+    const data = extractRef('test/hello/sample', 'default');
+    expect(data.moduleName).toBe('test');
+    expect(data.refId).toBe('hello/sample');
+  });
+
+  test('extractRef() should attach groupKey in refId', () => {
+    const data = extractRef('hello', 'default', 'sample_group');
+    expect(data.moduleName).toBe('default');
+    expect(data.refId).toBe('sample_group_hello');
+  });
+});
+
+describe('useDataFromContext()', () => {
+  let context: ApplicationContext;
+
+  beforeEach(() => {
+    context = new ApplicationContext();
+  });
+
+  test(`useDataFromContext('test') should put to current module`, () => {
+    context.activate(({useDataFromContext}) => {
+      const item = useDataFromContext('test', 'hello', false, 'demo_group');
+      expect(item).toBe('hello');
+      expect(context.getData('default', 'demo_group_test')).toBe('hello');
+    });
+  });
+
+  test(`useDataFromContext('mod1/test') should put to mod1`, () => {
+    context.activate(({useDataFromContext}) => {
+      const item = useDataFromContext('mod1/test', 'hello');
+      expect(item).toBe('hello');
+      expect(context.getData('mod1', 'test')).toBe('hello');
+    });
+  });
+
+  test(`useDataFromContext('mod1/test') should take from mod1`, (done) => {
+    context.activate(({useModule}) => {
+      useModule('mod1', ({useDataFromContext}) => {
+        const item = useDataFromContext('test', 'hello', false, 'demo_group');
+        expect(item).toBe('hello');
+        expect(context.getData('mod1', 'demo_group_test')).toBe('hello');
+      });
+
+      useModule('mod2', ({useDataFromContext}) => {
+        const item = useDataFromContext(
+            'mod1/test',
+            undefined,
+            undefined,
+            'demo_group');
+        expect(item).toBe('hello');
+        expect(context.getData('mod1', 'demo_group_test')).toBe('hello');
+      });
+    })
+        .then(() => done())
+        .catch(done);
+  });
+
+  test(`useDataFromContext('mod1/test') should throw overrite error`,
+      (done) => {
+        context.activate(({useModule}) => {
+          useModule('mod1', ({useDataFromContext}) => {
+            const item = useDataFromContext('test', 'hello');
+            expect(item).toBe('hello');
+            expect(context.getData('mod1', 'test')).toBe('hello');
+          });
+
+          useModule('mod2', ({useDataFromContext}) => {
+            const t = () => useDataFromContext(
+                'mod1/test', 'hello again');
+            expect(t).toThrowError();
+          });
+
+          useModule('mod2', ({useDataFromContext}) => {
+            const item = useDataFromContext('mod1/test', 'hello again', true);
+            expect(item).toBe('hello again');
+          });
+        })
+            .then(() => done())
+            .catch(done);
+      });
 });
