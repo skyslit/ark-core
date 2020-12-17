@@ -445,6 +445,12 @@ export class ApplicationContext implements Ark.IApplicationContext {
         groupId: string = null
     ): T {
       const ref = extractRef(refId, moduleId, groupId);
+      if (!this.getData(ref.moduleName, ref.refId)) {
+        throw new Error(
+            // eslint-disable-next-line max-len
+            `${groupId ? groupId + ' ' : ''}'${ref.refId}' is not found under module '${ref.moduleName}'`
+        );
+      }
       return this.getData(ref.moduleName, ref.refId);
     }
 
