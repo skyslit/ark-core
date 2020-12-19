@@ -1,9 +1,12 @@
+import React from 'react';
+import path from 'path';
 import {ApplicationContext} from '@skyslit/ark-core';
 import {Backend, Data} from '../index';
 import {Connection} from 'mongoose';
 import supertest from 'supertest';
 import * as http from 'http';
 import {MongoMemoryServer} from 'mongodb-memory-server';
+import {createReactApp, Frontend} from '@skyslit/ark-frontend';
 
 declare global {
   // eslint-disable-next-line no-unused-vars
@@ -162,11 +165,36 @@ describe('Data services', () => {
 });
 
 describe('Frontend services', () => {
-  test('defineSPA()', () => {
+  let context: ApplicationContext;
 
+  const webApp = createReactApp(({use}) => {
+    const {useComponent, mapRoute} = use(Frontend);
+    const TestComp = useComponent('testCompo', () => {
+      return <div>Hello</div>;
+    });
+    mapRoute('/', TestComp);
   });
 
-  test('serveSPA()', () => {
+  beforeEach(() => {
+    context = new ApplicationContext();
+  });
 
+  test('useWebApp()', (done) => {
+    context.activate(({use}) => {
+      const {useWebApp, useRoute} = use(Backend);
+      const SampleWebApp = useWebApp('sample', webApp, path.join(
+          __dirname,
+          'test-template.html'
+      ));
+      useRoute('get', '/', SampleWebApp.render());
+    }).finally(() => {
+      supertest(context.getData('default', 'express'))
+          .get('/')
+          .then((res) => {
+            expect(res.status).toBe(200);
+            expect(res.text).toContain('Hello');
+            done();
+          });
+    });
   });
 });

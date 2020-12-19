@@ -1,4 +1,11 @@
-import {ContextScope, createPointer} from '@skyslit/ark-core';
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
+import fs from 'fs';
+import {
+  ApplicationContext,
+  ContextScope,
+  createPointer,
+} from '@skyslit/ark-core';
 import expressApp from 'express';
 import {
   SchemaDefinition,
@@ -10,6 +17,9 @@ import {
   Connection,
 } from 'mongoose';
 import http from 'http';
+import {initReactRouterApp} from '@skyslit/ark-frontend';
+import {Route, StaticRouter, Switch} from 'react-router-dom';
+import * as HTMLParser from 'node-html-parser';
 
 type HttpVerbs = 'all' | 'get' | 'post' |
     'put' | 'delete' | 'patch' | 'options' | 'head';
@@ -19,6 +29,10 @@ type ServerOpts = {
     hostname: string,
     backlog?: number,
     listeningListener?: () => void
+}
+
+type WebAppRenderer = {
+  render: (initialState?: any) => expressApp.RequestHandler,
 }
 
 declare global {
@@ -35,9 +49,8 @@ declare global {
         useWebApp: (
           appId: string,
           ctx?: ContextScope<any>,
-        ) => {
-          render: (initialState?: any) => void,
-        },
+          htmlFileName?: string,
+        ) => WebAppRenderer,
       }
       // eslint-disable-next-line no-unused-vars
       interface Data {
@@ -59,6 +72,58 @@ declare global {
         default: Connection
       } & Databases
     }
+}
+
+/**
+ * Reads static HTML file from resource
+ * @param {string} htmlFilePath e.g. index.html | admin.html
+ * @return {string} HTML static content
+ */
+function readHtmlFile(htmlFilePath: string): string {
+  return fs.readFileSync(
+      htmlFilePath,
+      'utf8'
+  );
+}
+
+/**
+ * Creates Web App Server-Side Render
+ * @param {ContextScope<any>} scope
+ * @param {string} htmlFileName
+ * @return {WebAppRenderer}
+ */
+function createWebAppRenderer(
+    scope: ContextScope<any>,
+    htmlFileName: string
+): WebAppRenderer {
+  return {
+    render: (initialState) => {
+      return (req, res, next) => {
+        const webAppContext = new ApplicationContext();
+        initReactRouterApp(scope, webAppContext)
+            .then((PureAppConfig) => {
+              const htmlContent = readHtmlFile(htmlFileName);
+              const htmlContentNode = HTMLParser.parse(htmlContent);
+
+              const appStr = ReactDOMServer.renderToString(
+                  <StaticRouter>
+                    <Switch>
+                      {
+                        PureAppConfig.map(
+                            (route) => <Route key={route.path} {...route} />
+                        )
+                      }
+                    </Switch>
+                  </StaticRouter>
+              );
+
+              htmlContentNode.querySelector('#root').set_content(appStr);
+              res.send(htmlContentNode.toString());
+            })
+            .catch(next);
+      };
+    },
+  };
 }
 
 /**
@@ -114,7 +179,7 @@ export const Data = createPointer<Partial<Ark.Data>>((
       });
     }));
   },
-  useModel: <T>(name: string,
+  useModel: <T extends unknown>(name: string,
     schema?: SchemaDefinition | (() => Schema),
     dbName: keyof Ark.PackageDatabases = 'default') => {
     const modelName = getModelName(moduleId, name);
@@ -192,5 +257,22 @@ export const Backend = createPointer<Partial<Ark.Backend>>((
     return context.getData<expressApp.Application>(
         moduleId, 'express'
     )[method](path, handlers);
+  },
+  useWebApp: (appId, ctx, htmlFileName) => {
+    if (!htmlFileName) {
+      htmlFileName = `${appId}.html`;
+    }
+
+    if (!htmlFileName.toLowerCase().endsWith('.html')) {
+      htmlFileName = `${htmlFileName}.html`;
+    }
+
+    return context.useDataFromContext(
+        moduleId,
+        appId,
+        ctx ? createWebAppRenderer(ctx, htmlFileName) : undefined,
+        false,
+        'pwa'
+    );
   },
 }));
