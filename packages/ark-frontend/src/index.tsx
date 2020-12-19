@@ -9,7 +9,7 @@ import {
 } from '@skyslit/ark-core';
 import {HelmetProvider} from 'react-helmet-async';
 import {
-  BrowserRouter as Router,
+  BrowserRouter,
   Switch,
   Route,
   RouteProps,
@@ -68,17 +68,16 @@ const createReducer = (initialState = {}) => (
 };
 
 /**
- * Run react application
- * @param {RenderMode} mode
+ * Initializes pure routed app
+ * that can be used to render both in browser and node js
  * @param {ContextScope<any>} scope
  * @param {ApplicationContext} ctx
  * @return {Promise<React.FunctionComponent>}
  */
-export function makeApp(
-    mode: RenderMode,
+export function initReactRouterApp(
     scope: ContextScope<any>,
     ctx: ApplicationContext = new ApplicationContext()
-): Promise<React.FunctionComponent> {
+) {
   ctx.setData('default', 'store',
       createStore(createReducer())
   );
@@ -105,18 +104,36 @@ export function makeApp(
               }
               return accumulator;
             }, []);
+        return Promise.resolve(routes);
+      });
+}
+
+/**
+ * Run react application
+ * @param {RenderMode} mode
+ * @param {ContextScope<any>} scope
+ * @param {ApplicationContext} ctx
+ * @return {Promise<React.FunctionComponent>}
+ */
+export function makeApp(
+    mode: RenderMode,
+    scope: ContextScope<any>,
+    ctx: ApplicationContext = new ApplicationContext()
+): Promise<React.FunctionComponent> {
+  return initReactRouterApp(scope, ctx)
+      .then((PureAppConfig) => {
         return Promise.resolve(
             () => (
               <HelmetProvider>
-                <Router>
+                <BrowserRouter>
                   <Switch>
                     {
-                      routes.map(
+                      PureAppConfig.map(
                           (route) => <Route key={route.path} {...route} />
                       )
                     }
                   </Switch>
-                </Router>
+                </BrowserRouter>
               </HelmetProvider>
             )
         );
