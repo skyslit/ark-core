@@ -66,10 +66,11 @@ export class SPABuilder extends BuilderBase {
             'react-router-dom',
           ], cwd),
         },
+        symlinks: true,
       },
       entry: path.join(cwd, 'src', 'index.tsx'),
       output: {
-        filename: `${this.appId}.js`,
+        filename: `_browser/${this.appId}.js`,
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',
       },

@@ -18,7 +18,7 @@ const layoutCreator = createComponent(({children}) => {
 const page1Creator = createComponent(() => {
   return (
     <div>
-      Page 1
+      Page 1 (Page 1 SSR Test)
     </div>
   );
 });
@@ -55,12 +55,3 @@ const _package = createContext(({useModule, use}) => {
 });
 
 export default _package;
-
-// makeApp('csr', _package)
-//     .then((App) => {
-//       ReactDOM.render(<App />,
-//           document.getElementById('root'));
-//     })
-//     .catch((err) => {
-//       console.error(err);
-//     });

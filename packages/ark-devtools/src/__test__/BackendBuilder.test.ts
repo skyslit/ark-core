@@ -22,7 +22,7 @@ describe('backend builder', () => {
 
   test('successfull build', (done) => {
     const builderInstance = new BackendBuilder(
-        path.join(__dirname, './test-project/src/mock.server.tsx')
+        path.join(__dirname, './test-project/src/services/mock.server.tsx')
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {
@@ -58,9 +58,31 @@ describe('backend builder', () => {
     testProcess.catch((e) => done(e));
 
     setTimeout(() => {
+      const request = createRequest('http://localhost:3001/test');
+      request.get('/').then((res) => {
+        testProcess.kill();
+        expect(res.status).toBe(200);
+        done();
+      })
+          .catch((err) => {
+            testProcess.kill();
+            done(err);
+          });
+    }, 1000);
+  });
+
+  test('server side rendering should work', (done) => {
+    const testProcess = execa('node', [
+      path.join(testProjectDir, 'build', 'server', 'main.js'),
+    ]);
+
+    testProcess.catch((e) => done(e));
+
+    setTimeout(() => {
       const request = createRequest('http://localhost:3001');
       request.get('/').then((res) => {
         testProcess.kill();
+        expect(res.text).toContain('Page 1 SSR Test');
         expect(res.status).toBe(200);
         done();
       })

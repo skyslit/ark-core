@@ -29,10 +29,10 @@
     "express": "^4.17.1",
     "mongodb-memory-server": "^6.9.2",
     "mongoose": "^5.10.15",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "^5.2.0",
+    "react-router-dom": "5.2.0",
     "supertest": "^6.0.1"
   },
   "peerDependencies": {
@@ -40,8 +40,9 @@
     "@skyslit/ark-frontend": "2.0.0",
     "express": "^4.17.1",
     "mongoose": "^5.10.15",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "react-router-dom": "5.2.0",
     "react-helmet-async": "^1.0.7"
   },
   "dependencies": {

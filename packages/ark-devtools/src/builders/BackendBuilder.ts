@@ -38,6 +38,7 @@ export class BackendBuilder extends BuilderBase {
             'react-router-dom',
           ], cwd),
         },
+        symlinks: true,
       },
       entry: this.entryFilePath,
       output: {
@@ -46,7 +47,11 @@ export class BackendBuilder extends BuilderBase {
         assetModuleFilename: '../assets/[hash][ext][query]',
       },
       target: 'node',
-      externals: [nodeExternals()],
+      externals: [nodeExternals({
+        allowlist: [
+          '@skyslit/ark-backend',
+        ],
+      })],
       plugins: [
         new IgnorePlugin({
           // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4

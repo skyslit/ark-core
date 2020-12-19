@@ -9,4 +9,7 @@ module.exports = {
   modulePathIgnorePatterns: [
     'build',
   ],
+  moduleNameMapper: {
+    '^react-router-dom$': '<rootDir>/node_modules/react-router-dom',
+  },
 };

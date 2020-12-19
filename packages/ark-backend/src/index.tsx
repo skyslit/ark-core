@@ -267,6 +267,8 @@ export const Backend = createPointer<Partial<Ark.Backend>>((
       htmlFileName = `${htmlFileName}.html`;
     }
 
+    // const jsPath = `${path.basename(htmlFileName)}.js`;
+
     return context.useDataFromContext(
         moduleId,
         appId,
