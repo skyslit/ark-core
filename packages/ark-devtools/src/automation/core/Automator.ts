@@ -1,14 +1,55 @@
 export interface IAutomatorInterface {}
 
+type QueueItemMeta = { title: string, description: string };
+
 type QueueItem = {
+  id: number
   activator?: (...args: any[]) => Generator,
-  service?: any
+  service?: any,
+  title?: string,
+  description?: string,
 }
+
+type StepSnapshot = {
+  title: string,
+  description: string,
+  state: 'waiting' | 'in-progress' | 'completed' | 'error'
+}
+
+type AutomationSnapshot = {
+  title: string,
+  description: string,
+  steps: StepSnapshot[],
+  completedSteps: number,
+  totalSteps: number,
+}
+
+type JobSnapshot = {
+  title: string,
+  description: string,
+  automations: AutomationSnapshot[],
+  completedAutomations: number,
+  completedSteps: number,
+  totalAutomations: number,
+  totalSteps: number,
+}
+
+/**
+ * In-Memory ID Generator
+ * @param {number=} startsWith (Default start with zero)
+ */
+function* generator(startsWith: number = 0): Generator<number> {
+  while (true) {
+    yield startsWith++;
+  }
+}
+
+const id = generator();
 
 /**
  * Manages automation and prompts
  */
-class Automator {
+export class Automator {
   private monitor: IAutomatorInterface;
   public queue: Array<QueueItem>
   public isRunning: boolean;
@@ -25,9 +66,14 @@ class Automator {
   /**
    * Use Activity
    * @param {any} activity
+   * @param {Partial<QueueItemMeta>=} opts
    */
-  run(activity: QueueItem) {
-    this.queue.push(activity);
+  run(activity: QueueItem, opts?: Partial<QueueItemMeta>) {
+    opts = Object.assign<QueueItemMeta, Partial<QueueItemMeta>>({
+      title: undefined,
+      description: undefined,
+    }, opts || {});
+    this.queue.push(Object.assign(activity, {title: '', description: ''}));
   }
 
   /**
@@ -89,6 +135,24 @@ export class Job {
   }
 
   /**
+   * Gets JSON snapshot of status
+   * @return {JobSnapshot}
+   */
+  getSnapshot(): JobSnapshot {
+    const snapshot: JobSnapshot = {
+      title: '',
+      description: '',
+      automations: [],
+      completedAutomations: 0,
+      completedSteps: 0,
+      totalAutomations: 0,
+      totalSteps: 0,
+    };
+
+    return snapshot;
+  }
+
+  /**
    * Run Job
    */
   async run() {
@@ -106,15 +170,18 @@ export class Job {
   }
 }
 
+type ServiceDef<T> = (gn: (services: T) => Generator) => QueueItem;
+
 /**
  * Create new service
  * @param {any} serviceCreator
  * @return {any}
  */
-export function createService<T>(serviceCreator: () => T) {
+export function createService<T>(serviceCreator: () => T): ServiceDef<T> {
   return (
       gn: (services: T) => Generator
   ) => ({
+    id: id.next().value,
     activator: gn,
     service: serviceCreator(),
   });

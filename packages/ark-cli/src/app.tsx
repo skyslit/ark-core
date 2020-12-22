@@ -8,45 +8,49 @@ import {
 } from 'ink';
 import Spinner from 'ink-spinner';
 import AutomationView from './components/automation';
+import {useAutomator} from './hooks/automator';
+import {Automations} from '@skyslit/ark-devtools';
 
 type AppState = 'boot' | 'automation' | 'dashboard';
 
 export default () => {
-  const [appState, setAppState] = useState<AppState>('boot');
+  const {isActive, run} = useAutomator();
+  const [appState] = useState<AppState>('boot');
 
   useEffect(() => {
     console.clear();
-    const timer = setInterval(() => {
+    const timer = setTimeout(() => {
       if (appState === 'boot') {
-        setAppState('automation');
+        run(Automations.processes.SetupProject);
       }
-    }, 100);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  switch (appState) {
-    case 'dashboard': {
-      return (
-        <Text color="green">Dashboard...</Text>
-      );
-    }
-    case 'automation': {
-      return (
-        <AutomationView />
-      );
-    }
-    default: {
-      return (
-        <Box height={10} alignItems="center" justifyContent="center">
-          <Text>
-            <Spinner />
-          </Text>
-          <Text color="gray">
-            {' '}Ark CLI Booting up...
-          </Text>
-        </Box>
-      );
+  if (isActive === true) {
+    return (
+      <AutomationView />
+    );
+  } else {
+    switch (appState) {
+      case 'dashboard': {
+        return (
+          <Text color="green">Dashboard...</Text>
+        );
+      }
+      default: {
+        return (
+          <Box height={10} alignItems="center" justifyContent="center">
+            <Text>
+              <Spinner />
+            </Text>
+            <Text color="gray">
+              {' '}Ark CLI Booting up...
+            </Text>
+          </Box>
+        );
+      }
     }
   }
 };
