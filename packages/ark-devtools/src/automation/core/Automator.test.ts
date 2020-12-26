@@ -1,9 +1,11 @@
 import {
   createService,
   createProcess,
+  Job,
+  TestMonitor,
 } from './Automator';
 
-const rocketsLaunched: string[] = [];
+let rocketsLaunched: string[] = [];
 
 const isro = createService(() => {
   return {
@@ -27,15 +29,13 @@ const isro = createService(() => {
 });
 
 describe('automator real-world usage', () => {
+  beforeEach(() => rocketsLaunched = []);
+
   test('async order of execution check', (done) => {
     const task = createProcess((automator) => {
       automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
         yield launchRocket('SLV');
         yield launchRocketSlow('ASLV');
-        // yield automator.prompt({
-        //   question: 'Sample Prompt',
-        //   type: 'text-input',
-        // });
         yield launchRocket('GSLV Mk III.');
       }));
 
@@ -45,11 +45,49 @@ describe('automator real-world usage', () => {
         yield launchRocket('Scramjet Engine - TD.');
       }));
     });
-    task.start()
+    task.start(new Job())
         .then(() => {
           expect(rocketsLaunched).toStrictEqual([
             'SLV',
             'ASLV',
+            'GSLV Mk III.',
+            'PSLV.',
+            'RLV-TD.',
+            'Scramjet Engine - TD.',
+          ]);
+          done();
+        })
+        .catch(done);
+  });
+
+  test('prompt', (done) => {
+    const task = createProcess((automator) => {
+      automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
+        yield launchRocket('SLV');
+        yield launchRocketSlow('ASLV');
+        const answer = yield automator.prompt({
+          key: 'sample-input',
+          question: 'Sample Prompt',
+          type: 'Sounding Rockets',
+        });
+        yield launchRocket(answer as any);
+        yield launchRocket('GSLV Mk III.');
+      }));
+
+      automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
+        yield launchRocketSlow('PSLV.');
+        yield launchRocket('RLV-TD.');
+        yield launchRocket('Scramjet Engine - TD.');
+      }));
+    });
+    task.start(new Job(new TestMonitor({
+      'sample-input': 'Sounding Rockets',
+    })))
+        .then(() => {
+          expect(rocketsLaunched).toStrictEqual([
+            'SLV',
+            'ASLV',
+            'Sounding Rockets',
             'GSLV Mk III.',
             'PSLV.',
             'RLV-TD.',

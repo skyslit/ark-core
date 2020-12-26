@@ -1,7 +1,43 @@
 /* eslint-disable max-len */
 import path from 'path';
 
-export interface IAutomatorInterface {}
+export type PromptAnswerActivator = (answer?: any) => void
+export interface IAutomatorInterface {
+  onNewPrompt: (prompt: Prompt, answer: PromptAnswerActivator) => void,
+}
+
+/**
+ * TestMonitor can be used to define preset inputs for integration testing
+ */
+export class TestMonitor implements IAutomatorInterface {
+  testInput: {
+    [key: string]: any,
+  }
+
+  /**
+   * TestMonitor Constructor
+   * @param {object} testInput
+   */
+  constructor(testInput: {
+    [key: string]: any,
+  } = {}) {
+    this.testInput = testInput;
+  }
+
+  /**
+   * onNewPrompt Fn
+   * @param {Prompt} prompt
+   * @param {Function} answer
+   */
+  onNewPrompt(prompt: Prompt, answer: PromptAnswerActivator) {
+    if (this.testInput[prompt.key]) {
+      const answerObj = this.testInput[prompt.key];
+      answer(answerObj);
+    } else {
+      throw new Error(`Test input has not been implemented for ${prompt.key}`);
+    }
+  }
+}
 
 type QueueItemMeta = { title: string, description: string };
 
@@ -89,6 +125,7 @@ function isActionType(x: any): x is ActionType {
 }
 
 type Prompt = {
+  key: string
   question: string
   type: string
   options?: []
@@ -99,7 +136,6 @@ type Prompt = {
  * Manages automation and prompts
  */
 export class Automator {
-  private monitor: IAutomatorInterface;
   public steps: Array<QueueItem>
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
@@ -109,7 +145,6 @@ export class Automator {
    * Creates new instance of automator
    */
   constructor() {
-    this.monitor = null;
     this.steps = [];
     this.isRunning = false;
     this.currentRunningTaskIndex = -1;
@@ -147,14 +182,6 @@ export class Automator {
   }
 
   /**
-   * Attaches UI to the process
-   * @param {IAutomatorInterface} monitor
-   */
-  attachInterface(monitor: IAutomatorInterface) {
-    this.monitor = monitor;
-  }
-
-  /**
    * Starts the job
    * @param {Job=} job
    * @return {Promise}
@@ -169,18 +196,30 @@ export class Automator {
  * Manages processes and its lifecycle
  */
 export class Job {
+  private monitor: IAutomatorInterface;
+  private currentRunningTaskIndex: number = -1;
   public automations: Array<Automator>
   public isRunning: boolean;
   public cwd: string;
 
   /**
    * Creates a new instance of job
+   * @param {IAutomatorInterface=} monitor
    * @param {string=} cwd
    */
-  constructor(cwd?: string) {
+  constructor(monitor?: IAutomatorInterface, cwd?: string) {
+    this.monitor = monitor;
     this.cwd = cwd;
     this.automations = [];
     this.isRunning = false;
+  }
+
+  /**
+   * Attaches UI to the process
+   * @param {IAutomatorInterface} monitor
+   */
+  attachInterface(monitor: IAutomatorInterface) {
+    this.monitor = monitor;
   }
 
   /**
@@ -202,6 +241,20 @@ export class Job {
   }
 
   /**
+   * Gets user input
+   * @param {Prompt} prompt
+   * @return {Promise}
+   */
+  getPromptResponse(prompt: Prompt) {
+    if (!this.monitor) {
+      throw new Error('Prompts cannot be handled because no monitor is attached to the Job');
+    }
+    return new Promise((resolve, reject) => {
+      this.monitor.onNewPrompt(prompt, (answer = null) => resolve(answer));
+    });
+  }
+
+  /**
    * Starts the job
    * @return {Promise}
    */
@@ -209,6 +262,7 @@ export class Job {
     const runGenerator = async (generator: Generator, depth: number = 1) => {
       let result = generator.next();
       while (result.done !== true) {
+        let answer: any = undefined;
         try {
           if (result.value instanceof Promise) {
             await result.value;
@@ -229,6 +283,7 @@ export class Job {
                   break;
                 }
                 case PROMPT_ACTION: {
+                  answer = await this.getPromptResponse(<any>result.value.payload);
                   break;
                 }
                 default: {
@@ -241,7 +296,7 @@ export class Job {
         } catch (e) {
           console.error(e);
         }
-        result = generator.next();
+        result = generator.next(answer);
       }
     };
 
@@ -251,12 +306,11 @@ export class Job {
     });
   }
 
-  private currentRunningTaskIndex: number = -1;
   /**
    * Job Runner function
    * @return {boolean}
    */
-  * runNext() {
+  private* runNext() {
     const job = this;
     job.isRunning = true;
     while (job.isRunning === true) {
