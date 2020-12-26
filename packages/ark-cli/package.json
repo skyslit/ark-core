@@ -17,7 +17,12 @@
     "@babel/preset-env": "^7.12.1",
     "@babel/preset-react": "^7.12.7",
     "@babel/preset-typescript": "^7.12.1",
-    "@types/react": "^17.0.0"
+    "@testing-library/react-hooks": "^3.7.0",
+    "@types/jest": "^26.0.19",
+    "@types/react": "^17.0.0",
+    "ink-testing-library": "^2.1.0",
+    "memfs": "^3.2.0",
+    "react-test-renderer": "^17.0.1"
   },
   "dependencies": {
     "@skyslit/ark-devtools": "2.0.0",

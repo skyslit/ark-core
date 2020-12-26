@@ -1,4 +1,5 @@
 import SetupProject from './automation/processes/SetupProject';
+import {createProcess, createService} from './automation/core/Automator';
 export {Job, Automator} from './automation/core/Automator';
 export {
   ManifestManager,
@@ -9,5 +10,9 @@ export {
 export const Automations = {
   processes: {
     SetupProject,
+  },
+  utils: {
+    createProcess,
+    createService,
   },
 };

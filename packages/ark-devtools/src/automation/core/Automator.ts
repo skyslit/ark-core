@@ -124,7 +124,7 @@ function isActionType(x: any): x is ActionType {
   return false;
 }
 
-type Prompt = {
+export type Prompt = {
   key: string
   question: string
   type: string

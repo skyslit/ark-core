@@ -1,11 +1,13 @@
 import React from 'react';
 import {Job, Automator} from '@skyslit/ark-devtools';
 import {EventEmitter} from 'events';
+// eslint-disable-next-line max-len
+import {IAutomatorInterface, Prompt, PromptAnswerActivator} from '@skyslit/ark-devtools/build/automation/core/Automator';
 
 /**
  * Automation controller instance
  */
-class AutomationController extends EventEmitter {
+class AutomationController extends EventEmitter implements IAutomatorInterface {
   static instance: AutomationController;
   /**
    * Singleton Instance Provider
@@ -29,6 +31,15 @@ class AutomationController extends EventEmitter {
   }
 
   /**
+   * Prompt Handler
+   * @param {Prompt} prompt
+   * @param {Function} sendAnswer
+   */
+  onNewPrompt(prompt: Prompt, sendAnswer: PromptAnswerActivator) {
+
+  };
+
+  /**
    * Runs a process
    * @param {Automator} proc
    */
@@ -38,9 +49,10 @@ class AutomationController extends EventEmitter {
     this.emit('job-state-changed', true);
     proc.start(this.activeJob)
         .then(() => {
-
+          this.emit('job-state-changed', false);
         })
         .catch((err) => {
+          this.emit('job-state-changed', false);
           console.error(err);
         });
   }
@@ -61,12 +73,14 @@ class AutomationController extends EventEmitter {
   eventNames() {
     return [
       'job-state-changed',
+      'prompt',
     ];
   }
 }
 
 export const useAutomator = () => {
-  const controller = AutomationController.getInstance();
+  // const controller = AutomationController.getInstance();
+  const [controller] = React.useState(new AutomationController());
   const [isActive, setIsActive] = React.useState(controller.isStarted);
 
   React.useEffect(() => {
@@ -81,7 +95,7 @@ export const useAutomator = () => {
 
   return {
     isActive,
-    run: controller.runProcess.bind(AutomationController.getInstance()),
-    reset: controller.reset.bind(AutomationController.getInstance()),
+    run: controller.runProcess.bind(controller),
+    reset: controller.reset.bind(controller),
   };
 };
