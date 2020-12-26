@@ -1,3 +1,6 @@
+/* eslint-disable max-len */
+import path from 'path';
+
 export interface IAutomatorInterface {}
 
 type QueueItemMeta = { title: string, description: string };
@@ -46,21 +49,88 @@ function* generator(startsWith: number = 0): Generator<number> {
 
 const id = generator();
 
+const GENERATOR_ACTION = 'GENERATOR';
+const PROMPT_ACTION = 'PROMPT';
+
+type ActionType = {
+  __type__: string,
+  payload: {
+    [key: string]: any,
+  }
+}
+
+/**
+ * Creates automation base action
+ * @param {string} type
+ * @param {object} payload
+ * @return {ActionType}
+ */
+function createAction(type: string, payload: {
+  [key: string]: any,
+}): ActionType {
+  return {
+    __type__: type,
+    payload,
+  };
+}
+
+/**
+ * Check if the provided value is of BaseActionType
+ * @param {any} x
+ * @return {boolean}
+ */
+function isActionType(x: any): x is ActionType {
+  if (typeof x === 'object') {
+    if (typeof x.__type__ === 'string') {
+      return true;
+    }
+  }
+  return false;
+}
+
+type Prompt = {
+  question: string
+  type: string
+  options?: []
+  answer?: () => void
+}
+
 /**
  * Manages automation and prompts
  */
 export class Automator {
   private monitor: IAutomatorInterface;
-  public queue: Array<QueueItem>
+  public steps: Array<QueueItem>
   public isRunning: boolean;
+  public currentRunningTaskIndex: number;
+  public cwd: string;
 
   /**
    * Creates new instance of automator
    */
   constructor() {
     this.monitor = null;
-    this.queue = [];
+    this.steps = [];
     this.isRunning = false;
+    this.currentRunningTaskIndex = -1;
+  }
+
+  /**
+   * Gets fully qualified path from cwd
+   * @param {string} _path
+   * @return {string}
+   */
+  getPath(_path: string) {
+    return path.join(this.cwd, _path);
+  }
+
+  /**
+   * Prompt for user input
+   * @param {Prompt} opts
+   * @return {any}
+   */
+  prompt(opts: Prompt) {
+    return createAction(PROMPT_ACTION, opts);
   }
 
   /**
@@ -73,7 +143,7 @@ export class Automator {
       title: undefined,
       description: undefined,
     }, opts || {});
-    this.queue.push(Object.assign(activity, {title: '', description: ''}));
+    this.steps.push(Object.assign(activity, {title: '', description: ''}));
   }
 
   /**
@@ -85,37 +155,13 @@ export class Automator {
   }
 
   /**
-   * Trigger the process
-   * @param {Job} ctx
+   * Starts the job
+   * @param {Job=} job
+   * @return {Promise}
    */
-  async __trigger(ctx: Job) {
-    this.isRunning = true;
-    let runnerIndex: number = 0;
-    while (this.isRunning) {
-      if (runnerIndex >= this.queue.length) {
-        this.isRunning = false;
-      } else {
-        const steps = this.queue[runnerIndex];
-        const stepRunner = steps.activator(steps.service);
-
-        let result = stepRunner.next();
-        while (!result.done) {
-          await Promise.resolve(result.value);
-          result = stepRunner.next();
-        }
-
-        runnerIndex++;
-      }
-    }
-  }
-
-  /**
-   * Starts the process
-   * @param {Job} job
-   */
-  async start(job: Job = new Job()) {
+  start(job: Job = new Job()) {
     job.automations.push(this);
-    await job.run();
+    return job.start();
   }
 }
 
@@ -125,11 +171,14 @@ export class Automator {
 export class Job {
   public automations: Array<Automator>
   public isRunning: boolean;
+  public cwd: string;
 
   /**
    * Creates a new instance of job
+   * @param {string=} cwd
    */
-  constructor() {
+  constructor(cwd?: string) {
+    this.cwd = cwd;
     this.automations = [];
     this.isRunning = false;
   }
@@ -153,20 +202,88 @@ export class Job {
   }
 
   /**
-   * Run Job
+   * Starts the job
+   * @return {Promise}
    */
-  async run() {
-    this.isRunning = true;
-    let runnerIndex: number = 0;
-    while (this.isRunning) {
-      if (runnerIndex >= this.automations.length) {
-        this.isRunning = false;
+  start() {
+    const runGenerator = async (generator: Generator, depth: number = 1) => {
+      let result = generator.next();
+      while (result.done !== true) {
+        try {
+          if (result.value instanceof Promise) {
+            await result.value;
+          } else if (typeof(result.value) === 'function') {
+            // Check if generator function
+            if (result.value.constructor.name === 'GeneratorFunction') {
+              const innerGenerator = result.value();
+              await runGenerator(innerGenerator, depth + 1);
+            } else {
+              await Promise.resolve(result.value());
+            }
+          } else if (typeof(result.value) === 'object') {
+            // Check if generator object
+            if (isActionType(result.value)) {
+              switch (result.value.__type__) {
+                case GENERATOR_ACTION: {
+                  await runGenerator(<any>result.value.payload, depth + 1);
+                  break;
+                }
+                case PROMPT_ACTION: {
+                  break;
+                }
+                default: {
+                  console.log(result.value.__type__);
+                  break;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+        result = generator.next();
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const runner = this.runNext();
+      runGenerator(runner).then(() => resolve(null)).catch(reject);
+    });
+  }
+
+  private currentRunningTaskIndex: number = -1;
+  /**
+   * Job Runner function
+   * @return {boolean}
+   */
+  * runNext() {
+    const job = this;
+    job.isRunning = true;
+    while (job.isRunning === true) {
+      job.currentRunningTaskIndex++;
+      if (job.automations[job.currentRunningTaskIndex]) {
+        yield function* () {
+          // Step runner
+          job.automations[job.currentRunningTaskIndex].isRunning = true;
+          while (job.automations[job.currentRunningTaskIndex].isRunning === true) {
+            job.automations[job.currentRunningTaskIndex].currentRunningTaskIndex++;
+            const step = job.automations[job.currentRunningTaskIndex].steps[job.automations[job.currentRunningTaskIndex].currentRunningTaskIndex];
+            if (step) {
+              // Call the actual step
+              yield createAction(GENERATOR_ACTION, step.activator(step.service));
+            } else {
+              job.automations[job.currentRunningTaskIndex].isRunning = false;
+              break;
+            }
+          }
+          return true;
+        };
       } else {
-        const automator = this.automations[runnerIndex];
-        await automator.__trigger(this);
-        runnerIndex++;
+        job.isRunning = false;
+        break;
       }
     }
+    return true;
   }
 }
 

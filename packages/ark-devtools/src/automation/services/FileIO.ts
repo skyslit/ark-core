@@ -2,10 +2,22 @@ import {createService} from '../core/Automator';
 import fs from 'fs';
 
 export default createService(() => ({
-  mkdir: (path: string) => {
+  createDirectory: (path: string) => {
     return fs.mkdirSync(path, {recursive: true});
   },
-  sayHello: () => {
-    console.log('Hello');
+  /**
+   * Create or overrite file
+   * @param {string} path
+   * @param {any} content
+   * @return {void}
+   */
+  writeFile: (path: string, content: any): void => {
+    return fs.writeFileSync(path, content, {encoding: 'utf-8'});
+  },
+  deleteFile: (path: string) => {
+    return fs.rmSync(path);
+  },
+  deleteDirectory: (path: string) => {
+    return fs.rmdirSync(path);
   },
 }));

@@ -32,6 +32,10 @@ describe('automator real-world usage', () => {
       automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
         yield launchRocket('SLV');
         yield launchRocketSlow('ASLV');
+        // yield automator.prompt({
+        //   question: 'Sample Prompt',
+        //   type: 'text-input',
+        // });
         yield launchRocket('GSLV Mk III.');
       }));
 
