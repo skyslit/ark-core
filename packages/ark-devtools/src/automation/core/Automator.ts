@@ -127,7 +127,7 @@ function isActionType(x: any): x is ActionType {
 export type Prompt = {
   key: string
   question: string
-  type: string
+  type: 'text-input'
   options?: []
   answer?: () => void
 }
@@ -140,6 +140,7 @@ export class Automator {
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
   public cwd: string;
+  public plainService = createService(() => ({}));
 
   /**
    * Creates new instance of automator
@@ -267,12 +268,11 @@ export class Job {
           if (result.value instanceof Promise) {
             await result.value;
           } else if (typeof(result.value) === 'function') {
+            const fnResult = await Promise.resolve(result.value());
             // Check if generator function
-            if (result.value.constructor.name === 'GeneratorFunction') {
+            if (typeof fnResult.next === 'function') {
               const innerGenerator = result.value();
               await runGenerator(innerGenerator, depth + 1);
-            } else {
-              await Promise.resolve(result.value());
             }
           } else if (typeof(result.value) === 'object') {
             // Check if generator object
@@ -341,7 +341,7 @@ export class Job {
   }
 }
 
-type ServiceDef<T> = (gn: (services: T) => Generator) => QueueItem;
+type ServiceDef<T> = (gn: (services: T) => Generator<any, any, any>) => QueueItem;
 
 /**
  * Create new service
@@ -350,7 +350,7 @@ type ServiceDef<T> = (gn: (services: T) => Generator) => QueueItem;
  */
 export function createService<T>(serviceCreator: () => T): ServiceDef<T> {
   return (
-      gn: (services: T) => Generator
+      gn: (services: T) => Generator<any, any, any>
   ) => ({
     id: id.next().value,
     activator: gn,

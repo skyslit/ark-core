@@ -68,7 +68,7 @@ describe('automator real-world usage', () => {
         const answer = yield automator.prompt({
           key: 'sample-input',
           question: 'Sample Prompt',
-          type: 'Sounding Rockets',
+          type: 'text-input',
         });
         yield launchRocket(answer as any);
         yield launchRocket('GSLV Mk III.');
