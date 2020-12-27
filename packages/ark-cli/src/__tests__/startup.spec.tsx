@@ -21,9 +21,9 @@ describe('new dir (without project)', () => {
 
   const testProcessRegistry: Partial<ProcessRegistryType> = {
     'new-project': Automations.utils.createProcess((automator) => {
-      automator.run(automator.plainService(function* () {
+      automator.run(function* () {
         hasNewProjectSetupRan = true;
-      }));
+      });
     }),
   };
 
@@ -60,13 +60,13 @@ describe('automation', () => {
     } = renderHook(() => useMasterController(options, {
       // @ts-ignore
       '__test__prompt': Automations.utils.createProcess((automator) => {
-        automator.run(automator.plainService(function* () {
+        automator.run(function* () {
           promptResponse = yield automator.prompt({
             key: '__test__p_key',
             question: 'Which is the tallest building in the world?',
             type: 'text-input',
           });
-        }));
+        });
       }),
     }));
     expect(result.current.screen).toBe('panel');

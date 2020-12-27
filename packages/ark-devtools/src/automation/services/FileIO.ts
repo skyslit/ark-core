@@ -1,7 +1,6 @@
-import {createService} from '../core/Automator';
 import fs from 'fs';
 
-export default createService(() => ({
+export default {
   createDirectory: (path: string) => {
     return fs.mkdirSync(path, {recursive: true});
   },
@@ -20,4 +19,4 @@ export default createService(() => ({
   deleteDirectory: (path: string) => {
     return fs.rmdirSync(path);
   },
-}));
+};

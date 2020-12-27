@@ -1,5 +1,4 @@
 import {
-  createService,
   createProcess,
   Job,
   TestMonitor,
@@ -7,43 +6,41 @@ import {
 
 let rocketsLaunched: string[] = [];
 
-const isro = createService(() => {
-  return {
-    launchRocket: (name: string) => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          rocketsLaunched.push(name);
-          resolve(null);
-        }, 10);
-      });
-    },
-    launchRocketSlow: (name: string) => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          rocketsLaunched.push(name);
-          resolve(null);
-        }, 70);
-      });
-    },
-  };
-});
+const isro = {
+  launchRocket: (name: string) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        rocketsLaunched.push(name);
+        resolve(null);
+      }, 10);
+    });
+  },
+  launchRocketSlow: (name: string) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        rocketsLaunched.push(name);
+        resolve(null);
+      }, 70);
+    });
+  },
+};
 
 describe('automator real-world usage', () => {
   beforeEach(() => rocketsLaunched = []);
 
   test('async order of execution check', (done) => {
     const task = createProcess((automator) => {
-      automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
-        yield launchRocket('SLV');
-        yield launchRocketSlow('ASLV');
-        yield launchRocket('GSLV Mk III.');
-      }));
+      automator.run(function* () {
+        yield isro.launchRocket('SLV');
+        yield isro.launchRocketSlow('ASLV');
+        yield isro.launchRocket('GSLV Mk III.');
+      });
 
-      automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
-        yield launchRocketSlow('PSLV.');
-        yield launchRocket('RLV-TD.');
-        yield launchRocket('Scramjet Engine - TD.');
-      }));
+      automator.run(function* () {
+        yield isro.launchRocketSlow('PSLV.');
+        yield isro.launchRocket('RLV-TD.');
+        yield isro.launchRocket('Scramjet Engine - TD.');
+      });
     });
     task.start(new Job())
         .then(() => {
@@ -62,23 +59,23 @@ describe('automator real-world usage', () => {
 
   test('prompt', (done) => {
     const task = createProcess((automator) => {
-      automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
-        yield launchRocket('SLV');
-        yield launchRocketSlow('ASLV');
+      automator.run(function* () {
+        yield isro.launchRocket('SLV');
+        yield isro.launchRocketSlow('ASLV');
         const answer = yield automator.prompt({
           key: 'sample-input',
           question: 'Sample Prompt',
           type: 'text-input',
         });
-        yield launchRocket(answer as any);
-        yield launchRocket('GSLV Mk III.');
-      }));
+        yield isro.launchRocket(answer as any);
+        yield isro.launchRocket('GSLV Mk III.');
+      });
 
-      automator.run(isro(function* ({launchRocket, launchRocketSlow}) {
-        yield launchRocketSlow('PSLV.');
-        yield launchRocket('RLV-TD.');
-        yield launchRocket('Scramjet Engine - TD.');
-      }));
+      automator.run(function* () {
+        yield isro.launchRocketSlow('PSLV.');
+        yield isro.launchRocket('RLV-TD.');
+        yield isro.launchRocket('Scramjet Engine - TD.');
+      });
     });
     task.start(new Job(new TestMonitor({
       'sample-input': 'Sounding Rockets',

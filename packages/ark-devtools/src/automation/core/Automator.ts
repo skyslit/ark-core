@@ -39,8 +39,6 @@ export class TestMonitor implements IAutomatorInterface {
   }
 }
 
-type QueueItemMeta = { title: string, description: string };
-
 type QueueItem = {
   id: number
   activator?: (...args: any[]) => Generator,
@@ -140,7 +138,6 @@ export class Automator {
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
   public cwd: string;
-  public plainService = createService(() => ({}));
 
   /**
    * Creates new instance of automator
@@ -171,15 +168,17 @@ export class Automator {
 
   /**
    * Use Activity
-   * @param {any} activity
+   * @param {Function} runner
    * @param {Partial<QueueItemMeta>=} opts
    */
-  run(activity: QueueItem, opts?: Partial<QueueItemMeta>) {
-    opts = Object.assign<QueueItemMeta, Partial<QueueItemMeta>>({
-      title: undefined,
-      description: undefined,
-    }, opts || {});
-    this.steps.push(Object.assign(activity, {title: '', description: ''}));
+  run(runner: () => Generator<any, any, any>) {
+    this.steps.push({
+      id: id.next().value,
+      activator: runner,
+      description: '',
+      service: '',
+      title: '',
+    });
   }
 
   /**
@@ -339,23 +338,6 @@ export class Job {
     }
     return true;
   }
-}
-
-type ServiceDef<T> = (gn: (services: T) => Generator<any, any, any>) => QueueItem;
-
-/**
- * Create new service
- * @param {any} serviceCreator
- * @return {any}
- */
-export function createService<T>(serviceCreator: () => T): ServiceDef<T> {
-  return (
-      gn: (services: T) => Generator<any, any, any>
-  ) => ({
-    id: id.next().value,
-    activator: gn,
-    service: serviceCreator(),
-  });
 }
 
 /**
