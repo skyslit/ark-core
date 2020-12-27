@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useCallback,
 } from 'react';
 import {
   ManifestManager,
@@ -37,20 +38,35 @@ export default function(
   const manager = new ManifestManager(opts.cwd);
   const [errorData, setErrorData] = useState(null);
   const [screen, setScreen] = useState<Screens>('boot');
-  const {isActive, run} = useAutomator();
+  const {
+    isActive,
+    run,
+    activePrompt,
+    hasPrompt,
+    returnPromptResponse,
+  } = useAutomator();
 
-  const setError = (err: any) => {
+  const setError = useCallback((err: any) => {
     setErrorData(err);
     setScreen('error');
-  };
+  }, []);
 
-  const boot = () => {
+  const runProcess = useCallback((automatorKey: keyof ProcessRegistryType) => {
+    if (isActive === true) {
+      throw new Error('Automator is already running a process');
+    }
+    if (!processRegistry[automatorKey]) {
+      throw new Error(`Automator key is not found ${automatorKey}`);
+    }
+    run(processRegistry[automatorKey]);
+  }, []);
+
+  const boot = useCallback(() => {
     try {
       if (manager.load() === true) {
         setScreen('panel');
       } else {
-        setScreen('automator');
-        run(processRegistry['new-project']);
+        runProcess('new-project');
       }
     } catch (e) {
       if (e instanceof InvalidManifestError) {
@@ -59,7 +75,7 @@ export default function(
         throw e;
       }
     }
-  };
+  }, []);
 
   if (opts.disableAutoBoot === false) {
     useEffect(() => {
@@ -70,5 +86,9 @@ export default function(
   return {
     screen: isActive === true ? 'automator' : screen,
     errorData,
+    runProcess,
+    activePrompt,
+    hasPrompt,
+    returnPromptResponse,
   };
 }

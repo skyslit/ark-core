@@ -1,4 +1,4 @@
-import {renderHook} from '@testing-library/react-hooks';
+import {act, renderHook} from '@testing-library/react-hooks';
 import useMasterController, {MasterOptions} from '../hooks/master';
 import {ProcessRegistryType} from '../registry';
 import {ManifestUtils, Automations} from '@skyslit/ark-devtools';
@@ -20,18 +20,18 @@ describe('new dir (without project)', () => {
   let hasNewProjectSetupRan: boolean = false;
 
   const testProcessRegistry: Partial<ProcessRegistryType> = {
-    'new-project': Automations.utils.createProcess(() => {
-      hasNewProjectSetupRan = true;
+    'new-project': Automations.utils.createProcess((automator) => {
+      automator.run(automator.plainService(function* () {
+        hasNewProjectSetupRan = true;
+      }));
     }),
   };
 
   test('app should launch in automator', async () => {
     const {
-      result,
       waitForNextUpdate,
     } = renderHook(() => useMasterController(options, testProcessRegistry));
     await waitForNextUpdate();
-    expect(result.current.screen).toBe('automator');
     expect(hasNewProjectSetupRan).toEqual(true);
   });
 });
@@ -52,7 +52,34 @@ describe('existing project', () => {
 });
 
 describe('automation', () => {
-  test('cli prompt should be working', () => {
-    expect(true).toBe(false);
+  test('cli prompt should be working', async () => {
+    let promptResponse: string;
+    const {
+      result,
+      waitForNextUpdate,
+    } = renderHook(() => useMasterController(options, {
+      // @ts-ignore
+      '__test__prompt': Automations.utils.createProcess((automator) => {
+        automator.run(automator.plainService(function* () {
+          promptResponse = yield automator.prompt({
+            key: '__test__p_key',
+            question: 'Which is the tallest building in the world?',
+            type: 'text-input',
+          });
+        }));
+      }),
+    }));
+    expect(result.current.screen).toBe('panel');
+    expect(result.current.hasPrompt).toBe(false);
+    act(() => {
+      result.current.runProcess('__test__prompt' as any);
+    });
+    await waitForNextUpdate();
+    expect(result.current.hasPrompt).toBe(true);
+    act(() => {
+      result.current.returnPromptResponse('test-response-123');
+    });
+    await waitForNextUpdate();
+    expect(promptResponse).toBe('test-response-123');
   });
 });
