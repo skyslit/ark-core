@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 import path from 'path';
+import execa from 'execa';
 
 export type PromptAnswerActivator = (answer?: any) => void
 export interface IAutomatorInterface {
@@ -149,6 +150,19 @@ export class Automator {
   }
 
   /**
+   * Runs on cli
+   * @param {string} file File to execute
+   * @param {string[]=} args Command argument
+   * @param {execa.Options<string>=} options (Optional)
+   * @return {execa.ExecaChildProcess<string>}
+   */
+  runOnCli(file: string, args?: readonly string[], options?: execa.Options<string>): execa.ExecaChildProcess<string> {
+    return execa(file, args, Object.assign<execa.Options<string>, execa.Options<string>>({
+      cwd: this.cwd,
+    }, options));
+  }
+
+  /**
    * Gets fully qualified path from cwd
    * @param {string} _path
    * @return {string}
@@ -266,13 +280,15 @@ export class Job {
         let answer: any = undefined;
         try {
           if (result.value instanceof Promise) {
-            await result.value;
+            answer = await result.value;
           } else if (typeof(result.value) === 'function') {
             const fnResult = await Promise.resolve(result.value());
             // Check if generator function
             if (typeof fnResult.next === 'function') {
               const innerGenerator = result.value();
               await runGenerator(innerGenerator, depth + 1);
+            } else {
+              answer = fnResult;
             }
           } else if (typeof(result.value) === 'object') {
             // Check if generator object

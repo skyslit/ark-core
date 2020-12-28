@@ -1,10 +1,11 @@
-import {Job} from '../../core/Automator';
+import {Job, TestMonitor} from '../../core/Automator';
 import SetupProjectProcess from './SetupProject';
 import path from 'path';
 import fs from 'fs';
 import rimraf from 'rimraf';
 
-const cwd = path.join(__dirname, './_test_project_setup_');
+// eslint-disable-next-line max-len
+const cwd = path.join(__dirname, '../../../__test__/test-artifacts/setup-project');
 
 beforeEach(() => {
   if (fs.existsSync(cwd)) {
@@ -14,9 +15,7 @@ beforeEach(() => {
 });
 
 test('workflow', async () => {
-  await SetupProjectProcess.start(new Job({
-    onNewPrompt: () => {
-
-    },
-  }, cwd));
+  await SetupProjectProcess.start(new Job(new TestMonitor({
+    'package-name': 'package-name-from-prompt',
+  }), cwd));
 });

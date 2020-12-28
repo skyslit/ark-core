@@ -77,6 +77,14 @@ export class ManifestManager {
       return false;
     }
   }
+
+  /**
+   * Write manifest file to disk
+   */
+  write() {
+    const configPath = this.getPath(PATH_CONFIG);
+    fs.writeFileSync(configPath, JSON.stringify(this.configuration));
+  }
 }
 
 export const ManifestUtils = {

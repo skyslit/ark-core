@@ -1,23 +1,40 @@
 import fs from 'fs';
+import path from 'path';
 import rimraf from 'rimraf';
+import {Automator} from '../core/Automator';
 
-export default {
-  createDirectory: (path: string) => {
-    return fs.mkdirSync(path, {recursive: true});
+type ParsePreset = 'raw' | 'json' | 'ts|tsx' | 'custom';
+
+export const useFileSystem = (automator: Automator) => ({
+  createDirectory: (p: string) => {
+    return fs.mkdirSync(path.join(automator.cwd, p), {recursive: true});
   },
   /**
    * Create or overrite file
-   * @param {string} path
+   * @param {string} p
    * @param {any} content
    * @return {void}
    */
-  writeFile: (path: string, content: any): void => {
-    return fs.writeFileSync(path, content, {encoding: 'utf-8'});
+  writeFile: (p: string, content: any): void => {
+    return fs.writeFileSync(
+        path.join(automator.cwd, p), content, {encoding: 'utf-8'});
   },
-  deleteFile: (path: string) => {
-    return fs.rmSync(path);
+  deleteFile: (p: string) => {
+    return fs.rmSync(path.join(automator.cwd, p));
   },
-  deleteDirectory: (path: string) => {
-    return rimraf.sync(path, {});
+  deleteDirectory: (p: string) => {
+    return rimraf.sync(path.join(automator.cwd, p), {});
   },
-};
+  useFile: (p: string) => ({
+    readFromDisk: () => {
+      return {
+        parse: (preset: ParsePreset) => {
+          return {
+            act: () => {
+            },
+          };
+        },
+      };
+    },
+  }),
+});
