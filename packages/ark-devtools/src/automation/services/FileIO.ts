@@ -1,4 +1,5 @@
 import fs from 'fs';
+import rimraf from 'rimraf';
 
 export default {
   createDirectory: (path: string) => {
@@ -17,6 +18,6 @@ export default {
     return fs.rmSync(path);
   },
   deleteDirectory: (path: string) => {
-    return fs.rmdirSync(path);
+    return rimraf.sync(path, {});
   },
 };

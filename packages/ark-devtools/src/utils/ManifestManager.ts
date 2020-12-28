@@ -30,11 +30,17 @@ export class ManifestManager {
   /**
    * Constructor
    * @param {string=} cwd
+   * @param {Manifest=} manifest (Optional)
    */
-  constructor(cwd?: string) {
+  constructor(cwd?: string, manifest?: Manifest) {
     this.cwd = cwd || process.cwd();
-    this.configuration = null;
-    this.isLoaded = false;
+    if (manifest) {
+      this.configuration = manifest;
+      this.isLoaded = true;
+    } else {
+      this.configuration = null;
+      this.isLoaded = false;
+    }
   }
 
   /**

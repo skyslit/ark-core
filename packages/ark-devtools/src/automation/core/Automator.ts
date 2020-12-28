@@ -153,7 +153,7 @@ export class Automator {
    * @param {string} _path
    * @return {string}
    */
-  getPath(_path: string) {
+  resolvePath(_path: string) {
     return path.join(this.cwd, _path);
   }
 
@@ -184,6 +184,7 @@ export class Automator {
   /**
    * Starts the job
    * @param {Job=} job
+   * @param {string=} cwd
    * @return {Promise}
    */
   start(job: Job = new Job()) {
@@ -315,6 +316,7 @@ export class Job {
     while (job.isRunning === true) {
       job.currentRunningTaskIndex++;
       if (job.automations[job.currentRunningTaskIndex]) {
+        job.automations[job.currentRunningTaskIndex].cwd = this.cwd;
         yield function* () {
           // Step runner
           job.automations[job.currentRunningTaskIndex].isRunning = true;
