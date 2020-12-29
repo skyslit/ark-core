@@ -1,0 +1,53 @@
+{
+  "name": "@skyslit/ark-devtools",
+  "version": "2.0.0",
+  "description": "",
+  "main": "./build/index.js",
+  "scripts": {
+    "test": "jest",
+    "start": "jest --watchAll",
+    "build": "tsc --watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-react": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.1",
+    "@skyslit/ark-backend": "2.0.0",
+    "@skyslit/ark-core": "2.0.0",
+    "@skyslit/ark-frontend": "2.0.0",
+    "@types/ejs": "^3.0.5",
+    "@types/express": "^4.17.9",
+    "@types/jest": "^26.0.15",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@types/react-router-dom": "^5.1.6",
+    "@types/rimraf": "^3.0.0",
+    "@types/supertest": "^2.0.10",
+    "@types/webpack-node-externals": "^2.5.0",
+    "execa": "^5.0.0",
+    "express": "^4.17.1",
+    "memfs": "^3.2.0",
+    "mongoose": "^5.10.15",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "react-helmet-async": "^1.0.7",
+    "react-router-dom": "5.2.0",
+    "supertest": "^6.0.1",
+    "unionfs": "^4.4.0"
+  },
+  "dependencies": {
+    "babel-loader": "^8.2.2",
+    "chalk": "^4.1.0",
+    "ejs": "^3.1.5",
+    "html-webpack-plugin": "^5.0.0-alpha.3",
+    "log-update": "^4.0.0",
+    "rimraf": "^3.0.2",
+    "webpack": "^5.10.0",
+    "webpack-node-externals": "^2.5.2"
+  }
+}
