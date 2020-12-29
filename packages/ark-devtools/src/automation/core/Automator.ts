@@ -156,8 +156,8 @@ export class Automator {
    * @param {execa.Options<string>=} options (Optional)
    * @return {execa.ExecaChildProcess<string>}
    */
-  runOnCli(file: string, args?: readonly string[], options?: execa.Options<string>): execa.ExecaChildProcess<string> {
-    return execa(file, args, Object.assign<execa.Options<string>, execa.Options<string>>({
+  async runOnCli(file: string, args?: readonly string[], options?: execa.Options<string>) {
+    return await execa(file, args, Object.assign<execa.Options<string>, execa.Options<string>>({
       cwd: this.cwd,
     }, options));
   }

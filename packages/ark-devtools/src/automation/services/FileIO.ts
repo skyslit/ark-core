@@ -5,6 +5,28 @@ import {Automator} from '../core/Automator';
 
 type ParsePreset = 'raw' | 'json' | 'ts|tsx' | 'custom';
 
+type Parser<O> = {
+  encode: (input: O) => string,
+  decode: (input: string) => O
+}
+
+type ParserMap = { [key: string]: Parser<any> }
+
+const RawParser: Parser<string> = {
+  encode: (input) => input,
+  decode: (input) => input,
+};
+
+const JSONParser: Parser<any> = {
+  encode: (input) => JSON.stringify(input),
+  decode: (input) => JSON.parse(input),
+};
+
+const FileParser: ParserMap = {
+  json: JSONParser,
+  raw: RawParser,
+};
+
 export const useFileSystem = (automator: Automator) => ({
   createDirectory: (p: string) => {
     return fs.mkdirSync(path.join(automator.cwd, p), {recursive: true});
@@ -25,16 +47,49 @@ export const useFileSystem = (automator: Automator) => ({
   deleteDirectory: (p: string) => {
     return rimraf.sync(path.join(automator.cwd, p), {});
   },
-  useFile: (p: string) => ({
-    readFromDisk: () => {
-      return {
-        parse: (preset: ParsePreset) => {
-          return {
-            act: () => {
-            },
-          };
-        },
-      };
-    },
-  }),
+  useFile: (p: string) => {
+    const filePath = path.join(automator.cwd, p);
+    let data: any = null;
+    let parsedData: any = null;
+    return {
+      readFromDisk: () => {
+        data = fs.readFileSync(filePath, 'utf8');
+        return {
+          parse: (preset: ParsePreset, custom?: Parser<any>) => {
+            let parser = custom || null;
+            if (preset !== 'custom') {
+              if (!FileParser[preset]) {
+                throw new Error(`parser '${preset}' is not defined`);
+              }
+              parser = FileParser[preset];
+            }
+
+            if (!parser) {
+              parser = RawParser;
+            }
+
+            parsedData = parser.decode(data);
+
+            return {
+              act: (activator: (
+                data: any,
+                raw: string,
+                saveFile: () => boolean
+              ) => Generator) => {
+                return () => activator(
+                    parsedData,
+                    data,
+                    () => {
+                      const dataToSave = parser.encode(parsedData);
+                      fs.writeFileSync(filePath, dataToSave);
+                      return true;
+                    },
+                );
+              },
+            };
+          },
+        };
+      },
+    };
+  },
 });

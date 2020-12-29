@@ -10,19 +10,21 @@ export default createProcess((automator) => {
 
   // Initialise npm package
   automator.run(function* () {
-    yield automator.prompt({
-      key: 'package-name',
-      question: 'Project name',
-      type: 'text-input',
-    });
-
     // Run npm init
     yield automator.runOnCli('npm', ['init', '-y']);
-
-    useFile('package.json')
+    yield useFile('package.json')
         .readFromDisk()
         .parse('json')
-        .act();
+        .act(function* (content, raw, saveFile) {
+          const packageName = yield automator.prompt({
+            key: 'package-name',
+            question: 'Project name',
+            type: 'text-input',
+          });
+
+          content.name = packageName;
+          saveFile();
+        });
   });
 
   // Initialise directory
