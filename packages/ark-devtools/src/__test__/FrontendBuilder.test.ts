@@ -6,7 +6,7 @@ import memfs from 'memfs';
 import * as fs from 'fs';
 
 describe('SPA app builder', () => {
-  const cwd: string = process.cwd();
+  const cwd: string = path.join(__dirname, './test-project');
   let vol: any;
   let outputFileSystem: any;
 
@@ -44,7 +44,7 @@ describe('SPA app builder', () => {
     });
     builderInstance.build({
       mode: 'production',
-      cwd: path.join(__dirname, './test-project'),
+      cwd,
     }, fs, outputFileSystem);
   }, 10 * 1000);
 });

@@ -11,6 +11,7 @@ type Mode = 'development' | 'production';
 export type ConfigurationOptions = {
   mode: Mode,
   cwd: string,
+  watchMode?: boolean
 }
 /**
  * Wrapper for Webpack
@@ -40,6 +41,7 @@ export class BuilderBase extends EventEmitter {
         >({
           mode: 'production',
           cwd: null,
+          watchMode: false,
         }, opts)
     );
     if (!buildConfiguration) {
@@ -75,9 +77,9 @@ export class BuilderBase extends EventEmitter {
       this.compiler.inputFileSystem = _ufs;
     }
 
-    if (opts.mode === 'development') {
+    if (opts.watchMode === true) {
       this.compiler.watch({}, this.handler.bind(this));
-    } else if (opts.mode === 'production') {
+    } else {
       this.compiler.run(this.handler.bind(this));
     }
   }

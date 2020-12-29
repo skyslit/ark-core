@@ -8,8 +8,8 @@ import execa from 'execa';
 import createRequest from 'supertest';
 
 describe('backend builder', () => {
-  const cwd: string = process.cwd();
   const testProjectDir: string = path.join(__dirname, './test-project');
+  const cwd: string = testProjectDir;
   let vol: any;
   let outputFileSystem: any;
 
