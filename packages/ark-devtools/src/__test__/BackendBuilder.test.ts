@@ -2,21 +2,16 @@
 import {Compilation} from 'webpack';
 import {BackendBuilder} from '../builders/BackendBuilder';
 import path from 'path';
-import memfs from 'memfs';
 import * as fs from 'fs';
 import execa from 'execa';
 import createRequest from 'supertest';
 
 describe('backend builder', () => {
   const testProjectDir: string = path.join(__dirname, './test-project');
-  const cwd: string = testProjectDir;
-  let vol: any;
   let outputFileSystem: any;
 
   beforeEach(() => {
     // Setup Output Filesystem
-    vol = memfs.Volume.fromJSON({}, cwd);
-    outputFileSystem = memfs.createFsFromVolume(vol);
     outputFileSystem = fs;
   });
 
@@ -26,12 +21,6 @@ describe('backend builder', () => {
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {
-        // eslint-disable-next-line no-unused-vars
-        const buildOutput: string = outputFileSystem.readFileSync(
-            path.join(cwd, 'build', 'server', 'main.js'),
-            'utf-8'
-        );
-        // expect(buildOutput).toContain('Server program');
         done();
       } catch (e) {
         done(e);

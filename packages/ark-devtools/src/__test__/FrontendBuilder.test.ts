@@ -2,18 +2,14 @@
 import {Compilation} from 'webpack';
 import {SPABuilder} from '../builders/FrontendBuilder';
 import path from 'path';
-import memfs from 'memfs';
 import * as fs from 'fs';
 
 describe('SPA app builder', () => {
-  const cwd: string = path.join(__dirname, './test-project');
-  let vol: any;
+  const testProjectDir: string = path.join(__dirname, './test-project');
   let outputFileSystem: any;
 
   beforeEach(() => {
     // Setup Output Filesystem
-    vol = memfs.Volume.fromJSON({}, cwd);
-    outputFileSystem = memfs.createFsFromVolume(vol);
     outputFileSystem = fs;
   });
 
@@ -24,12 +20,6 @@ describe('SPA app builder', () => {
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {
-        // eslint-disable-next-line no-unused-vars
-        const buildOutput: string = outputFileSystem.readFileSync(
-            path.join(cwd, 'build', 'server', 'main.js'),
-            'utf-8'
-        );
-        // expect(buildOutput).toContain('Server program');
         done();
       } catch (e) {
         done(e);
@@ -44,7 +34,7 @@ describe('SPA app builder', () => {
     });
     builderInstance.build({
       mode: 'production',
-      cwd,
+      cwd: testProjectDir,
     }, fs, outputFileSystem);
   }, 10 * 1000);
 });
