@@ -1,15 +1,21 @@
 {
   "name": "@skyslit/ark-backend",
   "version": "2.0.0",
-  "description": "",
+  "description": "A business framework for building Ark based event driven backend application",
   "main": "./build/index.js",
   "scripts": {
     "test": "jest",
     "start": "jest --watchAll",
     "build": "tsc --watch"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Skyslit Network Private Limited",
+  "license": "Apache-2.0",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
   "devDependencies": {
     "@babel/core": "^7.12.3",
     "@babel/plugin-proposal-class-properties": "^7.12.1",
