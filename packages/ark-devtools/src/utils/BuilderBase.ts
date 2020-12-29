@@ -18,6 +18,7 @@ export type ConfigurationOptions = {
  */
 export class BuilderBase extends EventEmitter {
   private compiler: webpack.Compiler;
+  private watching: any;
   /**
    * Creates a new builder base instance
    * @param {EventEmitterOptions} options
@@ -78,10 +79,33 @@ export class BuilderBase extends EventEmitter {
     }
 
     if (opts.watchMode === true) {
-      this.compiler.watch({}, this.handler.bind(this));
+      this.watching = this.compiler.watch({}, this.handler.bind(this));
     } else {
       this.compiler.run(this.handler.bind(this));
     }
+  }
+
+  /**
+   * Teardown logic
+   * @return {Promise}
+   */
+  teardown() {
+    return new Promise((resolve, reject) => {
+      this.removeAllListeners('success');
+      this.removeAllListeners('warning');
+      this.removeAllListeners('error');
+      if (this.watching) {
+        this.watching.close((err: any, result: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(true);
+          }
+        });
+      } else {
+        resolve(true);
+      }
+    });
   }
 
   /**
