@@ -47,10 +47,10 @@ export class SPABuilder extends BuilderBase {
    * @param {ConfigurationOptions} opts
    * @return {Configuration}
    */
-  getConfiguration({cwd}: ConfigurationOptions): Configuration {
+  getConfiguration({cwd, mode}: ConfigurationOptions): Configuration {
     return {
       context: cwd,
-      mode: 'development',
+      mode,
       resolve: {
         extensions: [
           '.json',

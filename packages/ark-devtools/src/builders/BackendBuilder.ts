@@ -20,9 +20,10 @@ export class BackendBuilder extends BuilderBase {
    * @param {ConfigurationOptions} opts
    * @return {Configuration}
    */
-  getConfiguration({cwd}: ConfigurationOptions): Configuration {
+  getConfiguration({cwd, mode}: ConfigurationOptions): Configuration {
     return {
-      mode: 'development',
+      context: cwd,
+      mode,
       resolve: {
         extensions: [
           '.json',
