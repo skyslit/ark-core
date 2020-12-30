@@ -30,12 +30,15 @@ jobs:
       #   run: |
       #     echo Add other actions to build,
       #     echo test, and deploy your project.
-          
+         
       - name: Install Dependencies
         run: |
           npm install
           npm run bootstrap
-          
+           
+      - name: Install jest@^26.0.15
+        run: npm install jest@^26.0.15
+
       - name: Build
         run: npm run build
         
