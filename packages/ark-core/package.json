@@ -3,6 +3,7 @@
   "version": "2.0.1",
   "description": "A pointer based library used for building Ark based applications",
   "main": "./build/index.js",
+  "private": false,
   "scripts": {
     "test": "jest",
     "start": "jest --watchAll",

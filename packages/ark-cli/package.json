@@ -3,6 +3,7 @@
   "version": "2.0.1",
   "description": "FreePizza CLI uses Ark DevTools to build and automate Ark Application development process",
   "main": "./build/index.js",
+  "private": false,
   "scripts": {
     "test": "jest",
     "start": "jest --watchAll",

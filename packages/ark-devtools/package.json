@@ -3,6 +3,7 @@
   "version": "2.0.1",
   "description": "DevTools and Utilities that power up Ark based Software Applications",
   "main": "./build/index.js",
+  "private": false,
   "scripts": {
     "test": "jest",
     "start": "jest --watchAll",
