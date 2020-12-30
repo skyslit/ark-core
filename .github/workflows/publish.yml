@@ -17,6 +17,9 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: '12.x'
+          
+      - name: Check NPM Registry Access
+        run: npm whoami
 
       - name: Install Dependencies
         run: |
