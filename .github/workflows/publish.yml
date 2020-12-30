@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: '12.x'
           
+      - name: Authenticate NPM
+        run: npm set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          
       - name: Check NPM Registry Access
         run: npm whoami
         env:
