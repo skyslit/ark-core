@@ -7,3 +7,9 @@ cd packages/ark-core && jest . \
 && cd ../../packages/ark-cli && jest . && cd ../../
 
 echo 'Exit Code' $?
+
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error"
+fi
+exit $retVal

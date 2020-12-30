@@ -253,7 +253,7 @@ describe('failover', () => {
         return new Promise((resolve) => {
           setTimeout(() => {
             flag = 200;
-            resolve();
+            resolve(null);
           }, 800);
         });
       });

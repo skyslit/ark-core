@@ -7,3 +7,9 @@ cd packages/ark-core && npm run build \
 && cd ../../packages/ark-cli && npm run build && cd ../../
 
 echo 'Exit Code' $?
+
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "Error"
+fi
+exit $retVal
