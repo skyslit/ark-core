@@ -1,7 +1,7 @@
 name: Build (CI)
 
 on:
-  pull_request:
+  push:
     branches: [ master ]
 
   workflow_dispatch:
@@ -25,9 +25,15 @@ jobs:
            
       - name: Install jest
         run: npm install jest@^26.0.15
+   
+      - name: Install lerna
+        run: npm install lerna@^3.22.1
 
       - name: Build
         run: npm run build
         
       - name: Test
         run: npm run test
+      
+      - name: Publish
+        run: lerna publish from-package
