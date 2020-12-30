@@ -22,5 +22,8 @@
     "@babel/preset-env": "^7.12.1",
     "@babel/preset-typescript": "^7.12.1",
     "@types/jest": "^26.0.15"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
