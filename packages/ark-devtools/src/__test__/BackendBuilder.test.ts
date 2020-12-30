@@ -57,8 +57,8 @@ describe('backend builder', () => {
             testProcess.kill();
             done(err);
           });
-    }, 1000);
-  });
+    }, 5000);
+  }, 10 * 1000);
 
   test('server side rendering should work', (done) => {
     const testProcess = execa('node', [
