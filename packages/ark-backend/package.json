@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "start": "jest --watchAll",
-    "build": "tsc --watch"
+    "build": "tsc"
   },
   "author": "Skyslit Network Private Limited",
   "license": "Apache-2.0",

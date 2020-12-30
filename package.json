@@ -4,7 +4,8 @@
   "scripts": {
     "bootstrap": "lerna bootstrap",
     "lint": "eslint .",
-    "test": "./runTests.sh"
+    "test": "./runTests.sh",
+    "build": "lerna run build"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.8.2",
