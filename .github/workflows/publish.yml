@@ -1,0 +1,39 @@
+name: Build (CI)
+
+on:
+  push:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm run bootstrap
+           
+      - name: Install jest
+        run: npm install jest@^26.0.15
+   
+      - name: Install lerna
+        run: npm install lerna@^3.22.1
+
+      - name: Build
+        run: npm run build
+        
+      - name: Test
+        run: npm run test
+      
+      - name: Publish
+        run: lerna publish from-package
