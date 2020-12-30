@@ -11,7 +11,7 @@ beforeEach(() => {
   if (fs.existsSync(cwd)) {
     rimraf.sync(cwd);
   }
-  fs.mkdirSync(cwd);
+  fs.mkdirSync(cwd, {recursive: true});
 });
 
 test('workflow', async () => {

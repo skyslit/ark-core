@@ -10,7 +10,7 @@ describe('Sequel', () => {
         return new Promise((resolve) => {
           setTimeout(() => {
             testBin.push('TEST 1');
-            resolve();
+            resolve(null);
           }, 1000);
         });
       },
@@ -22,7 +22,7 @@ describe('Sequel', () => {
           setTimeout(() => {
             testBin.push('TEST 2', 'TEST 3');
             setTimeout(() => {
-              resolve();
+              resolve(null);
             }, 300);
           }, 300);
         });
@@ -107,7 +107,7 @@ describe('Sequel', () => {
       activator: () => new Promise((resolve) => {
         setTimeout(() => {
           result.push(counter);
-          resolve();
+          resolve(null);
         }, 300);
       }),
     });
@@ -148,7 +148,7 @@ describe('Sequel', () => {
       activator: () => new Promise((resolve) => {
         setTimeout(() => {
           result.push(counter);
-          resolve();
+          resolve(null);
         }, 300);
       }),
     });
