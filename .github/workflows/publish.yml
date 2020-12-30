@@ -24,10 +24,10 @@ jobs:
           npm run bootstrap
            
       - name: Install jest
-        run: npm install jest@^26.0.15
+        run: npm install jest@^26.0.15 -g
    
       - name: Install lerna
-        run: npm install lerna@^3.22.1
+        run: npm install lerna@^3.22.1 -g
 
       - name: Build
         run: npm run build
