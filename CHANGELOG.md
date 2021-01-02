@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 2.0.5 (2021-01-02)
+
+**Note:** Version bump only for package root
+
+
+
+
+
 ## [2.0.4](https://github.com/skyslit/ark-core/compare/v2.0.3...v2.0.4) (2021-01-02)
 
 ### Bug Fixes
