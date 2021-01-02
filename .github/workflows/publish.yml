@@ -34,18 +34,28 @@ jobs:
         run: |
           npm install
           npm run bootstrap
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install jest
         run: npm install jest@^26.0.15 -g
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install lerna
         run: npm install lerna@^3.22.1 -g
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Build
         run: npm run build
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Test
         run: npm run test
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish
         run: npm run lerna-publish
