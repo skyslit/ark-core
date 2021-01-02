@@ -5,7 +5,8 @@
     "lint": "eslint .",
     "test": "./scripts/runTests.sh",
     "build": "./scripts/build.sh",
-    "clean": "./scripts/cleanup.sh"
+    "clean": "./scripts/cleanup.sh",
+    "vbump": "lerna version --conventional-commits --no-push"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
