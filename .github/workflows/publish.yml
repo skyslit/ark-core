@@ -29,6 +29,11 @@ jobs:
       - name: Authenticate NPM
         run: npm set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
 
+      - name: Check NPM Registry Access
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Install Dependencies
         run: |
           npm install
