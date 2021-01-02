@@ -7,7 +7,8 @@
     "build": "./scripts/build.sh",
     "clean": "./scripts/cleanup.sh",
     "vbump": "lerna version --conventional-commits --yes",
-    "npmpublish": "lerna publish from-git --yes"
+    "npmpublish": "lerna publish from-git --yes",
+    "lerna-publish": "lerna publish --conventional-commits --yes"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
