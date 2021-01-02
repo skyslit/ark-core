@@ -19,6 +19,13 @@ jobs:
           node-version: '12.x'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Git Identity
+        run: |
+          git config --global user.name 'CI'
+          git config --global user.email 'ci@bots.skyslit.com'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Dependencies
         run: |
           npm install
