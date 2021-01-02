@@ -59,3 +59,6 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload coverage report
+        run: ./node_modules/.bin/codecov --token="${{ secrets.CODECOV_TOKEN }}"
