@@ -2,7 +2,7 @@ name: Build (CI)
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
   workflow_dispatch:
 
@@ -22,12 +22,12 @@ jobs:
         run: |
           npm install
           npm run bootstrap
-           
+
       - name: Install jest
         run: npm install jest@^26.0.15
 
       - name: Build
         run: npm run build
-        
+
       - name: Test
         run: npm run test

@@ -1,8 +1,4 @@
-import {
-  createProcess,
-  Job,
-  TestMonitor,
-} from './Automator';
+import { createProcess, Job, TestMonitor } from './Automator';
 
 let rocketsLaunched: string[] = [];
 
@@ -26,7 +22,7 @@ const isro = {
 };
 
 describe('automator real-world usage', () => {
-  beforeEach(() => rocketsLaunched = []);
+  beforeEach(() => (rocketsLaunched = []));
 
   test('async order of execution check', (done) => {
     const task = createProcess((automator) => {
@@ -42,19 +38,20 @@ describe('automator real-world usage', () => {
         yield isro.launchRocket('Scramjet Engine - TD.');
       });
     });
-    task.start(new Job())
-        .then(() => {
-          expect(rocketsLaunched).toStrictEqual([
-            'SLV',
-            'ASLV',
-            'GSLV Mk III.',
-            'PSLV.',
-            'RLV-TD.',
-            'Scramjet Engine - TD.',
-          ]);
-          done();
-        })
-        .catch(done);
+    task
+      .start(new Job())
+      .then(() => {
+        expect(rocketsLaunched).toStrictEqual([
+          'SLV',
+          'ASLV',
+          'GSLV Mk III.',
+          'PSLV.',
+          'RLV-TD.',
+          'Scramjet Engine - TD.',
+        ]);
+        done();
+      })
+      .catch(done);
   });
 
   test('prompt', (done) => {
@@ -77,21 +74,26 @@ describe('automator real-world usage', () => {
         yield isro.launchRocket('Scramjet Engine - TD.');
       });
     });
-    task.start(new Job(new TestMonitor({
-      'sample-input': 'Sounding Rockets',
-    })))
-        .then(() => {
-          expect(rocketsLaunched).toStrictEqual([
-            'SLV',
-            'ASLV',
-            'Sounding Rockets',
-            'GSLV Mk III.',
-            'PSLV.',
-            'RLV-TD.',
-            'Scramjet Engine - TD.',
-          ]);
-          done();
-        })
-        .catch(done);
+    task
+      .start(
+        new Job(
+          new TestMonitor({
+            'sample-input': 'Sounding Rockets',
+          })
+        )
+      )
+      .then(() => {
+        expect(rocketsLaunched).toStrictEqual([
+          'SLV',
+          'ASLV',
+          'Sounding Rockets',
+          'GSLV Mk III.',
+          'PSLV.',
+          'RLV-TD.',
+          'Scramjet Engine - TD.',
+        ]);
+        done();
+      })
+      .catch(done);
   });
 });

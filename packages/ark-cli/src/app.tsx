@@ -1,10 +1,5 @@
-import React, {
-  useState,
-} from 'react';
-import {
-  Text,
-  Box,
-} from 'ink';
+import React, { useState } from 'react';
+import { Text, Box } from 'ink';
 import Spinner from 'ink-spinner';
 
 type AppState = 'boot' | 'automation' | 'dashboard';
@@ -13,9 +8,7 @@ export default () => {
   const [appState] = useState<AppState>('boot');
   switch (appState) {
     case 'dashboard': {
-      return (
-        <Text color="green">Dashboard...</Text>
-      );
+      return <Text color="green">Dashboard...</Text>;
     }
     default: {
       return (
@@ -23,9 +16,7 @@ export default () => {
           <Text>
             <Spinner />
           </Text>
-          <Text color="gray">
-            {' '}Ark CLI Booting up...
-          </Text>
+          <Text color="gray"> Ark CLI Booting up...</Text>
         </Box>
       );
     }

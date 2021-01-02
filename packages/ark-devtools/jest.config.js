@@ -6,10 +6,7 @@ module.exports = {
   name: packageJson.name,
   displayName: packageJson.name,
   verbose: true,
-  modulePathIgnorePatterns: [
-    'build',
-    '__test__/test-artifacts',
-  ],
+  modulePathIgnorePatterns: ['build', '__test__/test-artifacts'],
   moduleNameMapper: {
     '^react-router-dom$': '<rootDir>/node_modules/react-router-dom',
   },

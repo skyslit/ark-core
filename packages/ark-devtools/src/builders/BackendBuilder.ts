@@ -1,6 +1,6 @@
-import {Configuration, IgnorePlugin} from 'webpack';
+import { Configuration, IgnorePlugin } from 'webpack';
 import nodeExternals from 'webpack-node-externals';
-import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
+import { BuilderBase, ConfigurationOptions } from '../utils/BuilderBase';
 import path from 'path';
 
 /**
@@ -20,24 +20,17 @@ export class BackendBuilder extends BuilderBase {
    * @param {ConfigurationOptions} opts
    * @return {Configuration}
    */
-  getConfiguration({cwd, mode}: ConfigurationOptions): Configuration {
+  getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
     return {
       context: cwd,
       mode,
       resolve: {
-        extensions: [
-          '.json',
-          '.ts',
-          '.tsx',
-          '.js',
-          '.jsx',
-        ],
+        extensions: ['.json', '.ts', '.tsx', '.js', '.jsx'],
         alias: {
-          ...this.mapPeerDependencies([
-            'react',
-            'react-dom',
-            'react-router-dom',
-          ], cwd),
+          ...this.mapPeerDependencies(
+            ['react', 'react-dom', 'react-router-dom'],
+            cwd
+          ),
         },
         symlinks: true,
       },
@@ -48,18 +41,18 @@ export class BackendBuilder extends BuilderBase {
         assetModuleFilename: '../assets/[hash][ext][query]',
       },
       target: 'node',
-      externals: [nodeExternals({
-        allowlist: [
-          '@skyslit/ark-backend',
-        ],
-      })],
+      externals: [
+        nodeExternals({
+          allowlist: ['@skyslit/ark-backend'],
+        }),
+      ],
       plugins: [
         new IgnorePlugin({
           // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4
           checkResource: (res) => {
             // eslint-disable-next-line no-unused-vars
             // const regex = /.(s?css|jpe?g|png|svg|gif|mp(3|4)|webp)/gmi;
-            const regex = /.(s?css)/gmi;
+            const regex = /.(s?css)/gim;
             return regex.test(res).valueOf() ? true : false;
           },
         }),
@@ -71,7 +64,9 @@ export class BackendBuilder extends BuilderBase {
             use: [
               {
                 loader: path.resolve(
-                    __dirname, '../../node_modules', 'babel-loader'
+                  __dirname,
+                  '../../node_modules',
+                  'babel-loader'
                 ),
                 options: {
                   compact: false,
@@ -87,4 +82,4 @@ export class BackendBuilder extends BuilderBase {
       },
     };
   }
-};
+}

@@ -3,13 +3,9 @@ import path from 'path';
 import ejs from 'ejs';
 
 export type GhostFileActions = {
-  eject: (
-    contextPath: string
-  ) => void,
-  provide: (
-    contextPath: string
-  ) => {[key: string]: string},
-}
+  eject: (contextPath: string) => void;
+  provide: (contextPath: string) => { [key: string]: string };
+};
 
 /**
  * Read EJS template
@@ -28,29 +24,22 @@ function readTemplate(templatePath: string): string {
  * @return {GhostFileActions}
  */
 export function createGhostFile(
-    templatePath: string,
-    relPath: string,
-    data?: any
+  templatePath: string,
+  relPath: string,
+  data?: any
 ): GhostFileActions {
   return {
-    eject: (
-        contextPath: string
-    ) => {
+    eject: (contextPath: string) => {
       const output = ejs.render(readTemplate(templatePath), data);
       const targetDirPath = path.dirname(path.join(contextPath, relPath));
 
       if (!fs.existsSync(targetDirPath)) {
-        fs.mkdirSync(targetDirPath, {recursive: true});
+        fs.mkdirSync(targetDirPath, { recursive: true });
       }
 
-      fs.writeFileSync(
-          path.join(contextPath, relPath),
-          output
-      );
+      fs.writeFileSync(path.join(contextPath, relPath), output);
     },
-    provide: (
-        contextPath: string,
-    ) => {
+    provide: (contextPath: string) => {
       // Check if file already exists
       const targetFilePath = path.join(contextPath, relPath);
       if (fs.existsSync(targetFilePath)) {

@@ -5,25 +5,15 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## [2.0.4](https://github.com/skyslit/ark-core/compare/v2.0.3...v2.0.4) (2021-01-02)
 
-
 ### Bug Fixes
 
-* typo fixes ([ba03919](https://github.com/skyslit/ark-core/commit/ba0391951e77bca6efeea83d75395721ce079537))
-
-
-
-
+- typo fixes ([ba03919](https://github.com/skyslit/ark-core/commit/ba0391951e77bca6efeea83d75395721ce079537))
 
 ## [2.0.3](https://github.com/skyslit/ark-core/compare/v2.0.2...v2.0.3) (2021-01-02)
 
-
 ### Bug Fixes
 
-* error ([5972849](https://github.com/skyslit/ark-core/commit/59728494565f0e58ebbdf18f394c42e70ff81931))
-
-
-
-
+- error ([5972849](https://github.com/skyslit/ark-core/commit/59728494565f0e58ebbdf18f394c42e70ff81931))
 
 ## [2.0.2](https://github.com/skyslit/ark-core/compare/v2.0.1...v2.0.2) (2021-01-02)
 

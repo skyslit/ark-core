@@ -1,8 +1,8 @@
-import {Configuration} from 'webpack';
-import {BuilderBase, ConfigurationOptions} from '../utils/BuilderBase';
+import { Configuration } from 'webpack';
+import { BuilderBase, ConfigurationOptions } from '../utils/BuilderBase';
 import path from 'path';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
-import {GhostFileActions, createGhostFile} from '../utils/ghostFile';
+import { GhostFileActions, createGhostFile } from '../utils/ghostFile';
 
 /**
  * SPA Builder
@@ -32,14 +32,14 @@ export class SPABuilder extends BuilderBase {
   getGhostFiles(opts: ConfigurationOptions): GhostFileActions[] {
     return [
       createGhostFile(
-          path.join(__dirname, './assets/Frontend/root.tsx.ejs'),
-          'src/index.tsx',
-          {
-            relativeAppFilePath: path.relative(
-                path.join(opts.cwd, 'src'),
-                path.join(this.appFilePath)
-            ),
-          }
+        path.join(__dirname, './assets/Frontend/root.tsx.ejs'),
+        'src/index.tsx',
+        {
+          relativeAppFilePath: path.relative(
+            path.join(opts.cwd, 'src'),
+            path.join(this.appFilePath)
+          ),
+        }
       ),
     ];
   }
@@ -47,24 +47,17 @@ export class SPABuilder extends BuilderBase {
    * @param {ConfigurationOptions} opts
    * @return {Configuration}
    */
-  getConfiguration({cwd, mode}: ConfigurationOptions): Configuration {
+  getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
     return {
       context: cwd,
       mode,
       resolve: {
-        extensions: [
-          '.json',
-          '.ts',
-          '.tsx',
-          '.js',
-          '.jsx',
-        ],
+        extensions: ['.json', '.ts', '.tsx', '.js', '.jsx'],
         alias: {
-          ...this.mapPeerDependencies([
-            'react',
-            'react-dom',
-            'react-router-dom',
-          ], cwd),
+          ...this.mapPeerDependencies(
+            ['react', 'react-dom', 'react-router-dom'],
+            cwd
+          ),
         },
         symlinks: true,
       },
@@ -87,7 +80,9 @@ export class SPABuilder extends BuilderBase {
             use: [
               {
                 loader: path.resolve(
-                    __dirname, '../../node_modules', 'babel-loader'
+                  __dirname,
+                  '../../node_modules',
+                  'babel-loader'
                 ),
                 options: {
                   compact: false,
@@ -103,4 +98,4 @@ export class SPABuilder extends BuilderBase {
       },
     };
   }
-};
+}

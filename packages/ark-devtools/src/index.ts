@@ -1,6 +1,6 @@
 import SetupProject from './automation/processes/SetupProject/SetupProject';
-import {createProcess} from './automation/core/Automator';
-export {Job, Automator} from './automation/core/Automator';
+import { createProcess } from './automation/core/Automator';
+export { Job, Automator } from './automation/core/Automator';
 export {
   ManifestManager,
   InvalidManifestError,

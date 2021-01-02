@@ -1,4 +1,4 @@
-import {Sequel} from '../index';
+import { Sequel } from '../index';
 
 describe('Sequel', () => {
   test('order of execution', (done) => {
@@ -40,8 +40,14 @@ describe('Sequel', () => {
       setTimeout(() => {
         expect(testBin).toHaveLength(3);
         setTimeout(() => {
-          expect(testBin).toEqual(['TEST 1', 'TEST 2', 'TEST 3',
-            'TEST 4', 'TEST 5', 'TEST 6']);
+          expect(testBin).toEqual([
+            'TEST 1',
+            'TEST 2',
+            'TEST 3',
+            'TEST 4',
+            'TEST 5',
+            'TEST 6',
+          ]);
           done();
         }, 500);
       }, 400);
@@ -66,10 +72,9 @@ describe('Sequel', () => {
       before: () => {
         counter++;
       },
-    })
-        .finally(() => {
-          expect(result).toEqual(1);
-        });
+    }).finally(() => {
+      expect(result).toEqual(1);
+    });
   });
 
   test('after all', () => {
@@ -86,10 +91,9 @@ describe('Sequel', () => {
       after: () => {
         result++;
       },
-    })
-        .finally(() => {
-          expect(result).toEqual(2);
-        });
+    }).finally(() => {
+      expect(result).toEqual(2);
+    });
   });
 
   test('before each', (done) => {
@@ -104,12 +108,13 @@ describe('Sequel', () => {
     });
 
     q.push({
-      activator: () => new Promise((resolve) => {
-        setTimeout(() => {
-          result.push(counter);
-          resolve(null);
-        }, 300);
-      }),
+      activator: () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            result.push(counter);
+            resolve(null);
+          }, 300);
+        }),
     });
 
     q.push({
@@ -122,13 +127,12 @@ describe('Sequel', () => {
       beforeEach: () => {
         counter++;
       },
-    })
-        .finally(() => {
-          expect(counter).toEqual(3);
-          expect(counter).toEqual(3);
-          expect(result).toEqual([1, 2, 3]);
-          done();
-        });
+    }).finally(() => {
+      expect(counter).toEqual(3);
+      expect(counter).toEqual(3);
+      expect(result).toEqual([1, 2, 3]);
+      done();
+    });
   });
 
   test('after each', (done) => {
@@ -145,12 +149,13 @@ describe('Sequel', () => {
 
     q.push({
       name: '2',
-      activator: () => new Promise((resolve) => {
-        setTimeout(() => {
-          result.push(counter);
-          resolve(null);
-        }, 300);
-      }),
+      activator: () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            result.push(counter);
+            resolve(null);
+          }, 300);
+        }),
     });
 
     q.push({
@@ -167,12 +172,11 @@ describe('Sequel', () => {
       afterEach: () => {
         result.splice(result.indexOf(counter), 1);
       },
-    })
-        .finally(() => {
-          expect(counter).toEqual(3);
-          expect(counter).toEqual(3);
-          expect(result).toEqual([]);
-          done();
-        });
+    }).finally(() => {
+      expect(counter).toEqual(3);
+      expect(counter).toEqual(3);
+      expect(result).toEqual([]);
+      done();
+    });
   });
 });

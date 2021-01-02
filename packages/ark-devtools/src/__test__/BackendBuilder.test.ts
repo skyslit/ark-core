@@ -1,7 +1,7 @@
 /* eslint-disable require-jsdoc */
-import {Compilation} from 'webpack';
-import {BackendBuilder} from '../builders/BackendBuilder';
-import {SPABuilder} from '../builders/FrontendBuilder';
+import { Compilation } from 'webpack';
+import { BackendBuilder } from '../builders/BackendBuilder';
+import { SPABuilder } from '../builders/FrontendBuilder';
 import path from 'path';
 import * as fs from 'fs';
 import execa from 'execa';
@@ -16,30 +16,38 @@ describe('SPA app builder', () => {
     outputFileSystem = fs;
   });
 
-  test('successfull build', (done) => {
-    const builderInstance = new SPABuilder(
+  test(
+    'successfull build',
+    (done) => {
+      const builderInstance = new SPABuilder(
         'admin',
         path.join(__dirname, './test-project/src/admin.client.tsx')
-    );
-    builderInstance.on('success', (compilation: Compilation) => {
-      try {
-        done();
-      } catch (e) {
-        done(e);
-      }
-    });
-    builderInstance.on('warning', (warnings) => {
-      done(new Error('Warnings should not be thrown'));
-    });
-    builderInstance.on('error', (errors) => {
-      console.log(errors);
-      done(new Error('Error should not be thrown'));
-    });
-    builderInstance.build({
-      mode: 'production',
-      cwd: testProjectDir,
-    }, fs, outputFileSystem);
-  }, 10 * 1000);
+      );
+      builderInstance.on('success', (compilation: Compilation) => {
+        try {
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+      builderInstance.on('warning', (warnings) => {
+        done(new Error('Warnings should not be thrown'));
+      });
+      builderInstance.on('error', (errors) => {
+        console.log(errors);
+        done(new Error('Error should not be thrown'));
+      });
+      builderInstance.build(
+        {
+          mode: 'production',
+          cwd: testProjectDir,
+        },
+        fs,
+        outputFileSystem
+      );
+    },
+    10 * 1000
+  );
 });
 
 describe('backend builder', () => {
@@ -53,7 +61,7 @@ describe('backend builder', () => {
 
   test('successfull build', (done) => {
     const builderInstance = new BackendBuilder(
-        path.join(__dirname, './test-project/src/services/mock.server.tsx')
+      path.join(__dirname, './test-project/src/services/mock.server.tsx')
     );
     builderInstance.on('success', (compilation: Compilation) => {
       try {
@@ -69,10 +77,14 @@ describe('backend builder', () => {
       console.log(errors);
       done(new Error('Error should not be thrown'));
     });
-    builderInstance.build({
-      mode: 'production',
-      cwd: testProjectDir,
-    }, fs, outputFileSystem);
+    builderInstance.build(
+      {
+        mode: 'production',
+        cwd: testProjectDir,
+      },
+      fs,
+      outputFileSystem
+    );
   });
 
   test('artifacts should run without error', (done) => {
@@ -84,15 +96,17 @@ describe('backend builder', () => {
 
     setTimeout(() => {
       const request = createRequest('http://localhost:3001/test');
-      request.get('/').then((res) => {
-        testProcess.kill();
-        expect(res.status).toBe(200);
-        done();
-      })
-          .catch((err) => {
-            testProcess.kill();
-            done(err);
-          });
+      request
+        .get('/')
+        .then((res) => {
+          testProcess.kill();
+          expect(res.status).toBe(200);
+          done();
+        })
+        .catch((err) => {
+          testProcess.kill();
+          done(err);
+        });
     }, 1000);
   });
 
@@ -105,16 +119,18 @@ describe('backend builder', () => {
 
     setTimeout(() => {
       const request = createRequest('http://localhost:3001');
-      request.get('/').then((res) => {
-        testProcess.kill();
-        expect(res.text).toContain('Page 1 SSR Test');
-        expect(res.status).toBe(200);
-        done();
-      })
-          .catch((err) => {
-            testProcess.kill();
-            done(err);
-          });
+      request
+        .get('/')
+        .then((res) => {
+          testProcess.kill();
+          expect(res.text).toContain('Page 1 SSR Test');
+          expect(res.status).toBe(200);
+          done();
+        })
+        .catch((err) => {
+          testProcess.kill();
+          done(err);
+        });
     }, 1000);
   });
 });

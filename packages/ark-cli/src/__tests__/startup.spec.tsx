@@ -1,7 +1,7 @@
-import {act, renderHook} from '@testing-library/react-hooks';
-import useMasterController, {MasterOptions} from '../hooks/master';
-import {ProcessRegistryType} from '../registry';
-import {ManifestUtils, Automations} from '@skyslit/ark-devtools';
+import { act, renderHook } from '@testing-library/react-hooks';
+import useMasterController, { MasterOptions } from '../hooks/master';
+import { ProcessRegistryType } from '../registry';
+import { ManifestUtils, Automations } from '@skyslit/ark-devtools';
 import fs from 'fs';
 
 jest.mock('fs', () => {
@@ -28,9 +28,9 @@ describe('new dir (without project)', () => {
   };
 
   test('app should launch in automator', async () => {
-    const {
-      waitForNextUpdate,
-    } = renderHook(() => useMasterController(options, testProcessRegistry));
+    const { waitForNextUpdate } = renderHook(() =>
+      useMasterController(options, testProcessRegistry)
+    );
     await waitForNextUpdate();
     expect(hasNewProjectSetupRan).toEqual(true);
   });
@@ -38,15 +38,14 @@ describe('new dir (without project)', () => {
 
 describe('existing project', () => {
   beforeAll(() => {
-    fs.writeFileSync('/ark.manifest.json', JSON.stringify(
-        ManifestUtils.createManifest({
-
-        })
-    ));
+    fs.writeFileSync(
+      '/ark.manifest.json',
+      JSON.stringify(ManifestUtils.createManifest({}))
+    );
   });
 
   test('app should launch in panel', () => {
-    const {result} = renderHook(() => useMasterController(options));
+    const { result } = renderHook(() => useMasterController(options));
     expect(result.current.screen).toBe('panel');
   });
 });
@@ -54,21 +53,20 @@ describe('existing project', () => {
 describe('automation', () => {
   test('cli prompt should be working', async () => {
     let promptResponse: string;
-    const {
-      result,
-      waitForNextUpdate,
-    } = renderHook(() => useMasterController(options, {
-      // @ts-ignore
-      '__test__prompt': Automations.utils.createProcess((automator) => {
-        automator.run(function* () {
-          promptResponse = yield automator.prompt({
-            key: '__test__p_key',
-            question: 'Which is the tallest building in the world?',
-            type: 'text-input',
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useMasterController(options, {
+        // @ts-ignore
+        __test__prompt: Automations.utils.createProcess((automator) => {
+          automator.run(function* () {
+            promptResponse = yield automator.prompt({
+              key: '__test__p_key',
+              question: 'Which is the tallest building in the world?',
+              type: 'text-input',
+            });
           });
-        });
-      }),
-    }));
+        }),
+      })
+    );
     expect(result.current.screen).toBe('panel');
     expect(result.current.hasPrompt).toBe(false);
     act(() => {

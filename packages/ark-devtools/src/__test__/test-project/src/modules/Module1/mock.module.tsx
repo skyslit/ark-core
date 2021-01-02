@@ -1,5 +1,3 @@
-import {createContext} from '@skyslit/ark-core';
+import { createContext } from '@skyslit/ark-core';
 
-export default createContext(() => {
-
-});
+export default createContext(() => {});

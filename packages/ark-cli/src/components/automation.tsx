@@ -1,11 +1,10 @@
 import React from 'react';
-import {Box} from 'ink';
+import { Box } from 'ink';
 
 export default () => {
   return (
     <>
-      <Box>
-      </Box>
+      <Box></Box>
     </>
   );
 };

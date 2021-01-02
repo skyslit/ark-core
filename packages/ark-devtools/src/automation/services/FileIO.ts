@@ -1,16 +1,16 @@
 import fs from 'fs';
 import path from 'path';
 import rimraf from 'rimraf';
-import {Automator} from '../core/Automator';
+import { Automator } from '../core/Automator';
 
 type ParsePreset = 'raw' | 'json' | 'ts|tsx' | 'custom';
 
 type Parser<O> = {
-  encode: (input: O) => string,
-  decode: (input: string) => O
-}
+  encode: (input: O) => string;
+  decode: (input: string) => O;
+};
 
-type ParserMap = { [key: string]: Parser<any> }
+type ParserMap = { [key: string]: Parser<any> };
 
 const RawParser: Parser<string> = {
   encode: (input) => input,
@@ -29,7 +29,7 @@ const FileParser: ParserMap = {
 
 export const useFileSystem = (automator: Automator) => ({
   createDirectory: (p: string) => {
-    return fs.mkdirSync(path.join(automator.cwd, p), {recursive: true});
+    return fs.mkdirSync(path.join(automator.cwd, p), { recursive: true });
   },
   /**
    * Create or overrite file
@@ -38,8 +38,9 @@ export const useFileSystem = (automator: Automator) => ({
    * @return {void}
    */
   writeFile: (p: string, content: any): void => {
-    return fs.writeFileSync(
-        path.join(automator.cwd, p), content, {encoding: 'utf-8'});
+    return fs.writeFileSync(path.join(automator.cwd, p), content, {
+      encoding: 'utf-8',
+    });
   },
   deleteFile: (p: string) => {
     return fs.rmSync(path.join(automator.cwd, p));
@@ -71,20 +72,19 @@ export const useFileSystem = (automator: Automator) => ({
             parsedData = parser.decode(data);
 
             return {
-              act: (activator: (
-                data: any,
-                raw: string,
-                saveFile: () => boolean
-              ) => Generator) => {
-                return () => activator(
-                    parsedData,
-                    data,
-                    () => {
-                      const dataToSave = parser.encode(parsedData);
-                      fs.writeFileSync(filePath, dataToSave);
-                      return true;
-                    },
-                );
+              act: (
+                activator: (
+                  data: any,
+                  raw: string,
+                  saveFile: () => boolean
+                ) => Generator
+              ) => {
+                return () =>
+                  activator(parsedData, data, () => {
+                    const dataToSave = parser.encode(parsedData);
+                    fs.writeFileSync(filePath, dataToSave);
+                    return true;
+                  });
               },
             };
           },

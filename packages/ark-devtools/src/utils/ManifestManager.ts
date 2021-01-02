@@ -13,10 +13,9 @@ export class InvalidManifestError {
   constructor(message: string) {
     this.message = message;
   }
-};
-
-export interface Manifest {
 }
+
+export interface Manifest {}
 
 const PATH_CONFIG = './ark.manifest.json';
 
@@ -24,7 +23,7 @@ const PATH_CONFIG = './ark.manifest.json';
  * Provides utility function to manage Ark project configuration file
  */
 export class ManifestManager {
-  public cwd: string
+  public cwd: string;
   public configuration: Manifest;
   public isLoaded: boolean;
   /**
@@ -89,10 +88,13 @@ export class ManifestManager {
 
 export const ManifestUtils = {
   createManifest: (
-      opts: Partial<Manifest>, defaultOpts?: Partial<Manifest>) => {
-    return Object.assign<Manifest, Partial<Manifest>, Partial<Manifest>>({
-
-    }, defaultOpts || {}, opts);
+    opts: Partial<Manifest>,
+    defaultOpts?: Partial<Manifest>
+  ) => {
+    return Object.assign<Manifest, Partial<Manifest>, Partial<Manifest>>(
+      {},
+      defaultOpts || {},
+      opts
+    );
   },
 };
-

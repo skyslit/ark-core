@@ -1,18 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 import ejs from 'ejs';
-import webpack, {Configuration, Stats} from 'webpack';
-import {EventEmitter} from 'events';
-import {GhostFileActions} from './ghostFile';
+import webpack, { Configuration, Stats } from 'webpack';
+import { EventEmitter } from 'events';
+import { GhostFileActions } from './ghostFile';
 import memfs from 'memfs';
-import {ufs} from 'unionfs';
+import { ufs } from 'unionfs';
 
 type Mode = 'development' | 'production';
 export type ConfigurationOptions = {
-  mode: Mode,
-  cwd: string,
-  watchMode?: boolean
-}
+  mode: Mode;
+  cwd: string;
+  watchMode?: boolean;
+};
 /**
  * Wrapper for Webpack
  */
@@ -36,19 +36,17 @@ export class BuilderBase extends EventEmitter {
    */
   build(opts: ConfigurationOptions, ifs?: any, ofs?: any, wfs?: any) {
     const buildConfiguration = this.getConfiguration(
-        Object.assign<
-          ConfigurationOptions,
-          Partial<ConfigurationOptions>
-        >({
+      Object.assign<ConfigurationOptions, Partial<ConfigurationOptions>>(
+        {
           mode: 'production',
           cwd: null,
           watchMode: false,
-        }, opts)
+        },
+        opts
+      )
     );
     if (!buildConfiguration) {
-      throw new Error(
-          'webpack configuration should not be null'
-      );
+      throw new Error('webpack configuration should not be null');
     }
     this.compiler = webpack(buildConfiguration);
     if (ifs) {
@@ -71,10 +69,12 @@ export class BuilderBase extends EventEmitter {
 
     if (Object.keys(volume).length > 0) {
       const _ufs = ufs
-          .use(memfs.createFsFromVolume(
-              memfs.Volume.fromJSON(volume, opts.cwd)
-          ) as any)
-          .use(this.compiler.inputFileSystem as any);
+        .use(
+          memfs.createFsFromVolume(
+            memfs.Volume.fromJSON(volume, opts.cwd)
+          ) as any
+        )
+        .use(this.compiler.inputFileSystem as any);
       this.compiler.inputFileSystem = _ufs;
     }
 
@@ -122,11 +122,7 @@ export class BuilderBase extends EventEmitter {
    * @return {string[]}
    */
   eventNames(): string[] {
-    return [
-      'success',
-      'warning',
-      'error',
-    ];
+    return ['success', 'warning', 'error'];
   }
 
   /**
@@ -144,8 +140,11 @@ export class BuilderBase extends EventEmitter {
    * @param {string=} cwd Defaults to process.cwd()
    * @return {any}
    */
-  mapPeerDependencies(dependencies: string[], cwd?: string): {
-    [key: string]: string
+  mapPeerDependencies(
+    dependencies: string[],
+    cwd?: string
+  ): {
+    [key: string]: string;
   } {
     return dependencies.reduce((acc, dependency) => {
       cwd = cwd || process.cwd();
@@ -170,10 +169,10 @@ export class BuilderBase extends EventEmitter {
    * @return {string} Optional file from project dir / template output
    */
   getOptionalFile(
-      cwd: string,
-      relativePath: string,
-      ejsFilePath: string,
-      data?: any
+    cwd: string,
+    relativePath: string,
+    ejsFilePath: string,
+    data?: any
   ): string {
     const optionalFile: string = path.join(cwd, relativePath);
     if (fs.existsSync(optionalFile)) {
@@ -186,7 +185,9 @@ export class BuilderBase extends EventEmitter {
         return ejs.render(template, data);
       }
       // eslint-disable-next-line max-len
-      throw new Error('Failed to compile replacement file. This indicates an error with Ark Build System, you may create an issue for this on GitHub.');
+      throw new Error(
+        'Failed to compile replacement file. This indicates an error with Ark Build System, you may create an issue for this on GitHub.'
+      );
     }
   }
 
@@ -197,21 +198,25 @@ export class BuilderBase extends EventEmitter {
    */
   private handler(err?: Error, result?: Stats): void {
     if (err) {
-      this.emit('error', [{
-        message: err.message,
-      }]);
+      this.emit('error', [
+        {
+          message: err.message,
+        },
+      ]);
     } else {
       if (result.hasErrors()) {
-        this.emit('error',
-            result.compilation.errors,
-            result.compilation,
-            result
+        this.emit(
+          'error',
+          result.compilation.errors,
+          result.compilation,
+          result
         );
       } else if (result.hasWarnings()) {
-        this.emit('warning',
-            result.compilation.warnings,
-            result.compilation,
-            result
+        this.emit(
+          'warning',
+          result.compilation.warnings,
+          result.compilation,
+          result
         );
       } else {
         this.emit('success', result.compilation, result);

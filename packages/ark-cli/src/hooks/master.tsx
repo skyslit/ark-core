@@ -1,20 +1,13 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-} from 'react';
-import {
-  ManifestManager,
-  InvalidManifestError,
-} from '@skyslit/ark-devtools';
-import {useAutomator} from './automator';
-import {ProcessRegistryType, Registry} from '../registry';
+import { useState, useEffect, useCallback } from 'react';
+import { ManifestManager, InvalidManifestError } from '@skyslit/ark-devtools';
+import { useAutomator } from './automator';
+import { ProcessRegistryType, Registry } from '../registry';
 
 type Screens = 'boot' | 'panel' | 'automator' | 'error';
 export type MasterOptions = {
-  disableAutoBoot: boolean,
-  cwd: string
-}
+  disableAutoBoot: boolean;
+  cwd: string;
+};
 
 /**
  * Master controller
@@ -22,18 +15,23 @@ export type MasterOptions = {
  * @param {Partial<ProcessRegistryType>} processRegistry
  * @return {any}
  */
-export default function(
-    opts?: Partial<MasterOptions>,
-    processRegistry?: Partial<ProcessRegistryType>) {
+export default function (
+  opts?: Partial<MasterOptions>,
+  processRegistry?: Partial<ProcessRegistryType>
+) {
   // Normalise
-  opts = Object.assign<MasterOptions, Partial<MasterOptions>>({
-    disableAutoBoot: false,
-    cwd: process.cwd(),
-  }, opts || {});
+  opts = Object.assign<MasterOptions, Partial<MasterOptions>>(
+    {
+      disableAutoBoot: false,
+      cwd: process.cwd(),
+    },
+    opts || {}
+  );
 
   processRegistry = Object.assign<
     ProcessRegistryType,
-    Partial<ProcessRegistryType>>(Registry, processRegistry || {});
+    Partial<ProcessRegistryType>
+  >(Registry, processRegistry || {});
 
   const manager = new ManifestManager(opts.cwd);
   const [errorData, setErrorData] = useState(null);

@@ -14,7 +14,7 @@ export class Term {
     }
     this.state = Object.assign(this.state, state);
     this.mount();
-  }
+  };
 
   mount = () => {
     if (!this.hasAlreadyMounted) {
@@ -22,9 +22,9 @@ export class Term {
       this.componentDidMount();
     }
     logUpdate(this.render());
-  }
+  };
 
-  componentDidMount() { }
+  componentDidMount() {}
 
   render() {
     return '';

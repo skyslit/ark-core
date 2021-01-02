@@ -2,9 +2,9 @@
 import path from 'path';
 import execa from 'execa';
 
-export type PromptAnswerActivator = (answer?: any) => void
+export type PromptAnswerActivator = (answer?: any) => void;
 export interface IAutomatorInterface {
-  onNewPrompt: (prompt: Prompt, answer: PromptAnswerActivator) => void,
+  onNewPrompt: (prompt: Prompt, answer: PromptAnswerActivator) => void;
 }
 
 /**
@@ -12,16 +12,18 @@ export interface IAutomatorInterface {
  */
 export class TestMonitor implements IAutomatorInterface {
   testInput: {
-    [key: string]: any,
-  }
+    [key: string]: any;
+  };
 
   /**
    * TestMonitor Constructor
    * @param {object} testInput
    */
-  constructor(testInput: {
-    [key: string]: any,
-  } = {}) {
+  constructor(
+    testInput: {
+      [key: string]: any;
+    } = {}
+  ) {
     this.testInput = testInput;
   }
 
@@ -41,36 +43,36 @@ export class TestMonitor implements IAutomatorInterface {
 }
 
 type QueueItem = {
-  id: number
-  activator?: (...args: any[]) => Generator,
-  service?: any,
-  title?: string,
-  description?: string,
-}
+  id: number;
+  activator?: (...args: any[]) => Generator;
+  service?: any;
+  title?: string;
+  description?: string;
+};
 
 type StepSnapshot = {
-  title: string,
-  description: string,
-  state: 'waiting' | 'in-progress' | 'completed' | 'error'
-}
+  title: string;
+  description: string;
+  state: 'waiting' | 'in-progress' | 'completed' | 'error';
+};
 
 type AutomationSnapshot = {
-  title: string,
-  description: string,
-  steps: StepSnapshot[],
-  completedSteps: number,
-  totalSteps: number,
-}
+  title: string;
+  description: string;
+  steps: StepSnapshot[];
+  completedSteps: number;
+  totalSteps: number;
+};
 
 type JobSnapshot = {
-  title: string,
-  description: string,
-  automations: AutomationSnapshot[],
-  completedAutomations: number,
-  completedSteps: number,
-  totalAutomations: number,
-  totalSteps: number,
-}
+  title: string;
+  description: string;
+  automations: AutomationSnapshot[];
+  completedAutomations: number;
+  completedSteps: number;
+  totalAutomations: number;
+  totalSteps: number;
+};
 
 /**
  * In-Memory ID Generator
@@ -88,11 +90,11 @@ const GENERATOR_ACTION = 'GENERATOR';
 const PROMPT_ACTION = 'PROMPT';
 
 type ActionType = {
-  __type__: string,
+  __type__: string;
   payload: {
-    [key: string]: any,
-  }
-}
+    [key: string]: any;
+  };
+};
 
 /**
  * Creates automation base action
@@ -100,9 +102,12 @@ type ActionType = {
  * @param {object} payload
  * @return {ActionType}
  */
-function createAction(type: string, payload: {
-  [key: string]: any,
-}): ActionType {
+function createAction(
+  type: string,
+  payload: {
+    [key: string]: any;
+  }
+): ActionType {
   return {
     __type__: type,
     payload,
@@ -124,18 +129,18 @@ function isActionType(x: any): x is ActionType {
 }
 
 export type Prompt = {
-  key: string
-  question: string
-  type: 'text-input'
-  options?: []
-  answer?: () => void
-}
+  key: string;
+  question: string;
+  type: 'text-input';
+  options?: [];
+  answer?: () => void;
+};
 
 /**
  * Manages automation and prompts
  */
 export class Automator {
-  public steps: Array<QueueItem>
+  public steps: Array<QueueItem>;
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
   public cwd: string;
@@ -156,10 +161,21 @@ export class Automator {
    * @param {execa.Options<string>=} options (Optional)
    * @return {execa.ExecaChildProcess<string>}
    */
-  async runOnCli(file: string, args?: readonly string[], options?: execa.Options<string>) {
-    return await execa(file, args, Object.assign<execa.Options<string>, execa.Options<string>>({
-      cwd: this.cwd,
-    }, options));
+  async runOnCli(
+    file: string,
+    args?: readonly string[],
+    options?: execa.Options<string>
+  ) {
+    return await execa(
+      file,
+      args,
+      Object.assign<execa.Options<string>, execa.Options<string>>(
+        {
+          cwd: this.cwd,
+        },
+        options
+      )
+    );
   }
 
   /**
@@ -213,7 +229,7 @@ export class Automator {
 export class Job {
   private monitor: IAutomatorInterface;
   private currentRunningTaskIndex: number = -1;
-  public automations: Array<Automator>
+  public automations: Array<Automator>;
   public isRunning: boolean;
   public cwd: string;
 
@@ -262,7 +278,9 @@ export class Job {
    */
   getPromptResponse(prompt: Prompt) {
     if (!this.monitor) {
-      throw new Error('Prompts cannot be handled because no monitor is attached to the Job');
+      throw new Error(
+        'Prompts cannot be handled because no monitor is attached to the Job'
+      );
     }
     return new Promise((resolve, reject) => {
       this.monitor.onNewPrompt(prompt, (answer = null) => resolve(answer));
@@ -281,7 +299,7 @@ export class Job {
         try {
           if (result.value instanceof Promise) {
             answer = await result.value;
-          } else if (typeof(result.value) === 'function') {
+          } else if (typeof result.value === 'function') {
             const fnResult = await Promise.resolve(result.value());
             // Check if generator function
             if (typeof fnResult.next === 'function') {
@@ -290,7 +308,7 @@ export class Job {
             } else {
               answer = fnResult;
             }
-          } else if (typeof(result.value) === 'object') {
+          } else if (typeof result.value === 'object') {
             // Check if generator object
             if (isActionType(result.value)) {
               switch (result.value.__type__) {
@@ -299,7 +317,9 @@ export class Job {
                   break;
                 }
                 case PROMPT_ACTION: {
-                  answer = await this.getPromptResponse(<any>result.value.payload);
+                  answer = await this.getPromptResponse(
+                    <any>result.value.payload
+                  );
                   break;
                 }
                 default: {
@@ -318,7 +338,9 @@ export class Job {
 
     return new Promise((resolve, reject) => {
       const runner = this.runNext();
-      runGenerator(runner).then(() => resolve(null)).catch(reject);
+      runGenerator(runner)
+        .then(() => resolve(null))
+        .catch(reject);
     });
   }
 
@@ -326,7 +348,7 @@ export class Job {
    * Job Runner function
    * @return {boolean}
    */
-  private* runNext() {
+  private *runNext() {
     const job = this;
     job.isRunning = true;
     while (job.isRunning === true) {
@@ -336,12 +358,22 @@ export class Job {
         yield function* () {
           // Step runner
           job.automations[job.currentRunningTaskIndex].isRunning = true;
-          while (job.automations[job.currentRunningTaskIndex].isRunning === true) {
-            job.automations[job.currentRunningTaskIndex].currentRunningTaskIndex++;
-            const step = job.automations[job.currentRunningTaskIndex].steps[job.automations[job.currentRunningTaskIndex].currentRunningTaskIndex];
+          while (
+            job.automations[job.currentRunningTaskIndex].isRunning === true
+          ) {
+            job.automations[job.currentRunningTaskIndex]
+              .currentRunningTaskIndex++;
+            const step =
+              job.automations[job.currentRunningTaskIndex].steps[
+                job.automations[job.currentRunningTaskIndex]
+                  .currentRunningTaskIndex
+              ];
             if (step) {
               // Call the actual step
-              yield createAction(GENERATOR_ACTION, step.activator(step.service));
+              yield createAction(
+                GENERATOR_ACTION,
+                step.activator(step.service)
+              );
             } else {
               job.automations[job.currentRunningTaskIndex].isRunning = false;
               break;

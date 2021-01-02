@@ -1,11 +1,11 @@
-import React, {useCallback} from 'react';
-import {Job, Automator} from '@skyslit/ark-devtools';
-import {Prompt} from '@skyslit/ark-devtools/build/automation/core/Automator';
+import React, { useCallback } from 'react';
+import { Job, Automator } from '@skyslit/ark-devtools';
+import { Prompt } from '@skyslit/ark-devtools/build/automation/core/Automator';
 
 type PromptEnvelop = {
-  prompt: Prompt,
-  returnAnswer: (...args: any[]) => void
-}
+  prompt: Prompt;
+  returnAnswer: (...args: any[]) => void;
+};
 
 let job: Job;
 
@@ -26,23 +26,27 @@ export const useAutomator = () => {
       },
     });
     setIsActive(true);
-    automationProcess.start(job)
-        .then(() => {
-          setIsActive(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setIsActive(false);
-        });
+    automationProcess
+      .start(job)
+      .then(() => {
+        setIsActive(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setIsActive(false);
+      });
   }, []);
 
-  const returnPromptResponse = useCallback((...args: any[]) => {
-    if (!activePromptEnvelop) {
-      return false;
-    }
-    activePromptEnvelop.returnAnswer(...args);
-    setActivePromptEnvelop(null);
-  }, [activePromptEnvelop, setActivePromptEnvelop]);
+  const returnPromptResponse = useCallback(
+    (...args: any[]) => {
+      if (!activePromptEnvelop) {
+        return false;
+      }
+      activePromptEnvelop.returnAnswer(...args);
+      setActivePromptEnvelop(null);
+    },
+    [activePromptEnvelop, setActivePromptEnvelop]
+  );
 
   return {
     isActive,

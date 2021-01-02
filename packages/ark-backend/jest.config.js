@@ -7,7 +7,5 @@ module.exports = {
   displayName: packageJson.name,
   testEnvironment: 'node',
   verbose: true,
-  modulePathIgnorePatterns: [
-    'build',
-  ],
+  modulePathIgnorePatterns: ['build'],
 };
