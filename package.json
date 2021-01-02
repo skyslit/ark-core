@@ -6,7 +6,7 @@
     "test": "./scripts/runTests.sh",
     "build": "./scripts/build.sh",
     "clean": "./scripts/cleanup.sh",
-    "vbump": "lerna version --conventional-commits",
+    "vbump": "lerna version --conventional-commits --yes",
     "npmpublish": "lerna publish from-git --yes"
   },
   "devDependencies": {
