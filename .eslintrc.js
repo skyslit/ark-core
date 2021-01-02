@@ -4,5 +4,10 @@ module.exports = {
   'plugins': [
     '@typescript-eslint',
   ],
-  'extends': 'google',
+  'extends': [
+    'google',
+    'prettier',
+    'prettier/@typescript-eslint',
+    'prettier/react'
+  ],
 };

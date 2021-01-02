@@ -6,7 +6,8 @@
     "test": "./scripts/runTests.sh",
     "build": "./scripts/build.sh",
     "clean": "./scripts/cleanup.sh",
-    "lerna-publish": "lerna publish --conventional-commits --yes"
+    "lerna-publish": "lerna publish --conventional-commits --yes",
+    "pt-check": "prettier --check ."
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
@@ -15,17 +16,21 @@
     "@typescript-eslint/parser": "^4.8.2",
     "eslint": "^7.14.0",
     "eslint-config-google": "^0.14.0",
+    "eslint-config-prettier": "^7.1.0",
     "husky": "^4.3.6",
     "lerna": "^3.22.1",
+    "prettier": "2.2.1",
     "typescript": "^4.1.2"
   },
   "dependencies": {},
   "husky": {
     "hooks": {
-        "commit-msg": "commitlint -E  HUSKY_GIT_PARAMS"
-     }
+      "commit-msg": "commitlint -E  HUSKY_GIT_PARAMS"
+    }
   },
   "commitlint": {
-    "extends": ["@commitlint/config-conventional"]
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
   }
 }
