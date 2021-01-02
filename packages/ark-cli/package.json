@@ -1,6 +1,6 @@
 {
   "name": "fpz",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "FreePizza CLI uses Ark DevTools to build and automate Ark Application development process",
   "main": "./build/index.js",
   "private": false,
@@ -32,7 +32,7 @@
     "react-test-renderer": "^17.0.1"
   },
   "dependencies": {
-    "@skyslit/ark-devtools": "^2.0.5",
+    "@skyslit/ark-devtools": "^2.0.6",
     "ink": "^3.0.8",
     "ink-confirm-input": "^2.0.0",
     "ink-multi-select": "^2.0.0",
