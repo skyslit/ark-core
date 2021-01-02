@@ -7,7 +7,8 @@
     "build": "./scripts/build.sh",
     "clean": "./scripts/cleanup.sh",
     "lerna-publish": "lerna publish --conventional-commits --yes",
-    "pt-check": "prettier --check ."
+    "pt-check": "prettier --check .",
+    "pt-run": "prettier --write ."
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
