@@ -3,11 +3,13 @@ name: Testing
 on:
   pull_request:
     branches: [master]
+  push:
+    branches: [master]
 
   workflow_dispatch:
 
 jobs:
-  build:
+  Test:
     runs-on: ubuntu-latest
 
     steps:
