@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import yaml from 'yaml';
 
 /**
  * Used to throw when manifest is not matching the schema
@@ -15,9 +16,37 @@ export class InvalidManifestError {
   }
 }
 
-export interface Manifest {}
+export type Role = {
+  /**
+   * e.g. admin | system_user | support_user
+   */
+  Name: string;
+  Label?: string;
+};
 
-const PATH_CONFIG = './ark.manifest.json';
+export type WebApp = {
+  title: string;
+  description?: string;
+};
+
+export type ServiceEndpoint = {
+  title: string;
+  description?: string;
+};
+
+export type RNApp = {
+  title: string;
+  description?: string;
+};
+
+export interface Manifest {
+  Roles: Array<Role>;
+  ServiceEndpoints: Array<ServiceEndpoint>;
+  WebApps?: Array<WebApp>;
+  RNApps?: Array<RNApp>;
+}
+
+const PATH_CONFIG = './structure.yaml';
 
 /**
  * Provides utility function to manage Ark project configuration file
@@ -61,7 +90,7 @@ export class ManifestManager {
       let data: string | Manifest = fs.readFileSync(configPath, 'utf-8');
       if (typeof data === 'string') {
         try {
-          data = JSON.parse(data);
+          data = yaml.parse(data);
           // TODO: Json Validation
         } catch (e) {
           throw new InvalidManifestError('Invalid JSON provided in file');
@@ -82,7 +111,7 @@ export class ManifestManager {
    */
   write() {
     const configPath = this.getPath(PATH_CONFIG);
-    fs.writeFileSync(configPath, JSON.stringify(this.configuration));
+    fs.writeFileSync(configPath, yaml.stringify(this.configuration));
   }
 }
 
@@ -92,7 +121,10 @@ export const ManifestUtils = {
     defaultOpts?: Partial<Manifest>
   ) => {
     return Object.assign<Manifest, Partial<Manifest>, Partial<Manifest>>(
-      {},
+      {
+        Roles: [],
+        ServiceEndpoints: [],
+      },
       defaultOpts || {},
       opts
     );
