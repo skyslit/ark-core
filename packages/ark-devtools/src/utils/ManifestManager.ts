@@ -1,9 +1,7 @@
-/* eslint-disable no-invalid-this */
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
 import traverse from 'traverse';
-import minimatch from 'minimatch';
 
 export type ManifestType = 'package' | 'module' | 'auto';
 
@@ -63,20 +61,34 @@ type PluginLog = {
 
 type PluginEvaluator = (opts: {
   task: {
-    push: () => void;
+    push: (id: string, args?: any) => void;
   };
+  log: (content: any, level?: 'log' | 'warn' | 'error') => void;
+  data: any;
 }) => Generator;
+
+type PluginExecutor = (opts: {
+  log: (content: any, level?: 'log' | 'warn' | 'error') => void;
+  data: any;
+  args: any;
+}) => Generator;
+
+type PluginAction = {
+  id: string;
+  args: any;
+};
 
 /**
  * Manifest Plugin
  */
 export class ManifestPlugin {
-  test: string[];
+  test: RegExp[];
   manifestType: ManifestType;
   registeredActions: {
-    [key: string]: PluginEvaluator;
+    [key: string]: PluginExecutor;
   };
   messages: Array<PluginLog>;
+  actions: Array<PluginAction>;
   evaluator: PluginEvaluator;
 
   /**
@@ -84,9 +96,91 @@ export class ManifestPlugin {
    */
   constructor() {
     this.test = [];
+    this.actions = [];
     this.messages = [];
     this.manifestType = 'auto';
     this.registeredActions = {};
+  }
+
+  /**
+   * Test whether at least one test is matching the path
+   * @param {string} path
+   * @return {boolean}
+   */
+  isMatching(path: string) {
+    return this.test.some((t) => t.test(path) === true);
+  }
+
+  /**
+   * Matches all paths provided in argument
+   * @param {ManifestType} manifestType
+   * @param {string | string[]} paths
+   * @return {any}
+   */
+  testMatch(manifestType: ManifestType, paths: string | string[]) {
+    if (manifestType !== this.manifestType) {
+      throw new Error(
+        `Expected '${manifestType}' but got '${this.manifestType}'`
+      );
+    }
+    paths = Array.isArray(paths) ? paths : [paths];
+    return paths.filter((p) => !this.isMatching(p));
+  }
+
+  /**
+   * Reset plugin state
+   */
+  reset() {
+    // Reset actions
+    this.actions = [];
+    // Reset messages
+    this.messages = [];
+  }
+
+  /**
+   * Run plugin
+   * @param {any} data
+   */
+  *run(data: any) {
+    if (!this.evaluator) {
+      throw new Error('Evaluator has not been implemented');
+    }
+
+    this.reset();
+
+    yield () =>
+      this.evaluator({
+        task: {
+          push: (id, args) => {
+            this.actions.push({
+              id,
+              args,
+            });
+          },
+        },
+        log: (content, level = 'log') => {
+          this.messages.push({
+            content,
+            level,
+          });
+        },
+        data,
+      });
+
+    let i: number;
+    for (i = 0; i < this.actions.length; i++) {
+      yield () =>
+        this.registeredActions[this.actions[i].id]({
+          log: (content, level = 'log') => {
+            this.messages.push({
+              content,
+              level,
+            });
+          },
+          data,
+          args: this.actions[i].args,
+        });
+    }
   }
 }
 
@@ -129,7 +223,7 @@ export class ManifestController {
       .filter(
         (p) => p.manifestType === 'auto' || p.manifestType === manifestType
       )
-      .filter((p) => p.test.some((t) => minimatch(inputAddress, t) === true));
+      .filter((p) => p.isMatching(inputAddress) === true);
   }
 }
 
@@ -145,9 +239,9 @@ export const useManifestController = () => ManifestController.getInstance();
  */
 export function createPlugin(
   manifestType: ManifestType,
-  test: string | string[],
+  test: RegExp | RegExp[],
   initializer: (opts: {
-    registerAction: (id: string, func: PluginEvaluator) => void;
+    registerAction: (id: string, func: PluginExecutor) => void;
     evaluate: (func: PluginEvaluator) => void;
   }) => void,
   preventRegistration: boolean = false
@@ -273,17 +367,27 @@ export class ManifestManager {
   }
 
   /**
-   * Traverse
+   * Sync
+   * @param {ManifestController=} controller
+   * @return {Generator}
    */
-  traverse() {
-    traverse(this.configuration).forEach(function () {
-      const address = this.parents
-        .map((p) => p.key)
-        .concat(this.key)
-        .filter(Boolean)
-        .join('.');
-      console.log(address);
-    });
+  *sync(controller?: ManifestController): Generator {
+    const manifestType = this.manifestType;
+    controller = controller || useManifestController();
+    const traverseResult = traverse(this.configuration);
+    const paths = traverseResult.paths().filter((p) => p.length > 0);
+
+    let i = 0;
+    for (i = 0; i < paths.length; i++) {
+      const address = paths[i].join('.');
+      const plugins = controller.matchPlugins(address, manifestType);
+      let j = 0;
+      for (j = 0; j < plugins.length; j++) {
+        yield () => plugins[j].run(traverseResult.get(paths[i]));
+      }
+    }
+
+    return true;
   }
 }
 

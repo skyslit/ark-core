@@ -53,8 +53,6 @@
     "chalk": "^4.1.0",
     "ejs": "^3.1.5",
     "html-webpack-plugin": "^5.0.0-alpha.3",
-    "log-update": "^4.0.0",
-    "minimatch": "^3.0.4",
     "rimraf": "^3.0.2",
     "tiny-glob": "^0.2.8",
     "traverse": "^0.6.6",

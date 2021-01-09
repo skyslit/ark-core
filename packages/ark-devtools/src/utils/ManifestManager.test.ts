@@ -11,6 +11,7 @@ import {
   createPlugin,
   ManifestController,
 } from './ManifestManager';
+import { createProcess } from '../automation/core/Automator';
 
 const cwd: string = '/test-dir';
 
@@ -112,22 +113,28 @@ describe('manifest loading', () => {
 
 describe('plugins', () => {
   test('createPlugin fn()', () => {
-    const plugin = createPlugin('auto', '*', ({ evaluate, registerAction }) => {
-      registerAction('TEST_RUNNER', function* () {});
-      evaluate(function* () {});
-    });
-    expect(plugin.test[0]).toBe('*');
+    const plugin = createPlugin(
+      'auto',
+      /.*/,
+      ({ evaluate, registerAction }) => {
+        registerAction('TEST_RUNNER', function* () {});
+        evaluate(function* () {});
+      },
+      true
+    );
+    expect(plugin.test[0]).toEqual(/.*/);
     expect(plugin.registeredActions.TEST_RUNNER).toBeTruthy();
   });
 
   test('match plugin', () => {
     const controller = new ManifestController();
-    const pluginMatchAll = createPlugin('auto', '*', () => {});
-    const pluginMatchOnlyRoles = createPlugin('auto', 'roles', () => {});
+    const pluginMatchAll = createPlugin('auto', /.*/, () => {}, true);
+    const pluginMatchOnlyRoles = createPlugin('auto', /roles/, () => {}, true);
     const pluginMatchMultiple = createPlugin(
       'auto',
-      ['match-1', 'match-2'],
-      () => {}
+      [/match-1/, /match-2/],
+      () => {},
+      true
     );
     controller.plugins.push(pluginMatchAll);
     controller.plugins.push(pluginMatchOnlyRoles);
@@ -150,8 +157,9 @@ describe('plugins', () => {
     const controller = new ManifestController();
     const pluginMatchMultiple = createPlugin(
       'auto',
-      ['match-1', 'match-2'],
-      () => {}
+      [/match-1/, /match-2/],
+      () => {},
+      true
     );
     controller.plugins.push(pluginMatchMultiple);
 
@@ -166,7 +174,12 @@ describe('plugins', () => {
 
   test('match plugin (wildcard)', () => {
     const controller = new ManifestController();
-    const pluginMatchMultiple = createPlugin('package', ['match-*'], () => {});
+    const pluginMatchMultiple = createPlugin(
+      'package',
+      [/match-*/],
+      () => {},
+      true
+    );
     controller.plugins.push(pluginMatchMultiple);
 
     const multipleMatch1 = controller.matchPlugins('match-1', 'package');
@@ -182,10 +195,11 @@ describe('plugins', () => {
     const controller = new ManifestController();
     const pluginMatchMultiple = createPlugin(
       'package',
-      ['match-1', 'match-2'],
-      () => {}
+      [/match-1/, /match-2/],
+      () => {},
+      true
     );
-    const pluginMatch3 = createPlugin('module', 'match-3', () => {});
+    const pluginMatch3 = createPlugin('module', /match-3/, () => {}, true);
     controller.plugins.push(pluginMatchMultiple);
     controller.plugins.push(pluginMatch3);
 
@@ -199,17 +213,66 @@ describe('plugins', () => {
   });
 });
 
-describe('manifest traversal', () => {
-  test('traverse test', () => {
+describe('manifest syncing', () => {
+  const output: string[] = [];
+
+  const createSampleFilePlugin = createPlugin(
+    'auto',
+    /ServiceEndpoints.+[0-9]$/,
+    (opts) => {
+      opts.registerAction('CREATE_APP_TSX', function* (opts) {
+        output.push(opts.args.customMessage);
+      });
+
+      opts.evaluate(function* (opts) {
+        opts.task.push('CREATE_APP_TSX', {
+          customMessage: opts.data.title,
+        });
+      });
+    },
+    true
+  );
+
+  test('path and compatibility match', () => {
+    expect(createSampleFilePlugin.manifestType).toBe('auto');
+    expect(createSampleFilePlugin.isMatching('ServiceEndpoints.0')).toBe(true);
+    expect(createSampleFilePlugin.isMatching('ServiceEndpoints.21')).toBe(true);
+
+    expect(createSampleFilePlugin.isMatching('ServiceEndpoints.0.test')).toBe(
+      false
+    );
+    expect(createSampleFilePlugin.isMatching('ServiceEndpoints.')).toBe(false);
+    expect(createSampleFilePlugin.isMatching('ServiceEndpoints')).toBe(false);
+    expect(createSampleFilePlugin.isMatching('')).toBe(false);
+  });
+
+  test('sync (order of execution)', async () => {
     // Arrange
+    const controller = new ManifestController();
     const manager = new ManifestManager(cwd, {
-      RNApps: [
+      ServiceEndpoints: [
         {
-          title: 'Hello',
+          title: 'MS 1',
+          description: 'Sample description for MS 1',
+        },
+        {
+          title: 'MS 2',
+          description: 'Sample description for MS 2',
         },
       ],
     });
 
-    manager.traverse();
+    controller.plugins.push(createSampleFilePlugin);
+
+    const automation = createProcess((opts) => {
+      opts.run(function* () {
+        yield () => manager.sync(controller);
+      });
+    });
+
+    await automation.start();
+
+    expect(output[0]).toBe('MS 1');
+    expect(output[1]).toBe('MS 2');
   });
 });
