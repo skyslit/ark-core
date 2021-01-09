@@ -330,7 +330,7 @@ export class Job {
             }
           }
         } catch (e) {
-          console.error(e);
+          throw e;
         }
         result = generator.next(answer);
       }
