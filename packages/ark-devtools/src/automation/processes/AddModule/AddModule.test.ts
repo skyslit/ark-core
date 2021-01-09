@@ -1,5 +1,5 @@
 import { Job, TestMonitor } from '../../core/Automator';
-import createSetupProjectProcess from './SetupProject';
+import createAddModuleProcess from './AddModule';
 import path from 'path';
 import fs from 'fs';
 import rimraf from 'rimraf';
@@ -18,7 +18,7 @@ beforeEach(() => {
 });
 
 test('workflow', async () => {
-  await createSetupProjectProcess().start(
+  await createAddModuleProcess().start(
     new Job(
       new TestMonitor({
         'package-name': 'package-name-from-prompt',

@@ -313,9 +313,17 @@ export class ManifestManager {
   /**
    * Load manifest file and build up services
    * @param {ManifestType=} manifestType
+   * @param {boolean=} suppressError
    * @return {boolean} TRUE if success, otherwise FALSE
    */
-  load(manifestType?: ManifestType) {
+  load(manifestType?: ManifestType, suppressError: boolean = false) {
+    const throwError = (message: string) => {
+      if (suppressError === true) {
+        return false;
+      }
+      throw new Error(message);
+    };
+
     const manifestPreferrence: 'auto' | ManifestType = manifestType || 'auto';
     let configPath: string = null;
 
@@ -324,7 +332,7 @@ export class ManifestManager {
       if (!fs.existsSync(configPath)) {
         configPath = this.getManifestPath('package');
         if (!fs.existsSync(configPath)) {
-          throw new Error('No package / module manifest found');
+          return throwError('No package / module manifest found');
         } else {
           this.manifestType = 'package';
         }
@@ -335,7 +343,7 @@ export class ManifestManager {
       this.manifestType = manifestPreferrence;
       configPath = this.getManifestPath(manifestPreferrence);
       if (!fs.existsSync(configPath)) {
-        throw new Error(`No ${manifestPreferrence} manifest found`);
+        return throwError(`No ${manifestPreferrence} manifest found`);
       }
     }
 

@@ -20,11 +20,12 @@ describe('new dir (without project)', () => {
   let hasNewProjectSetupRan: boolean = false;
 
   const testProcessRegistry: Partial<ProcessRegistryType> = {
-    'new-project': Automations.utils.createProcess((automator) => {
-      automator.run(function* () {
-        hasNewProjectSetupRan = true;
-      });
-    }),
+    'new-project': () =>
+      Automations.utils.createProcess((automator) => {
+        automator.run(function* () {
+          hasNewProjectSetupRan = true;
+        });
+      }),
   };
 
   test('app should launch in automator', async () => {

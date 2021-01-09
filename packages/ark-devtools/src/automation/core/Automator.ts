@@ -303,8 +303,7 @@ export class Job {
             const fnResult = await Promise.resolve(result.value());
             // Check if generator function
             if (typeof fnResult.next === 'function') {
-              const innerGenerator = result.value();
-              await runGenerator(innerGenerator, depth + 1);
+              await runGenerator(fnResult, depth + 1);
             } else {
               answer = fnResult;
             }
@@ -358,6 +357,7 @@ export class Job {
         yield function* () {
           // Step runner
           job.automations[job.currentRunningTaskIndex].isRunning = true;
+          // job.automations[job.currentRunningTaskIndex].currentRunningTaskIndex = -1;
           while (
             job.automations[job.currentRunningTaskIndex].isRunning === true
           ) {

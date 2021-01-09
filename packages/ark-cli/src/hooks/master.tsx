@@ -42,7 +42,7 @@ export default function (
     activePrompt,
     hasPrompt,
     returnPromptResponse,
-  } = useAutomator();
+  } = useAutomator({ cwd: opts.cwd });
 
   const setError = useCallback((err: any) => {
     setErrorData(err);
@@ -60,12 +60,12 @@ export default function (
   }, []);
 
   const boot = useCallback(() => {
+    console.clear();
     try {
-      if (manager.load() === true) {
-        setScreen('panel');
-      } else {
+      if (manager.load('package', true) === false) {
         runProcess('new-project');
       }
+      setScreen('panel');
     } catch (e) {
       if (e instanceof InvalidManifestError) {
         setError(e);
@@ -79,6 +79,10 @@ export default function (
     useEffect(() => {
       boot();
     }, []);
+
+    useEffect(() => {
+      process.stdin.resume();
+    }, [isActive]);
   }
 
   return {

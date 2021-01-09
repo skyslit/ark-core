@@ -1,14 +1,33 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Text, Box } from 'ink';
 import Spinner from 'ink-spinner';
-
-type AppState = 'boot' | 'automation' | 'dashboard';
+import Automator from './components/automation';
+import Panel from './components/panel';
+import useApp from './hooks/master';
 
 export default () => {
-  const [appState] = useState<AppState>('boot');
-  switch (appState) {
-    case 'dashboard': {
-      return <Text color="green">Dashboard...</Text>;
+  const {
+    screen,
+    hasPrompt,
+    activePrompt,
+    returnPromptResponse,
+    runProcess,
+  } = useApp({
+    cwd: process.cwd(),
+  });
+
+  switch (screen) {
+    case 'panel': {
+      return <Panel runProcess={runProcess} />;
+    }
+    case 'automator': {
+      return (
+        <Automator
+          hasPrompt={hasPrompt}
+          activePrompt={activePrompt}
+          returnPromptResponse={returnPromptResponse}
+        />
+      );
     }
     default: {
       return (

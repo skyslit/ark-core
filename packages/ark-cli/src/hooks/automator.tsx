@@ -9,24 +9,31 @@ type PromptEnvelop = {
 
 let job: Job;
 
-export const useAutomator = () => {
+type AutomatorOption = {
+  cwd: string;
+};
+
+export const useAutomator = (opts: AutomatorOption) => {
   const [isActive, setIsActive] = React.useState(false);
   const [
     activePromptEnvelop,
     setActivePromptEnvelop,
   ] = React.useState<PromptEnvelop>(null);
 
-  const run = useCallback((automationProcess: Automator) => {
-    job = new Job({
-      onNewPrompt: (prompt, returnAnswer) => {
-        setActivePromptEnvelop({
-          prompt,
-          returnAnswer,
-        });
+  const run = useCallback((automationProcessCreator: () => Automator) => {
+    job = new Job(
+      {
+        onNewPrompt: (prompt, returnAnswer) => {
+          setActivePromptEnvelop({
+            prompt,
+            returnAnswer,
+          });
+        },
       },
-    });
+      opts.cwd
+    );
     setIsActive(true);
-    automationProcess
+    automationProcessCreator()
       .start(job)
       .then(() => {
         setIsActive(false);
