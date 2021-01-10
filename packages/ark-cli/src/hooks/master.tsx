@@ -5,6 +5,7 @@ import { ProcessRegistryType, Registry } from '../registry';
 
 type Screens = 'boot' | 'panel' | 'automator' | 'error';
 export type MasterOptions = {
+  keepAlive: boolean;
   disableAutoBoot: boolean;
   cwd: string;
 };
@@ -22,6 +23,7 @@ export default function (
   // Normalise
   opts = Object.assign<MasterOptions, Partial<MasterOptions>>(
     {
+      keepAlive: true,
       disableAutoBoot: false,
       cwd: process.cwd(),
     },
@@ -80,9 +82,11 @@ export default function (
       boot();
     }, []);
 
-    useEffect(() => {
-      process.stdin.resume();
-    }, [isActive]);
+    if (opts.keepAlive === true) {
+      useEffect(() => {
+        process.stdin.resume();
+      }, [isActive]);
+    }
   }
 
   return {

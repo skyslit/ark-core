@@ -5,7 +5,13 @@ import Automator from './components/automation';
 import Panel from './components/panel';
 import useApp from './hooks/master';
 
-export default () => {
+type PropType = {
+  cwd: string;
+  keepAlive?: boolean;
+};
+
+export default (props: PropType) => {
+  const { cwd, keepAlive } = props;
   const {
     screen,
     hasPrompt,
@@ -13,7 +19,8 @@ export default () => {
     returnPromptResponse,
     runProcess,
   } = useApp({
-    cwd: process.cwd(),
+    cwd,
+    keepAlive: keepAlive || false,
   });
 
   switch (screen) {

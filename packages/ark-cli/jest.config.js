@@ -6,5 +6,5 @@ module.exports = {
   name: packageJson.name,
   displayName: packageJson.name,
   verbose: true,
-  modulePathIgnorePatterns: ['build'],
+  modulePathIgnorePatterns: ['build', 'test-artifacts'],
 };

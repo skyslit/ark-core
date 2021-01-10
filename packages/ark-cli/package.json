@@ -32,9 +32,11 @@
     "@testing-library/react-hooks": "^3.7.0",
     "@types/jest": "^26.0.19",
     "@types/react": "^17.0.0",
+    "@types/rimraf": "^3.0.0",
     "ink-testing-library": "^2.1.0",
     "memfs": "^3.2.0",
-    "react-test-renderer": "^17.0.1"
+    "react-test-renderer": "^17.0.1",
+    "rimraf": "^3.0.2"
   },
   "dependencies": {
     "@skyslit/ark-devtools": "^2.0.13",
