@@ -162,20 +162,32 @@ export class ManifestPlugin {
         data,
       });
 
+    const task = new Automator();
     let i: number;
     for (i = 0; i < this.actions.length; i++) {
-      yield () =>
-        this.registeredActions[this.actions[i].id]({
-          log: (content, level = 'log') => {
-            this.messages.push({
-              content,
-              level,
-            });
-          },
-          data,
-          args: this.actions[i].args,
-        });
+      const plugin = this;
+      const action = plugin.actions[i];
+      task.step(function* () {
+        yield () =>
+          plugin.registeredActions[action.id]({
+            log: (content, level = 'log') => {
+              plugin.messages.push({
+                content,
+                level,
+              });
+            },
+            data,
+            args: action.args,
+          });
+      });
     }
+
+    // Add custom task to queue
+    if (!Array.isArray(automator.getData('MAN_PLUGIN:AUTOMATOR_QUEUE'))) {
+      automator.setData('MAN_PLUGIN:AUTOMATOR_QUEUE', []);
+    }
+
+    automator.getData('MAN_PLUGIN:AUTOMATOR_QUEUE', []).push(task);
   }
 }
 
