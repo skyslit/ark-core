@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
 import traverse from 'traverse';
+import { Automator } from '../automation/core/Automator';
 
 export type ManifestType = 'package' | 'module' | 'auto';
 
@@ -112,19 +113,12 @@ export class ManifestPlugin {
   }
 
   /**
-   * Matches all paths provided in argument
-   * @param {ManifestType} manifestType
-   * @param {string | string[]} paths
-   * @return {any}
+   * Test whether the
+   * @param {ManifestType} inputType
+   * @return {boolean}
    */
-  testMatch(manifestType: ManifestType, paths: string | string[]) {
-    if (manifestType !== this.manifestType) {
-      throw new Error(
-        `Expected '${manifestType}' but got '${this.manifestType}'`
-      );
-    }
-    paths = Array.isArray(paths) ? paths : [paths];
-    return paths.filter((p) => !this.isMatching(p));
+  isTypeMatching(inputType: ManifestType) {
+    return this.manifestType === 'auto' || this.manifestType === inputType;
   }
 
   /**
@@ -139,9 +133,10 @@ export class ManifestPlugin {
 
   /**
    * Run plugin
+   * @param {Automator} automator
    * @param {any} data
    */
-  *run(data: any) {
+  *run(automator: Automator, data: any) {
     if (!this.evaluator) {
       throw new Error('Evaluator has not been implemented');
     }
@@ -220,9 +215,7 @@ export class ManifestController {
     manifestType: ManifestType = 'auto'
   ): Array<ManifestPlugin> {
     return this.plugins
-      .filter(
-        (p) => p.manifestType === 'auto' || p.manifestType === manifestType
-      )
+      .filter((p) => p.isTypeMatching(manifestType) === true)
       .filter((p) => p.isMatching(inputAddress) === true);
   }
 }
@@ -376,10 +369,11 @@ export class ManifestManager {
 
   /**
    * Sync
+   * @param {Automator} automator
    * @param {ManifestController=} controller
    * @return {Generator}
    */
-  *sync(controller?: ManifestController): Generator {
+  *sync(automator: Automator, controller?: ManifestController): Generator {
     const manifestType = this.manifestType;
     controller = controller || useManifestController();
     const traverseResult = traverse(this.configuration);
@@ -391,7 +385,7 @@ export class ManifestManager {
       const plugins = controller.matchPlugins(address, manifestType);
       let j = 0;
       for (j = 0; j < plugins.length; j++) {
-        yield () => plugins[j].run(traverseResult.get(paths[i]));
+        yield () => plugins[j].run(automator, traverseResult.get(paths[i]));
       }
     }
 

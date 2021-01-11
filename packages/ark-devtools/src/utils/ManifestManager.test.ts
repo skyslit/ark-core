@@ -234,7 +234,8 @@ describe('manifest syncing', () => {
   );
 
   test('path and compatibility match', () => {
-    expect(createSampleFilePlugin.manifestType).toBe('auto');
+    expect(createSampleFilePlugin.isTypeMatching('package')).toBe(true);
+    expect(createSampleFilePlugin.isTypeMatching('module')).toBe(true);
     expect(createSampleFilePlugin.isMatching('ServiceEndpoints.0')).toBe(true);
     expect(createSampleFilePlugin.isMatching('ServiceEndpoints.21')).toBe(true);
 
@@ -264,9 +265,9 @@ describe('manifest syncing', () => {
 
     controller.plugins.push(createSampleFilePlugin);
 
-    const automation = createProcess((opts) => {
-      opts.run(function* () {
-        yield () => manager.sync(controller);
+    const automation = createProcess((automator) => {
+      automator.step(function* () {
+        yield () => manager.sync(automator, controller);
       });
     });
 

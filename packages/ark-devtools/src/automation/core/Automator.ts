@@ -42,6 +42,12 @@ export class TestMonitor implements IAutomatorInterface {
   }
 }
 
+type ItemMeta = {
+  service?: any;
+  title?: string;
+  description?: string;
+};
+
 type QueueItem = {
   id: number;
   activator?: (...args: any[]) => Generator;
@@ -202,7 +208,6 @@ export class Automator {
    * @deprecated
    * Use Activity
    * @param {Function} runner
-   * @param {Partial<QueueItemMeta>=} opts
    */
   run(runner: () => Generator<any, any, any>) {
     this.step(runner);
@@ -211,16 +216,48 @@ export class Automator {
   /**
    * Use Step
    * @param {Function} runner
-   * @param {Partial<QueueItemMeta>=} opts
+   * @param {Partial<ItemMeta>=} meta
    */
-  step(runner: () => Generator<any, any, any>) {
-    this.steps.push({
-      id: id.next().value,
-      activator: runner,
-      description: '',
-      service: '',
-      title: '',
-    });
+  step(runner: () => Generator<any, any, any>, meta?: Partial<ItemMeta>) {
+    this.steps.push(
+      Object.assign<QueueItem, Partial<ItemMeta>>(
+        {
+          id: id.next().value,
+          activator: runner,
+          description: '',
+          service: '',
+          title: '',
+        },
+        meta || {}
+      )
+    );
+  }
+
+  /**
+   * Set data to job context
+   * @param {string} key
+   * @param {T} val
+   * @return {T}
+   */
+  setData<T>(key: string, val: T): T {
+    this.ensureContext();
+    this.job.context[key] = val;
+    return val;
+  }
+
+  /**
+   * Get data from job context
+   * @param {string} key
+   * @param {T=} def
+   * @return {T}
+   */
+  getData<T>(key: string, def?: T): T {
+    this.ensureContext();
+    if (this.job.context[key] === undefined) {
+      return def;
+    }
+
+    return this.job.context[key];
   }
 
   /**
@@ -234,6 +271,15 @@ export class Automator {
     job.automations.push(this);
     return job.start();
   }
+
+  /**
+   * Ensures that the job is started and running
+   */
+  private ensureContext() {
+    if (!this.job) {
+      throw new Error('Job context is not defined. May be it is not started?');
+    }
+  }
 }
 
 /**
@@ -245,6 +291,7 @@ export class Job {
   public automations: Array<Automator>;
   public isRunning: boolean;
   public cwd: string;
+  public context: any;
 
   /**
    * Creates a new instance of job
@@ -256,6 +303,7 @@ export class Job {
     this.cwd = cwd;
     this.automations = [];
     this.isRunning = false;
+    this.context = {};
   }
 
   /**
