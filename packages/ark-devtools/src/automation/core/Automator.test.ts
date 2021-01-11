@@ -26,13 +26,13 @@ describe('automator real-world usage', () => {
 
   test('async order of execution check', (done) => {
     const task = createProcess((automator) => {
-      automator.run(function* () {
+      automator.step(function* () {
         yield isro.launchRocket('SLV');
         yield isro.launchRocketSlow('ASLV');
         yield isro.launchRocket('GSLV Mk III.');
       });
 
-      automator.run(function* () {
+      automator.step(function* () {
         yield isro.launchRocketSlow('PSLV.');
         yield isro.launchRocket('RLV-TD.');
         yield isro.launchRocket('Scramjet Engine - TD.');
@@ -56,7 +56,7 @@ describe('automator real-world usage', () => {
 
   test('prompt', (done) => {
     const task = createProcess((automator) => {
-      automator.run(function* () {
+      automator.step(function* () {
         yield isro.launchRocket('SLV');
         yield isro.launchRocketSlow('ASLV');
         const answer = yield automator.prompt({
@@ -68,7 +68,7 @@ describe('automator real-world usage', () => {
         yield isro.launchRocket('GSLV Mk III.');
       });
 
-      automator.run(function* () {
+      automator.step(function* () {
         yield isro.launchRocketSlow('PSLV.');
         yield isro.launchRocket('RLV-TD.');
         yield isro.launchRocket('Scramjet Engine - TD.');
@@ -95,5 +95,42 @@ describe('automator real-world usage', () => {
         done();
       })
       .catch(done);
+  });
+
+  test('add more step during automation runtime', async () => {
+    const results: string[] = [];
+    const delay = (ms: number) =>
+      new Promise((r) => setTimeout(() => r(null), ms));
+    const task = createProcess((automator) => {
+      automator.step(function* () {
+        results.push('Step 1 Hit');
+
+        // Push new step to this automator
+        automator.step(function* () {
+          results.push('Step 2 Hit');
+        });
+
+        // Push new automator to job
+        automator.job.queueAutomator(
+          createProcess((innerAutomator) => {
+            innerAutomator.step(function* () {
+              expect(innerAutomator.job).toBeTruthy();
+              results.push('Automator 2 > Step 1 Hit');
+            });
+          })
+        );
+
+        expect(results).toHaveLength(1);
+        expect(results[0]).toEqual('Step 1 Hit');
+
+        yield delay(1000);
+      });
+    });
+
+    await task.start();
+
+    expect(results).toHaveLength(3);
+    expect(results[1]).toEqual('Step 2 Hit');
+    expect(results[2]).toEqual('Automator 2 > Step 1 Hit');
   });
 });

@@ -144,6 +144,7 @@ export class Automator {
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
   public cwd: string;
+  public job: Job;
 
   /**
    * Creates new instance of automator
@@ -152,6 +153,7 @@ export class Automator {
     this.steps = [];
     this.isRunning = false;
     this.currentRunningTaskIndex = -1;
+    this.job = null;
   }
 
   /**
@@ -197,11 +199,21 @@ export class Automator {
   }
 
   /**
+   * @deprecated
    * Use Activity
    * @param {Function} runner
    * @param {Partial<QueueItemMeta>=} opts
    */
   run(runner: () => Generator<any, any, any>) {
+    this.step(runner);
+  }
+
+  /**
+   * Use Step
+   * @param {Function} runner
+   * @param {Partial<QueueItemMeta>=} opts
+   */
+  step(runner: () => Generator<any, any, any>) {
     this.steps.push({
       id: id.next().value,
       activator: runner,
@@ -218,6 +230,7 @@ export class Automator {
    * @return {Promise}
    */
   start(job: Job = new Job()) {
+    this.job = job;
     job.automations.push(this);
     return job.start();
   }
@@ -288,6 +301,15 @@ export class Job {
   }
 
   /**
+   * Creates automator
+   * @param {Automator} automator
+   */
+  queueAutomator(automator: Automator) {
+    automator.job = this;
+    this.automations.push(automator);
+  }
+
+  /**
    * Starts the job
    * @return {Promise}
    */
@@ -302,7 +324,7 @@ export class Job {
           } else if (typeof result.value === 'function') {
             const fnResult = await Promise.resolve(result.value());
             // Check if generator function
-            if (typeof fnResult.next === 'function') {
+            if (fnResult && typeof fnResult.next === 'function') {
               await runGenerator(fnResult, depth + 1);
             } else {
               answer = fnResult;
