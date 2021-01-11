@@ -2,9 +2,12 @@
 import path from 'path';
 import execa from 'execa';
 
+export type JobEvents = 'init' | 'started' | 'progress-update' | 'ended';
+
 export type PromptAnswerActivator = (answer?: any) => void;
 export interface IAutomatorInterface {
   onNewPrompt: (prompt: Prompt, answer: PromptAnswerActivator) => void;
+  onSnapshot?: (events: JobEvents, snapshot: JobSnapshot) => void;
 }
 
 /**
@@ -48,18 +51,21 @@ type ItemMeta = {
   description?: string;
 };
 
+type WorkerStatus = 'waiting' | 'in-progress' | 'completed' | 'error';
+
 type QueueItem = {
   id: number;
   activator?: (...args: any[]) => Generator;
   service?: any;
   title?: string;
   description?: string;
+  status: WorkerStatus;
 };
 
 type StepSnapshot = {
   title: string;
   description: string;
-  state: 'waiting' | 'in-progress' | 'completed' | 'error';
+  state: WorkerStatus;
 };
 
 type AutomationSnapshot = {
@@ -151,15 +157,23 @@ export class Automator {
   public currentRunningTaskIndex: number;
   public cwd: string;
   public job: Job;
+  public title: string;
+  public description: string;
+  public status: WorkerStatus;
 
   /**
    * Creates new instance of automator
+   * @param {string=} title
+   * @param {string=} description
    */
-  constructor() {
+  constructor(title?: string, description?: string) {
     this.steps = [];
     this.isRunning = false;
     this.currentRunningTaskIndex = -1;
     this.job = null;
+    this.title = title;
+    this.description = description;
+    this.status = 'waiting';
   }
 
   /**
@@ -227,6 +241,7 @@ export class Automator {
           description: '',
           service: '',
           title: '',
+          status: 'waiting',
         },
         meta || {}
       )
@@ -414,12 +429,25 @@ export class Job {
   }
 
   /**
+   * Emits snapshot on progress update
+   * @param {JobEvents} event
+   */
+  private emitSnapshot(event: JobEvents) {
+    if (this.monitor) {
+      if (this.monitor.onSnapshot) {
+        this.monitor.onSnapshot(event, this.getSnapshot());
+      }
+    }
+  }
+
+  /**
    * Job Runner function
    * @return {boolean}
    */
   private *runNext() {
     const job = this;
     job.isRunning = true;
+    this.emitSnapshot('init');
     while (job.isRunning === true) {
       job.currentRunningTaskIndex++;
       if (job.automations[job.currentRunningTaskIndex]) {

@@ -268,6 +268,8 @@ describe('manifest syncing', () => {
     const automation = createProcess((automator) => {
       automator.step(function* () {
         yield () => manager.sync(automator, controller);
+        // console.log(automator
+        //   .getData('MAN_PLUGIN:AUTOMATOR_QUEUE', []));
         automator
           .getData('MAN_PLUGIN:AUTOMATOR_QUEUE', [])
           .forEach((innerAutomator) => {

@@ -150,6 +150,34 @@ describe('automator real-world usage', () => {
     await task.start();
   });
 
+  test('getSnapshot() fn', async () => {
+    const task = createProcess((automator) => {
+      automator.step(function* () {
+        yield automator.prompt({
+          key: 'step-1',
+          question: 'step-1',
+          type: 'text-input',
+        });
+      });
+    });
+
+    await task.start(
+      new Job({
+        onSnapshot: (event, snapshot) => {
+          switch (event) {
+            case 'init': {
+              // console.log(snapshot);
+              break;
+            }
+          }
+        },
+        onNewPrompt: (prompt, answer) => {
+          answer(true);
+        },
+      })
+    );
+  });
+
   test('add more step during automation runtime', async () => {
     const results: string[] = [];
     const delay = (ms: number) =>
