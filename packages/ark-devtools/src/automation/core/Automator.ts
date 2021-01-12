@@ -7,7 +7,11 @@ export type JobEvents = 'init' | 'started' | 'progress-update' | 'ended';
 export type PromptAnswerActivator = (answer?: any) => void;
 export interface IAutomatorInterface {
   onNewPrompt: (prompt: Prompt, answer: PromptAnswerActivator) => void;
-  onSnapshot?: (events: JobEvents, snapshot: JobSnapshot) => void;
+  onSnapshot?: (
+    events: JobEvents,
+    snapshot: JobSnapshot,
+    frameIndex: number
+  ) => void;
 }
 
 /**
@@ -51,7 +55,12 @@ type ItemMeta = {
   description?: string;
 };
 
-type WorkerStatus = 'waiting' | 'in-progress' | 'completed' | 'error';
+type WorkerStatus =
+  | 'waiting'
+  | 'in-progress'
+  | 'completed'
+  | 'error'
+  | 'skipped';
 
 type QueueItem = {
   id: number;
@@ -60,6 +69,7 @@ type QueueItem = {
   title?: string;
   description?: string;
   status: WorkerStatus;
+  errors: Error[];
 };
 
 type StepSnapshot = {
@@ -77,8 +87,6 @@ type AutomationSnapshot = {
 };
 
 type JobSnapshot = {
-  title: string;
-  description: string;
   automations: AutomationSnapshot[];
   completedAutomations: number;
   completedSteps: number;
@@ -98,6 +106,7 @@ function* generator(startsWith: number = 0): Generator<number> {
 
 const id = generator();
 
+const STEP_ACTION = 'STEP';
 const GENERATOR_ACTION = 'GENERATOR';
 const PROMPT_ACTION = 'PROMPT';
 
@@ -242,6 +251,7 @@ export class Automator {
           service: '',
           title: '',
           status: 'waiting',
+          errors: [],
         },
         meta || {}
       )
@@ -307,6 +317,8 @@ export class Job {
   public isRunning: boolean;
   public cwd: string;
   public context: any;
+  private frameCount: number;
+  public errors: Error[];
 
   /**
    * Creates a new instance of job
@@ -319,6 +331,8 @@ export class Job {
     this.automations = [];
     this.isRunning = false;
     this.context = {};
+    this.frameCount = 0;
+    this.errors = [];
   }
 
   /**
@@ -334,15 +348,39 @@ export class Job {
    * @return {JobSnapshot}
    */
   getSnapshot(): JobSnapshot {
-    const snapshot: JobSnapshot = {
-      title: '',
-      description: '',
+    let snapshot: JobSnapshot = {
       automations: [],
       completedAutomations: 0,
       completedSteps: 0,
       totalAutomations: 0,
       totalSteps: 0,
     };
+
+    snapshot = Object.assign<JobSnapshot, Partial<JobSnapshot>>(
+      snapshot,
+      this.automations.reduce<Partial<JobSnapshot>>(
+        (acc, item, index) => {
+          acc.totalSteps += item.steps.length;
+          acc.totalAutomations += index + 1;
+          if (item.status === 'completed' || item.status === 'error') {
+            acc.completedAutomations += 1;
+            acc.completedSteps += item.steps.reduce((acc, item) => {
+              if (item.status === 'completed' || item.status === 'error') {
+                return acc + 1;
+              }
+              return acc;
+            }, 0);
+          }
+          return acc;
+        },
+        {
+          completedAutomations: 0,
+          totalAutomations: 0,
+          completedSteps: 0,
+          totalSteps: 0,
+        }
+      )
+    );
 
     return snapshot;
   }
@@ -373,6 +411,14 @@ export class Job {
   }
 
   /**
+   * Returns if the job has error
+   * @return {boolean}
+   */
+  hasErrors(): boolean {
+    return this.errors.length > 0;
+  }
+
+  /**
    * Starts the job
    * @return {Promise}
    */
@@ -396,8 +442,46 @@ export class Job {
             // Check if generator object
             if (isActionType(result.value)) {
               switch (result.value.__type__) {
+                case STEP_ACTION:
                 case GENERATOR_ACTION: {
-                  await runGenerator(<any>result.value.payload, depth + 1);
+                  const isStep = result.value.__type__ === STEP_ACTION;
+
+                  let errorHandler: (e: Error) => void = null;
+                  if (isStep === true) {
+                    const stepRef = this.automations[
+                      this.currentRunningTaskIndex
+                    ].steps[
+                      this.automations[this.currentRunningTaskIndex]
+                        .currentRunningTaskIndex
+                    ];
+
+                    const skipStep = () => {
+                      if (stepRef) {
+                        stepRef.status = 'skipped';
+                        this.emitSnapshot('progress-update');
+                      }
+                    };
+
+                    errorHandler = (e: Error) => {
+                      if (stepRef) {
+                        stepRef.status = 'error';
+                        stepRef.errors.push(e);
+                      }
+                      this.emitSnapshot('progress-update');
+                    };
+
+                    if (this.hasErrors()) {
+                      skipStep();
+                      break;
+                    }
+                  }
+
+                  try {
+                    await runGenerator(<any>result.value.payload, depth + 1);
+                  } catch (e) {
+                    errorHandler && errorHandler(e);
+                    throw e;
+                  }
                   break;
                 }
                 case PROMPT_ACTION: {
@@ -414,7 +498,7 @@ export class Job {
             }
           }
         } catch (e) {
-          throw e;
+          this.errors.push(e);
         }
         result = generator.next(answer);
       }
@@ -433,9 +517,10 @@ export class Job {
    * @param {JobEvents} event
    */
   private emitSnapshot(event: JobEvents) {
+    this.frameCount++;
     if (this.monitor) {
       if (this.monitor.onSnapshot) {
-        this.monitor.onSnapshot(event, this.getSnapshot());
+        this.monitor.onSnapshot(event, this.getSnapshot(), this.frameCount);
       }
     }
   }
@@ -450,30 +535,40 @@ export class Job {
     this.emitSnapshot('init');
     while (job.isRunning === true) {
       job.currentRunningTaskIndex++;
-      if (job.automations[job.currentRunningTaskIndex]) {
-        job.automations[job.currentRunningTaskIndex].cwd = this.cwd;
+      const automation = job.automations[job.currentRunningTaskIndex];
+      if (automation) {
+        automation.cwd = this.cwd;
         yield function* () {
           // Step runner
-          job.automations[job.currentRunningTaskIndex].isRunning = true;
-          // job.automations[job.currentRunningTaskIndex].currentRunningTaskIndex = -1;
-          while (
-            job.automations[job.currentRunningTaskIndex].isRunning === true
-          ) {
-            job.automations[job.currentRunningTaskIndex]
-              .currentRunningTaskIndex++;
-            const step =
-              job.automations[job.currentRunningTaskIndex].steps[
-                job.automations[job.currentRunningTaskIndex]
-                  .currentRunningTaskIndex
-              ];
+          automation.isRunning = true;
+          automation.status = 'in-progress';
+          job.emitSnapshot('progress-update');
+          while (automation.isRunning === true) {
+            automation.currentRunningTaskIndex++;
+            const step = automation.steps[automation.currentRunningTaskIndex];
             if (step) {
+              step.status = 'in-progress';
+              job.emitSnapshot('progress-update');
               // Call the actual step
-              yield createAction(
-                GENERATOR_ACTION,
-                step.activator(step.service)
-              );
+              yield createAction(STEP_ACTION, step.activator(step.service));
+              if (step.status === 'in-progress') {
+                step.status = 'completed';
+                job.emitSnapshot('progress-update');
+              } else if (step.status === 'error') {
+                automation.status = 'error';
+                job.emitSnapshot('progress-update');
+              }
             } else {
-              job.automations[job.currentRunningTaskIndex].isRunning = false;
+              automation.isRunning = false;
+              if (automation.status === 'in-progress') {
+                if (job.hasErrors()) {
+                  automation.status = 'skipped';
+                } else {
+                  automation.status = 'completed';
+                }
+              }
+
+              job.emitSnapshot('progress-update');
               break;
             }
           }

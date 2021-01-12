@@ -54,6 +54,68 @@ describe('automator real-world usage', () => {
       .catch(done);
   });
 
+  test('error handling', async () => {
+    const output: any[] = [];
+
+    const taskPre = createProcess((automator) => {
+      automator.step(function* () {
+        output.push('PRE:TEST_CONTENT_0');
+      });
+    });
+
+    const task = createProcess((automator) => {
+      automator.step(function* () {
+        output.push('TEST_CONTENT_0');
+      });
+
+      automator.step(function* () {
+        output.push('TEST_CONTENT');
+        throw new Error('Intentional mistakes');
+      });
+
+      automator.step(function* () {
+        output.push('TEST_CONTENT_1');
+      });
+    });
+
+    const taskPost = createProcess((automator) => {
+      automator.step(function* () {
+        output.push('POST:TEST_CONTENT_0');
+      });
+    });
+
+    const job = new Job();
+
+    job.queueAutomator(taskPre);
+    job.queueAutomator(task);
+    job.queueAutomator(taskPost);
+
+    await job.start();
+
+    // Steps should be stopped executing
+    expect(output.length).toBe(3);
+    expect(output[0]).toEqual('PRE:TEST_CONTENT_0');
+
+    // Expect global errors
+    expect(job.hasErrors()).toBe(true);
+    expect(job.errors.length).toEqual(1);
+    expect(job.errors[0].message).toEqual('Intentional mistakes');
+
+    // Expect task / automator level errors
+    expect(job.automations[0].status).toEqual('completed');
+    expect(job.automations[1].status).toEqual('error');
+    expect(job.automations[2].status).toEqual('skipped');
+
+    // Expect step level errors
+    expect(job.automations[0].steps[0].status).toEqual('completed');
+
+    expect(job.automations[1].steps[0].status).toEqual('completed');
+    expect(job.automations[1].steps[1].status).toEqual('error');
+    expect(job.automations[1].steps[2].status).toEqual('skipped');
+
+    expect(job.automations[2].steps[0].status).toEqual('skipped');
+  });
+
   test('prompt', (done) => {
     const task = createProcess((automator) => {
       automator.step(function* () {
@@ -166,6 +228,10 @@ describe('automator real-world usage', () => {
         onSnapshot: (event, snapshot) => {
           switch (event) {
             case 'init': {
+              // console.log(snapshot);
+              break;
+            }
+            default: {
               // console.log(snapshot);
               break;
             }
