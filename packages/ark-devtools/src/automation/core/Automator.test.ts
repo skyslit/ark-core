@@ -212,38 +212,6 @@ describe('automator real-world usage', () => {
     await task.start();
   });
 
-  test('getSnapshot() fn', async () => {
-    const task = createProcess((automator) => {
-      automator.step(function* () {
-        yield automator.prompt({
-          key: 'step-1',
-          question: 'step-1',
-          type: 'text-input',
-        });
-      });
-    });
-
-    await task.start(
-      new Job({
-        onSnapshot: (event, snapshot) => {
-          switch (event) {
-            case 'init': {
-              // console.log(snapshot);
-              break;
-            }
-            default: {
-              // console.log(snapshot);
-              break;
-            }
-          }
-        },
-        onNewPrompt: (prompt, answer) => {
-          answer(true);
-        },
-      })
-    );
-  });
-
   test('add more step during automation runtime', async () => {
     const results: string[] = [];
     const delay = (ms: number) =>
@@ -279,5 +247,532 @@ describe('automator real-world usage', () => {
     expect(results).toHaveLength(3);
     expect(results[1]).toEqual('Step 2 Hit');
     expect(results[2]).toEqual('Automator 2 > Step 1 Hit');
+  });
+});
+
+describe('getSnapshot() fn', () => {
+  test('event trigger (order)', async () => {
+    const output: string[] = [];
+
+    const task1 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        output.push('occurence 1');
+      });
+    });
+
+    const task2 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        output.push('occurence 2');
+      });
+      automator.step(function* () {
+        output.push('occurence 2.A');
+      });
+    });
+
+    const task3 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        output.push('occurence 3');
+      });
+    });
+
+    const job = new Job({
+      onSnapshot: (event, snapshot, frameIndex) => {
+        switch (frameIndex) {
+          case 1: {
+            // Init
+            expect(snapshot.pendingAutomations).toEqual(3);
+            expect(snapshot.successfulAutomations).toEqual(0);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(4);
+            expect(snapshot.successfulSteps).toEqual(0);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            expect(snapshot.totalAutomations).toEqual(3);
+            expect(snapshot.totalSteps).toEqual(4);
+
+            break;
+          }
+          case 2: {
+            // Automation #1 should be in-progress
+            expect(snapshot.automations[0].status).toEqual('in-progress');
+            expect(snapshot.automations[0].steps[0].status).toEqual('waiting');
+            break;
+          }
+          case 3: {
+            // Automation #1 > step #1 should be in-progress
+            expect(snapshot.automations[0].status).toEqual('in-progress');
+            expect(snapshot.automations[0].steps[0].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 4: {
+            // Automation #1 > step #1 should be completed
+            expect(snapshot.automations[0].status).toEqual('in-progress');
+            expect(snapshot.automations[0].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(3);
+            expect(snapshot.successfulAutomations).toEqual(0);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(3);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 5: {
+            // Automation #1 > should be completed
+            expect(snapshot.automations[0].status).toEqual('completed');
+            expect(snapshot.automations[0].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(2);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(3);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 6: {
+            // Automation #2 > should be in-progress
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[0].status).toEqual('waiting');
+
+            break;
+          }
+          case 7: {
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[0].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 8: {
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(2);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(2);
+            expect(snapshot.successfulSteps).toEqual(2);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 9: {
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[1].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 10: {
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[1].status).toEqual(
+              'completed'
+            );
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(2);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(1);
+            expect(snapshot.successfulSteps).toEqual(3);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 11: {
+            expect(snapshot.automations[1].status).toEqual('completed');
+            expect(snapshot.automations[1].steps[1].status).toEqual(
+              'completed'
+            );
+            break;
+          }
+          case 12: {
+            expect(snapshot.automations[2].status).toEqual('in-progress');
+            expect(snapshot.automations[2].steps[0].status).toEqual('waiting');
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(2);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(1);
+            expect(snapshot.successfulSteps).toEqual(3);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 13: {
+            expect(snapshot.automations[2].status).toEqual('in-progress');
+            expect(snapshot.automations[2].steps[0].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 14: {
+            expect(snapshot.automations[2].status).toEqual('in-progress');
+            expect(snapshot.automations[2].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(2);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(0);
+            expect(snapshot.successfulSteps).toEqual(4);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 15: {
+            expect(snapshot.automations[2].status).toEqual('completed');
+            expect(snapshot.automations[2].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta assertion
+            expect(snapshot.pendingAutomations).toEqual(0);
+            expect(snapshot.successfulAutomations).toEqual(3);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(0);
+            expect(snapshot.successfulSteps).toEqual(4);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+        }
+      },
+      onNewPrompt: (prompt, answer) => {
+        answer(true);
+      },
+    });
+
+    job.queueAutomator(task1);
+    job.queueAutomator(task2);
+    job.queueAutomator(task3);
+
+    // Need this for performing assertion withing the process
+    job.shouldSuppressError = false;
+
+    await job.start();
+
+    expect(output).toHaveLength(4);
+    expect(output).toEqual([
+      'occurence 1',
+      'occurence 2',
+      'occurence 2.A',
+      'occurence 3',
+    ]);
+  });
+
+  test('skipping on error', async () => {
+    const output: string[] = [];
+
+    const task1 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        output.push('occurence 1');
+      });
+    });
+
+    const task2 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        throw new Error('Intentional trigger');
+      });
+      automator.step(function* () {
+        output.push('occurence 2.A');
+      });
+    });
+
+    const task3 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        output.push('occurence 3');
+      });
+    });
+
+    const job = new Job({
+      onSnapshot: (event, snapshot, frameIndex) => {
+        switch (frameIndex) {
+          case 1: {
+            // Init
+            expect(snapshot.pendingAutomations).toEqual(3);
+            expect(snapshot.successfulAutomations).toEqual(0);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(4);
+            expect(snapshot.successfulSteps).toEqual(0);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            expect(snapshot.totalAutomations).toEqual(3);
+            expect(snapshot.totalSteps).toEqual(4);
+
+            break;
+          }
+          case 2: {
+            // Automation #1 should be in-progress
+            expect(snapshot.automations[0].status).toEqual('in-progress');
+            expect(snapshot.automations[0].steps[0].status).toEqual('waiting');
+            break;
+          }
+          case 3: {
+            // Automation #1 > step #1 should be in-progress
+            expect(snapshot.automations[0].status).toEqual('in-progress');
+            expect(snapshot.automations[0].steps[0].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 4: {
+            // Automation #1 > step #1 should be completed
+            expect(snapshot.automations[0].status).toEqual('in-progress');
+            expect(snapshot.automations[0].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(3);
+            expect(snapshot.successfulAutomations).toEqual(0);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(3);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 5: {
+            // Automation #1 > should be completed
+            expect(snapshot.automations[0].status).toEqual('completed');
+            expect(snapshot.automations[0].steps[0].status).toEqual(
+              'completed'
+            );
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(2);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(3);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(0);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 6: {
+            // Automation #2 > should be in-progress
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[0].status).toEqual('waiting');
+            break;
+          }
+          case 7: {
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[0].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 8: {
+            // Running error triggering step
+            expect(snapshot.automations[1].status).toEqual('in-progress');
+            expect(snapshot.automations[1].steps[0].status).toEqual('error');
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(2);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(0);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(2);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 9: {
+            // Finding out that error happened
+            expect(snapshot.automations[1].status).toEqual('error');
+            expect(snapshot.automations[1].steps[0].status).toEqual('error');
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(1);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(2);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 10: {
+            // Running next step within same automation
+            expect(snapshot.automations[1].status).toEqual('error');
+            expect(snapshot.automations[1].steps[1].status).toEqual(
+              'in-progress'
+            );
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(1);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(2);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(0);
+
+            break;
+          }
+          case 11: {
+            // Skipping the next step because a prev action failed
+            expect(snapshot.automations[1].status).toEqual('error');
+            expect(snapshot.automations[1].steps[1].status).toEqual('skipped');
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(1);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(1);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(1);
+
+            break;
+          }
+          case 13: {
+            // Running next task / automator
+            expect(snapshot.automations[2].status).toEqual('in-progress');
+            expect(snapshot.automations[2].steps[0].status).toEqual('waiting');
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(1);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(1);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(1);
+
+            break;
+          }
+          case 14: {
+            // Running first step with the task / automator
+            expect(snapshot.automations[2].status).toEqual('in-progress');
+            expect(snapshot.automations[2].steps[0].status).toEqual(
+              'in-progress'
+            );
+            break;
+          }
+          case 15: {
+            // Skipping the subsequent steps
+            expect(snapshot.automations[2].status).toEqual('in-progress');
+            expect(snapshot.automations[2].steps[0].status).toEqual('skipped');
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(1);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(1);
+            expect(snapshot.skippedAutomations).toEqual(0);
+
+            expect(snapshot.pendingSteps).toEqual(0);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(2);
+
+            break;
+          }
+          case 16: {
+            // Skiping the entire task / automation
+            expect(snapshot.automations[2].status).toEqual('skipped');
+            expect(snapshot.automations[2].steps[0].status).toEqual('skipped');
+
+            // Meta
+            expect(snapshot.pendingAutomations).toEqual(0);
+            expect(snapshot.successfulAutomations).toEqual(1);
+            expect(snapshot.failedAutomations).toEqual(1);
+            expect(snapshot.skippedAutomations).toEqual(1);
+
+            expect(snapshot.pendingSteps).toEqual(0);
+            expect(snapshot.successfulSteps).toEqual(1);
+            expect(snapshot.failedSteps).toEqual(1);
+            expect(snapshot.skippedSteps).toEqual(2);
+
+            break;
+          }
+        }
+      },
+      onNewPrompt: (prompt, answer) => {
+        answer(true);
+      },
+    });
+
+    job.queueAutomator(task1);
+    job.queueAutomator(task2);
+    job.queueAutomator(task3);
+
+    await job.start();
+    const testErrors = job.errors.filter(
+      (e) => e.message !== 'Intentional trigger'
+    );
+    if (testErrors.length > 0) {
+      throw testErrors[0];
+    }
+    expect(output).toEqual(['occurence 1']);
   });
 });

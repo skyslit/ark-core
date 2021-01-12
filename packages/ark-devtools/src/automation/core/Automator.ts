@@ -75,21 +75,35 @@ type QueueItem = {
 type StepSnapshot = {
   title: string;
   description: string;
-  state: WorkerStatus;
+  status: WorkerStatus;
 };
 
 type AutomationSnapshot = {
   title: string;
   description: string;
   steps: StepSnapshot[];
-  completedSteps: number;
   totalSteps: number;
+  status: WorkerStatus;
+
+  pendingSteps: number;
+  successfulSteps: number;
+  failedSteps: number;
+  skippedSteps: number;
 };
 
 type JobSnapshot = {
   automations: AutomationSnapshot[];
-  completedAutomations: number;
-  completedSteps: number;
+
+  pendingAutomations: number;
+  successfulAutomations: number;
+  failedAutomations: number;
+  skippedAutomations: number;
+
+  pendingSteps: number;
+  successfulSteps: number;
+  failedSteps: number;
+  skippedSteps: number;
+
   totalAutomations: number;
   totalSteps: number;
 };
@@ -319,6 +333,7 @@ export class Job {
   public context: any;
   private frameCount: number;
   public errors: Error[];
+  public shouldSuppressError: boolean;
 
   /**
    * Creates a new instance of job
@@ -333,6 +348,7 @@ export class Job {
     this.context = {};
     this.frameCount = 0;
     this.errors = [];
+    this.shouldSuppressError = true;
   }
 
   /**
@@ -348,41 +364,151 @@ export class Job {
    * @return {JobSnapshot}
    */
   getSnapshot(): JobSnapshot {
-    let snapshot: JobSnapshot = {
+    const snapshot: JobSnapshot = {
       automations: [],
-      completedAutomations: 0,
-      completedSteps: 0,
+
+      pendingAutomations: 0,
+      successfulAutomations: 0,
+      failedAutomations: 0,
+      skippedAutomations: 0,
+
+      pendingSteps: 0,
+      successfulSteps: 0,
+      failedSteps: 0,
+      skippedSteps: 0,
+
       totalAutomations: 0,
       totalSteps: 0,
     };
 
-    snapshot = Object.assign<JobSnapshot, Partial<JobSnapshot>>(
-      snapshot,
-      this.automations.reduce<Partial<JobSnapshot>>(
-        (acc, item, index) => {
-          acc.totalSteps += item.steps.length;
-          acc.totalAutomations += index + 1;
-          if (item.status === 'completed' || item.status === 'error') {
-            acc.completedAutomations += 1;
-            acc.completedSteps += item.steps.reduce((acc, item) => {
-              if (item.status === 'completed' || item.status === 'error') {
-                return acc + 1;
-              }
-              return acc;
-            }, 0);
+    snapshot.automations = this.automations.map<AutomationSnapshot>((item) => {
+      const stepSnapshots = item.steps.map<StepSnapshot>((stepItem) => ({
+        title: stepItem.title,
+        description: stepItem.description,
+        status: stepItem.status,
+      }));
+
+      const metaInfo: Partial<AutomationSnapshot> = stepSnapshots.reduce<
+        Partial<AutomationSnapshot>
+      >(
+        (acc, item) => {
+          switch (item.status) {
+            case 'waiting': {
+              acc.pendingSteps++;
+              break;
+            }
+            case 'completed': {
+              acc.successfulSteps++;
+              break;
+            }
+            case 'error': {
+              acc.failedSteps++;
+              break;
+            }
+            case 'skipped': {
+              acc.skippedSteps++;
+              break;
+            }
           }
           return acc;
         },
         {
-          completedAutomations: 0,
-          totalAutomations: 0,
-          completedSteps: 0,
-          totalSteps: 0,
+          pendingSteps: 0,
+          successfulSteps: 0,
+          failedSteps: 0,
+          skippedSteps: 0,
         }
-      )
+      );
+
+      return Object.assign<AutomationSnapshot, Partial<AutomationSnapshot>>(
+        {
+          title: item.title,
+          description: item.description,
+          steps: stepSnapshots,
+          totalSteps: stepSnapshots.length,
+          status: item.status,
+
+          pendingSteps: 0,
+          successfulSteps: 0,
+          failedSteps: 0,
+          skippedSteps: 0,
+        },
+        metaInfo
+      );
+    });
+
+    const automatorMeta = snapshot.automations.reduce<Partial<JobSnapshot>>(
+      (acc, item) => {
+        switch (item.status) {
+          case 'in-progress':
+          case 'waiting': {
+            acc.pendingAutomations++;
+            break;
+          }
+          case 'completed': {
+            acc.successfulAutomations++;
+            break;
+          }
+          case 'error': {
+            acc.failedAutomations++;
+            break;
+          }
+          case 'skipped': {
+            acc.skippedAutomations++;
+            break;
+          }
+        }
+
+        const stepMeta = item.steps.reduce<Partial<JobSnapshot>>(
+          (acc, item) => {
+            switch (item.status) {
+              case 'in-progress':
+              case 'waiting': {
+                acc.pendingSteps++;
+                break;
+              }
+              case 'completed': {
+                acc.successfulSteps++;
+                break;
+              }
+              case 'error': {
+                acc.failedSteps++;
+                break;
+              }
+              case 'skipped': {
+                acc.skippedSteps++;
+                break;
+              }
+            }
+            return acc;
+          },
+          acc
+        );
+
+        acc.totalSteps += item.totalSteps;
+
+        return Object.assign(acc, stepMeta);
+      },
+      {
+        pendingAutomations: 0,
+        successfulAutomations: 0,
+        failedAutomations: 0,
+        skippedAutomations: 0,
+
+        pendingSteps: 0,
+        successfulSteps: 0,
+        failedSteps: 0,
+        skippedSteps: 0,
+
+        totalAutomations: snapshot.automations.length,
+        totalSteps: snapshot.totalSteps,
+      }
     );
 
-    return snapshot;
+    return Object.assign<JobSnapshot, Partial<JobSnapshot>>(
+      snapshot,
+      automatorMeta
+    );
   }
 
   /**
@@ -499,6 +625,9 @@ export class Job {
           }
         } catch (e) {
           this.errors.push(e);
+          if (this.shouldSuppressError === false) {
+            throw e;
+          }
         }
         result = generator.next(answer);
       }
