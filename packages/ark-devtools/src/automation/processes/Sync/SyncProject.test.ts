@@ -1,6 +1,6 @@
 import { Job, TestMonitor } from '../../core/Automator';
 import { ManifestManager } from '../../../utils/ManifestManager';
-import SyncProjectProcess from './SyncProject';
+import createSyncProcess from './SyncProject';
 
 const cwd = '/';
 
@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 test('workflow', async () => {
-  await SyncProjectProcess.start(
+  await createSyncProcess().start(
     new Job(
       new TestMonitor({
         'package-name': 'package-name-from-prompt',

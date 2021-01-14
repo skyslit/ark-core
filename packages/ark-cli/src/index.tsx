@@ -3,5 +3,6 @@
 import React from 'react';
 import { render } from 'ink';
 import App from './app';
+import { getAppProps } from './cli';
 
-render(<App cwd={process.cwd()} keepAlive={true} />);
+render(<App {...getAppProps()} />);

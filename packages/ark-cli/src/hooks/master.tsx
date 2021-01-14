@@ -2,12 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { ManifestManager, InvalidManifestError } from '@skyslit/ark-devtools';
 import { useAutomator } from './automator';
 import { ProcessRegistryType, Registry } from '../registry';
+import commandLineArgs from 'command-line-args';
+
+type Mode = 'command' | 'help' | 'normal';
 
 type Screens = 'boot' | 'panel' | 'automator' | 'error';
 export type MasterOptions = {
   keepAlive: boolean;
   disableAutoBoot: boolean;
   cwd: string;
+  mode: Mode;
+  options?: commandLineArgs.CommandLineOptions;
 };
 
 /**
@@ -26,6 +31,8 @@ export default function (
       keepAlive: true,
       disableAutoBoot: false,
       cwd: process.cwd(),
+      mode: 'normal',
+      options: {},
     },
     opts || {}
   );
@@ -48,6 +55,19 @@ export default function (
     hideJobPanel,
     showJobPanel,
   } = useAutomator({ cwd: opts.cwd });
+
+  if (opts.mode === 'help') {
+    opts.disableAutoBoot = true;
+  }
+
+  let isManagedRuntime: boolean = false;
+  if (opts.mode === 'command') {
+    isManagedRuntime = true;
+    opts.disableAutoBoot = true;
+    useEffect(() => {
+      runProcess(opts.options.process);
+    }, []);
+  }
 
   const setError = useCallback((err: any) => {
     setErrorData(err);
@@ -93,13 +113,16 @@ export default function (
   }
 
   return {
-    screen: isActive === true ? 'automator' : screen,
+    screen:
+      isActive === true ? 'automator' : isManagedRuntime ? '_blank' : screen,
     errorData,
-    runProcess,
     activePrompt,
     hasPrompt,
-    returnPromptResponse,
     jobSnapshot,
+    startupOptions: opts.options,
+    isManagedRuntime,
+    runProcess,
+    returnPromptResponse,
     hideJobPanel,
     showJobPanel,
   };

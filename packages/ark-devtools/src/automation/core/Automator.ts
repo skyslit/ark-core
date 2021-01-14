@@ -76,6 +76,7 @@ export type StepSnapshot = {
   title: string;
   description: string;
   status: WorkerStatus;
+  errors: Error[];
 };
 
 export type AutomationSnapshot = {
@@ -391,6 +392,7 @@ export class Job {
         title: stepItem.title,
         description: stepItem.description,
         status: stepItem.status,
+        errors: stepItem.errors,
       }));
 
       const metaInfo: Partial<AutomationSnapshot> = stepSnapshots.reduce<

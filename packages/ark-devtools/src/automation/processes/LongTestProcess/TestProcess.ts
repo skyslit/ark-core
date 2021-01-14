@@ -5,13 +5,21 @@ const delay = (ms: number) =>
 
 export default () =>
   createProcess((automator) => {
+    let counter: number = 0;
     new Array(3).fill(null).forEach((_, index) => {
       // Initialise npm package
       automator.step(function* () {
+        counter++;
+
+        if (counter === 2) {
+          throw new Error('File permission denied (intentional)');
+        }
+
         yield delay(2000);
         automator.job.queueAutomator(
           createProcess((automator) => {
             automator.step(function* () {
+              counter++;
               yield delay(500);
             });
           })

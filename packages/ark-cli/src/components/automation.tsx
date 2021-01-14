@@ -9,6 +9,7 @@ type PropType = {
   activePrompt: any;
   returnPromptResponse: any;
   snapshot: JobSnapshot;
+  isManagedRuntime: boolean;
   hideJobPanel: () => void;
 };
 
@@ -30,6 +31,7 @@ type StepPropType = Partial<{
   status: WorkerStatus;
   title: string;
   children: any;
+  color: string;
 }>;
 
 const Check = () => <Text color="green">✔</Text>;
@@ -38,7 +40,7 @@ const Waiting = () => <Text color="gray">◯</Text>;
 const Skipped = () => <Text color="gray">↓</Text>;
 
 const StepItem = (props: StepPropType) => {
-  const { title, children, status } = props;
+  const { title, children, status, color } = props;
 
   let statusComponent: JSX.Element = null;
   switch (status) {
@@ -77,15 +79,17 @@ const StepItem = (props: StepPropType) => {
       <Text>
         {statusComponent}
         <Text> </Text>
-        {title}
+        <Text color={color}>{title}</Text>
       </Text>
       {children}
     </>
   );
 };
 
-const SnapshotViewer = (props: Partial<JobSnapshot>) => {
-  const { automations, hasEnded } = props;
+const SnapshotViewer = (
+  props: Partial<JobSnapshot & { isManagedRuntime: boolean }>
+) => {
+  const { automations, hasEnded, isManagedRuntime } = props;
   return (
     <Box flexDirection="column">
       {automations.map((automator, aIndex) => (
@@ -95,23 +99,41 @@ const SnapshotViewer = (props: Partial<JobSnapshot>) => {
           status={automator.status}
         >
           <Box flexDirection="column" marginLeft={2}>
-            {automator.steps.map((step, sIndex) => (
-              <StepItem
-                key={`${aIndex}-${sIndex}`}
-                title={step.title}
-                status={step.status}
-              />
-            ))}
+            {automator.steps.map((step, sIndex) => {
+              return (
+                <Box key={`${aIndex}-${sIndex}`} flexDirection="column">
+                  <StepItem
+                    color="gray"
+                    title={step.title}
+                    status={step.status}
+                  />
+                  {step.errors && step.errors.length > 0 ? (
+                    <Box flexDirection="column" marginLeft={3}>
+                      {step.errors.map((err, eIndex) => (
+                        <Text
+                          color="red"
+                          key={`${aIndex}-${sIndex}-e-${eIndex}`}
+                        >
+                          {err && err.message}
+                        </Text>
+                      ))}
+                    </Box>
+                  ) : null}
+                </Box>
+              );
+            })}
           </Box>
         </StepItem>
       ))}
-      {hasEnded ? <Text>Press esc (escape) to go back to menu</Text> : null}
+      {!isManagedRuntime && hasEnded ? (
+        <Text>Press esc (escape) to go back to menu</Text>
+      ) : null}
     </Box>
   );
 };
 
 export default (props: PropType) => {
-  const { snapshot, hideJobPanel } = props;
+  const { snapshot, hideJobPanel, isManagedRuntime } = props;
 
   useInput(
     (input, key) => {
@@ -120,7 +142,10 @@ export default (props: PropType) => {
       }
     },
     {
-      isActive: snapshot && snapshot.pendingAutomations < 1,
+      isActive:
+        isManagedRuntime === false &&
+        snapshot &&
+        snapshot.pendingAutomations < 1,
     }
   );
 
@@ -151,6 +176,7 @@ export default (props: PropType) => {
         failedSteps={snapshot.failedSteps}
         skippedSteps={snapshot.skippedSteps}
         hasEnded={snapshot.hasEnded}
+        isManagedRuntime={isManagedRuntime}
       />
     );
 
@@ -163,13 +189,8 @@ export default (props: PropType) => {
   }
 
   return (
-    <>
-      <Box marginLeft={2} marginTop={2}>
-        <Text>
-          <Spinner />
-        </Text>
-        <Text color="gray"> Automator starting...</Text>
-      </Box>
-    </>
+    <Box>
+      <Text color="gray"> Automator starting...</Text>
+    </Box>
   );
 };

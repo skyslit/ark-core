@@ -27,7 +27,7 @@ export default (props: any) => {
     },
     {
       label: 'Sync All',
-      value: '8',
+      value: 'sync',
     },
     {
       label: 'Run All',

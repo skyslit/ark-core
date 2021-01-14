@@ -4,25 +4,39 @@ import Spinner from 'ink-spinner';
 import Automator from './components/automation';
 import Panel from './components/panel';
 import useApp from './hooks/master';
+import commandLineArgs from 'command-line-args';
+import { getHelpText } from './cli';
 
-type PropType = {
+type Mode = 'command' | 'help' | 'normal';
+
+export type AppPropType = {
   cwd: string;
+  mode: Mode;
   keepAlive?: boolean;
+  options?: commandLineArgs.CommandLineOptions;
 };
 
-export default (props: PropType) => {
-  const { cwd, keepAlive } = props;
+export default (props: AppPropType) => {
+  const { cwd, keepAlive, mode, options } = props;
+  if (mode === 'help') {
+    const helpText = React.useMemo(() => getHelpText(), []);
+    return <Text>{helpText}</Text>;
+  }
+
   const {
     screen,
     hasPrompt,
     activePrompt,
+    jobSnapshot,
+    isManagedRuntime,
     returnPromptResponse,
     runProcess,
-    jobSnapshot,
     hideJobPanel,
   } = useApp({
     cwd,
     keepAlive: keepAlive || false,
+    mode,
+    options,
   });
 
   switch (screen) {
@@ -34,11 +48,15 @@ export default (props: PropType) => {
         <Automator
           hasPrompt={hasPrompt}
           activePrompt={activePrompt}
+          isManagedRuntime={isManagedRuntime}
           returnPromptResponse={returnPromptResponse}
           snapshot={jobSnapshot}
           hideJobPanel={hideJobPanel}
         />
       );
+    }
+    case '_blank': {
+      return null;
     }
     default: {
       return (

@@ -23,7 +23,9 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe('startup', () => {
   test('empty directory', async () => {
-    const { lastFrame, stdin } = render(<App cwd={testDirectory} />);
+    const { lastFrame, stdin } = render(
+      <App cwd={testDirectory} mode="normal" />
+    );
 
     expect(lastFrame()).toContain('CLI Booting up');
 

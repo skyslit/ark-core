@@ -30,6 +30,8 @@
     "@babel/preset-react": "^7.12.7",
     "@babel/preset-typescript": "^7.12.1",
     "@testing-library/react-hooks": "^3.7.0",
+    "@types/command-line-args": "^5.0.0",
+    "@types/command-line-usage": "^5.0.1",
     "@types/jest": "^26.0.19",
     "@types/react": "^17.0.0",
     "@types/rimraf": "^3.0.0",
@@ -40,6 +42,8 @@
   },
   "dependencies": {
     "@skyslit/ark-devtools": "^2.0.13",
+    "command-line-args": "^5.1.1",
+    "command-line-usage": "^6.1.1",
     "ink": "^3.0.8",
     "ink-confirm-input": "^2.0.0",
     "ink-multi-select": "^2.0.0",
