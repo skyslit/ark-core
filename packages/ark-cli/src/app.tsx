@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Text, Box } from 'ink';
 import Spinner from 'ink-spinner';
 import Automator from './components/automation';
@@ -17,7 +17,7 @@ export type AppPropType = {
 };
 
 export default (props: AppPropType) => {
-  const { cwd, keepAlive, mode, options } = props;
+  const { cwd, mode, options } = props;
   if (mode === 'help') {
     const helpText = React.useMemo(() => getHelpText(), []);
     return <Text>{helpText}</Text>;
@@ -26,18 +26,35 @@ export default (props: AppPropType) => {
   const {
     screen,
     hasPrompt,
+    isJobActive,
     activePrompt,
     jobSnapshot,
-    isManagedRuntime,
     returnPromptResponse,
     runProcess,
     hideJobPanel,
+    boot,
   } = useApp({
     cwd,
-    keepAlive: keepAlive || false,
     mode,
     options,
   });
+
+  let isManagedRuntime: boolean = false;
+  if (mode === 'command') {
+    isManagedRuntime = true;
+    useEffect(() => {
+      runProcess(options.process);
+    }, []);
+  }
+
+  useEffect(() => {
+    console.clear();
+    boot();
+  }, []);
+
+  useEffect(() => {
+    process.stdin.resume();
+  }, [isJobActive]);
 
   switch (screen) {
     case 'panel': {
@@ -55,10 +72,10 @@ export default (props: AppPropType) => {
         />
       );
     }
-    case '_blank': {
-      return null;
-    }
     default: {
+      if (mode === 'command') {
+        return null;
+      }
       return (
         <Box height={10} alignItems="center" justifyContent="center">
           <Text>

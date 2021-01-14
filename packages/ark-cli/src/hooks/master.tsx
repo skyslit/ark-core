@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ManifestManager, InvalidManifestError } from '@skyslit/ark-devtools';
 import { useAutomator } from './automator';
 import { ProcessRegistryType, Registry } from '../registry';
@@ -8,8 +8,6 @@ type Mode = 'command' | 'help' | 'normal';
 
 type Screens = 'boot' | 'panel' | 'automator' | 'error';
 export type MasterOptions = {
-  keepAlive: boolean;
-  disableAutoBoot: boolean;
   cwd: string;
   mode: Mode;
   options?: commandLineArgs.CommandLineOptions;
@@ -28,8 +26,6 @@ export default function (
   // Normalise
   opts = Object.assign<MasterOptions, Partial<MasterOptions>>(
     {
-      keepAlive: true,
-      disableAutoBoot: false,
       cwd: process.cwd(),
       mode: 'normal',
       options: {},
@@ -56,19 +52,6 @@ export default function (
     showJobPanel,
   } = useAutomator({ cwd: opts.cwd });
 
-  if (opts.mode === 'help') {
-    opts.disableAutoBoot = true;
-  }
-
-  let isManagedRuntime: boolean = false;
-  if (opts.mode === 'command') {
-    isManagedRuntime = true;
-    opts.disableAutoBoot = true;
-    useEffect(() => {
-      runProcess(opts.options.process);
-    }, []);
-  }
-
   const setError = useCallback((err: any) => {
     setErrorData(err);
     setScreen('error');
@@ -81,14 +64,13 @@ export default function (
     if (!processRegistry[automatorKey]) {
       throw new Error(`Automator key is not found ${automatorKey}`);
     }
-    run(processRegistry[automatorKey]);
+    return run(processRegistry[automatorKey]);
   }, []);
 
-  const boot = useCallback(() => {
-    console.clear();
+  const boot = useCallback(async () => {
     try {
       if (manager.load('package', true) === false) {
-        runProcess('new-project');
+        return await runProcess('new-project');
       }
       setScreen('panel');
     } catch (e) {
@@ -100,27 +82,15 @@ export default function (
     }
   }, []);
 
-  if (opts.disableAutoBoot === false) {
-    useEffect(() => {
-      boot();
-    }, []);
-
-    if (opts.keepAlive === true) {
-      useEffect(() => {
-        process.stdin.resume();
-      }, [isActive]);
-    }
-  }
-
   return {
-    screen:
-      isActive === true ? 'automator' : isManagedRuntime ? '_blank' : screen,
+    screen: isActive === true ? 'automator' : screen,
     errorData,
     activePrompt,
     hasPrompt,
     jobSnapshot,
     startupOptions: opts.options,
-    isManagedRuntime,
+    isJobActive: isActive,
+    boot,
     runProcess,
     returnPromptResponse,
     hideJobPanel,

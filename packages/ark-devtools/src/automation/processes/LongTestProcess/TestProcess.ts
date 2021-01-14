@@ -15,12 +15,12 @@ export default () =>
           throw new Error('File permission denied (intentional)');
         }
 
-        yield delay(2000);
+        yield delay(1000);
         automator.job.queueAutomator(
           createProcess((automator) => {
             automator.step(function* () {
               counter++;
-              yield delay(500);
+              yield delay(100);
             });
           })
         );

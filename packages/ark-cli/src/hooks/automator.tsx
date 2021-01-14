@@ -41,14 +41,7 @@ export const useAutomator = (opts: AutomatorOption) => {
     );
     updateSnapshot(null);
     setIsActive(true);
-    automationProcessCreator()
-      .start(job)
-      .then(() => {
-        // Nothing here yet
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+    return automationProcessCreator().start(job);
   }, []);
 
   const returnPromptResponse = useCallback(
@@ -64,12 +57,12 @@ export const useAutomator = (opts: AutomatorOption) => {
 
   return {
     isActive,
-    hideJobPanel: () => setIsActive(false),
-    showJobPanel: () => setIsActive(true),
+    jobSnapshot: snapshot,
     activePrompt: activePromptEnvelop ? activePromptEnvelop.prompt : null,
     hasPrompt: activePromptEnvelop ? true : false,
+    hideJobPanel: () => setIsActive(false),
+    showJobPanel: () => setIsActive(true),
     returnPromptResponse,
     run,
-    jobSnapshot: snapshot,
   };
 };
