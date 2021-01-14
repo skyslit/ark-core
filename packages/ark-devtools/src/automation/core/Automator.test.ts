@@ -295,6 +295,7 @@ describe('getSnapshot() fn', () => {
 
             expect(snapshot.totalAutomations).toEqual(3);
             expect(snapshot.totalSteps).toEqual(4);
+            expect(snapshot.hasEnded).toEqual(false);
 
             break;
           }
@@ -349,6 +350,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.successfulSteps).toEqual(1);
             expect(snapshot.failedSteps).toEqual(0);
             expect(snapshot.skippedSteps).toEqual(0);
+
+            expect(snapshot.hasEnded).toEqual(false);
 
             break;
           }
@@ -478,6 +481,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.failedSteps).toEqual(0);
             expect(snapshot.skippedSteps).toEqual(0);
 
+            expect(snapshot.hasEnded).toEqual(true);
+
             break;
           }
         }
@@ -550,6 +555,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.totalAutomations).toEqual(3);
             expect(snapshot.totalSteps).toEqual(4);
 
+            expect(snapshot.hasEnded).toEqual(false);
+
             break;
           }
           case 2: {
@@ -617,6 +624,9 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.automations[1].steps[0].status).toEqual(
               'in-progress'
             );
+
+            expect(snapshot.hasEnded).toEqual(false);
+
             break;
           }
           case 8: {
@@ -635,6 +645,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.failedSteps).toEqual(1);
             expect(snapshot.skippedSteps).toEqual(0);
 
+            expect(snapshot.hasEnded).toEqual(false);
+
             break;
           }
           case 9: {
@@ -652,6 +664,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.successfulSteps).toEqual(1);
             expect(snapshot.failedSteps).toEqual(1);
             expect(snapshot.skippedSteps).toEqual(0);
+
+            expect(snapshot.hasEnded).toEqual(false);
 
             break;
           }
@@ -672,6 +686,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.successfulSteps).toEqual(1);
             expect(snapshot.failedSteps).toEqual(1);
             expect(snapshot.skippedSteps).toEqual(0);
+
+            expect(snapshot.hasEnded).toEqual(false);
 
             break;
           }
@@ -735,6 +751,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.failedSteps).toEqual(1);
             expect(snapshot.skippedSteps).toEqual(2);
 
+            expect(snapshot.hasEnded).toEqual(false);
+
             break;
           }
           case 16: {
@@ -752,6 +770,8 @@ describe('getSnapshot() fn', () => {
             expect(snapshot.successfulSteps).toEqual(1);
             expect(snapshot.failedSteps).toEqual(1);
             expect(snapshot.skippedSteps).toEqual(2);
+
+            expect(snapshot.hasEnded).toEqual(true);
 
             break;
           }

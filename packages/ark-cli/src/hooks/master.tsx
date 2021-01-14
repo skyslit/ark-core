@@ -44,6 +44,9 @@ export default function (
     activePrompt,
     hasPrompt,
     returnPromptResponse,
+    jobSnapshot,
+    hideJobPanel,
+    showJobPanel,
   } = useAutomator({ cwd: opts.cwd });
 
   const setError = useCallback((err: any) => {
@@ -96,5 +99,8 @@ export default function (
     activePrompt,
     hasPrompt,
     returnPromptResponse,
+    jobSnapshot,
+    hideJobPanel,
+    showJobPanel,
   };
 }

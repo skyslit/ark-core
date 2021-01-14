@@ -18,6 +18,8 @@ export default (props: PropType) => {
     activePrompt,
     returnPromptResponse,
     runProcess,
+    jobSnapshot,
+    hideJobPanel,
   } = useApp({
     cwd,
     keepAlive: keepAlive || false,
@@ -33,6 +35,8 @@ export default (props: PropType) => {
           hasPrompt={hasPrompt}
           activePrompt={activePrompt}
           returnPromptResponse={returnPromptResponse}
+          snapshot={jobSnapshot}
+          hideJobPanel={hideJobPanel}
         />
       );
     }

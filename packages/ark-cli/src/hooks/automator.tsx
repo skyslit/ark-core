@@ -1,6 +1,9 @@
 import React, { useCallback } from 'react';
 import { Job, Automator } from '@skyslit/ark-devtools';
-import { Prompt } from '@skyslit/ark-devtools/build/automation/core/Automator';
+import {
+  Prompt,
+  JobSnapshot,
+} from '@skyslit/ark-devtools/build/automation/core/Automator';
 
 type PromptEnvelop = {
   prompt: Prompt;
@@ -15,6 +18,7 @@ type AutomatorOption = {
 
 export const useAutomator = (opts: AutomatorOption) => {
   const [isActive, setIsActive] = React.useState(false);
+  const [snapshot, updateSnapshot] = React.useState<JobSnapshot>(null);
   const [
     activePromptEnvelop,
     setActivePromptEnvelop,
@@ -23,6 +27,9 @@ export const useAutomator = (opts: AutomatorOption) => {
   const run = useCallback((automationProcessCreator: () => Automator) => {
     job = new Job(
       {
+        onSnapshot: (e, snapshot) => {
+          updateSnapshot(snapshot);
+        },
         onNewPrompt: (prompt, returnAnswer) => {
           setActivePromptEnvelop({
             prompt,
@@ -32,15 +39,15 @@ export const useAutomator = (opts: AutomatorOption) => {
       },
       opts.cwd
     );
+    updateSnapshot(null);
     setIsActive(true);
     automationProcessCreator()
       .start(job)
       .then(() => {
-        setIsActive(false);
+        // Nothing here yet
       })
       .catch((err) => {
         console.error(err);
-        setIsActive(false);
       });
   }, []);
 
@@ -57,9 +64,12 @@ export const useAutomator = (opts: AutomatorOption) => {
 
   return {
     isActive,
+    hideJobPanel: () => setIsActive(false),
+    showJobPanel: () => setIsActive(true),
     activePrompt: activePromptEnvelop ? activePromptEnvelop.prompt : null,
     hasPrompt: activePromptEnvelop ? true : false,
     returnPromptResponse,
     run,
+    jobSnapshot: snapshot,
   };
 };

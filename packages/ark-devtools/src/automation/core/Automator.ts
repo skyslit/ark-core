@@ -55,7 +55,7 @@ type ItemMeta = {
   description?: string;
 };
 
-type WorkerStatus =
+export type WorkerStatus =
   | 'waiting'
   | 'in-progress'
   | 'completed'
@@ -72,13 +72,13 @@ type QueueItem = {
   errors: Error[];
 };
 
-type StepSnapshot = {
+export type StepSnapshot = {
   title: string;
   description: string;
   status: WorkerStatus;
 };
 
-type AutomationSnapshot = {
+export type AutomationSnapshot = {
   title: string;
   description: string;
   steps: StepSnapshot[];
@@ -91,7 +91,8 @@ type AutomationSnapshot = {
   skippedSteps: number;
 };
 
-type JobSnapshot = {
+export type JobSnapshot = {
+  hasEnded: boolean;
   automations: AutomationSnapshot[];
 
   pendingAutomations: number;
@@ -175,6 +176,7 @@ export type Prompt = {
  * Manages automation and prompts
  */
 export class Automator {
+  public id: number;
   public steps: Array<QueueItem>;
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
@@ -190,6 +192,7 @@ export class Automator {
    * @param {string=} description
    */
   constructor(title?: string, description?: string) {
+    this.id = -1;
     this.steps = [];
     this.isRunning = false;
     this.currentRunningTaskIndex = -1;
@@ -256,14 +259,15 @@ export class Automator {
    * @param {Partial<ItemMeta>=} meta
    */
   step(runner: () => Generator<any, any, any>, meta?: Partial<ItemMeta>) {
+    const stepId: number = id.next().value;
     this.steps.push(
       Object.assign<QueueItem, Partial<ItemMeta>>(
         {
-          id: id.next().value,
+          id: stepId,
           activator: runner,
           description: '',
           service: '',
-          title: '',
+          title: `Step ID: ${stepId}`,
           status: 'waiting',
           errors: [],
         },
@@ -307,7 +311,7 @@ export class Automator {
    */
   start(job: Job = new Job()) {
     this.job = job;
-    job.automations.push(this);
+    job.queueAutomator(this);
     return job.start();
   }
 
@@ -364,7 +368,8 @@ export class Job {
    * @return {JobSnapshot}
    */
   getSnapshot(): JobSnapshot {
-    const snapshot: JobSnapshot = {
+    let snapshot: JobSnapshot = {
+      hasEnded: false,
       automations: [],
 
       pendingAutomations: 0,
@@ -505,10 +510,13 @@ export class Job {
       }
     );
 
-    return Object.assign<JobSnapshot, Partial<JobSnapshot>>(
+    snapshot = Object.assign<JobSnapshot, Partial<JobSnapshot>>(
       snapshot,
       automatorMeta
     );
+
+    snapshot.hasEnded = snapshot.pendingAutomations === 0;
+    return snapshot;
   }
 
   /**
@@ -532,7 +540,12 @@ export class Job {
    * @param {Automator} automator
    */
   queueAutomator(automator: Automator) {
+    const automatorId: number = id.next().value;
     automator.job = this;
+    automator.id = automatorId;
+    if (!automator.title || automator.title === '') {
+      automator.title = `Job ID: ${automatorId}`;
+    }
     this.automations.push(automator);
   }
 
