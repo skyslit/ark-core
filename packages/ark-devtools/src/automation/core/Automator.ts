@@ -70,6 +70,9 @@ type QueueItem = {
   description?: string;
   status: WorkerStatus;
   errors: Error[];
+  observers: {
+    [key: string]: WorkerStatus;
+  };
 };
 
 export type StepSnapshot = {
@@ -77,6 +80,9 @@ export type StepSnapshot = {
   description: string;
   status: WorkerStatus;
   errors: Error[];
+  observers: {
+    [key: string]: WorkerStatus;
+  };
 };
 
 export type AutomationSnapshot = {
@@ -246,6 +252,36 @@ export class Automator {
   }
 
   /**
+   * Creates and observes a process
+   * @param {string} label
+   * @param {WorkerStatus} status
+   * @return {any}
+   */
+  createObserver(label: string, status: WorkerStatus = 'in-progress') {
+    const step = this.steps[this.currentRunningTaskIndex];
+    if (!step) {
+      throw new Error('createObserver should be called only inside a step');
+    }
+
+    const updateStatus = (status: WorkerStatus) => {
+      step.observers[label] = status;
+      this.job.emitSnapshot('progress-update');
+    };
+
+    const remove = () => {
+      delete step.observers[label];
+      this.job.emitSnapshot('progress-update');
+    };
+
+    updateStatus(status);
+
+    return {
+      updateStatus,
+      remove,
+    };
+  }
+
+  /**
    * @deprecated
    * Use Activity
    * @param {Function} runner
@@ -271,6 +307,7 @@ export class Automator {
           title: `Step ID: ${stepId}`,
           status: 'waiting',
           errors: [],
+          observers: {},
         },
         meta || {}
       )
@@ -393,6 +430,7 @@ export class Job {
         description: stepItem.description,
         status: stepItem.status,
         errors: stepItem.errors,
+        observers: stepItem.observers,
       }));
 
       const metaInfo: Partial<AutomationSnapshot> = stepSnapshots.reduce<
@@ -660,7 +698,7 @@ export class Job {
    * Emits snapshot on progress update
    * @param {JobEvents} event
    */
-  private emitSnapshot(event: JobEvents) {
+  emitSnapshot(event: JobEvents) {
     this.frameCount++;
     if (this.monitor) {
       if (this.monitor.onSnapshot) {

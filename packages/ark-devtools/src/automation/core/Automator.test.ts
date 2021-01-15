@@ -795,4 +795,122 @@ describe('getSnapshot() fn', () => {
     }
     expect(output).toEqual(['occurence 1']);
   });
+
+  test('observable', async () => {
+    const output: string[] = [];
+
+    const delay = (ms: number) =>
+      new Promise((resolve, reject) => setTimeout(resolve, ms));
+
+    const task1 = createProcess((automator) => {
+      automator.title = 'Test title';
+      automator.step(function* () {
+        output.push('occurence 1');
+        const observer1 = automator.createObserver('Observer 1');
+        const observer2 = automator.createObserver('Observer 2');
+        yield delay(300);
+        const observer3 = automator.createObserver('Observer 3');
+        observer1.updateStatus('completed');
+        yield delay(300);
+        observer2.updateStatus('completed');
+        yield delay(300);
+        observer3.updateStatus('completed');
+      });
+
+      automator.step(function* () {
+        output.push('occurence 2');
+        const observer4 = automator.createObserver('Observer 4');
+        const observer5 = automator.createObserver('Observer 5');
+        yield delay(300);
+        observer4.updateStatus('completed');
+        yield delay(300);
+        observer5.updateStatus('completed');
+      });
+    });
+
+    const job = new Job({
+      onNewPrompt: () => {},
+      onSnapshot: (event, snapshot, frameIndex) => {
+        switch (frameIndex) {
+          case 4: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 1']).toStrictEqual('in-progress');
+            break;
+          }
+          case 4: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 1']).toStrictEqual('in-progress');
+            expect(step.observers['Observer 2']).toStrictEqual('in-progress');
+            break;
+          }
+          case 6: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 1']).toStrictEqual('in-progress');
+            expect(step.observers['Observer 2']).toStrictEqual('in-progress');
+            expect(step.observers['Observer 3']).toStrictEqual('in-progress');
+            break;
+          }
+          case 7: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 1']).toStrictEqual('completed');
+            expect(step.observers['Observer 2']).toStrictEqual('in-progress');
+            expect(step.observers['Observer 3']).toStrictEqual('in-progress');
+            break;
+          }
+          case 7: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 1']).toStrictEqual('completed');
+            expect(step.observers['Observer 2']).toStrictEqual('completed');
+            expect(step.observers['Observer 3']).toStrictEqual('in-progress');
+            break;
+          }
+          case 9: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 1']).toStrictEqual('completed');
+            expect(step.observers['Observer 2']).toStrictEqual('completed');
+            expect(step.observers['Observer 3']).toStrictEqual('completed');
+            break;
+          }
+          case 12: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 4']).toStrictEqual('in-progress');
+            break;
+          }
+          case 13: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 4']).toStrictEqual('in-progress');
+            expect(step.observers['Observer 5']).toStrictEqual('in-progress');
+            break;
+          }
+          case 14: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 4']).toStrictEqual('completed');
+            expect(step.observers['Observer 5']).toStrictEqual('in-progress');
+            break;
+          }
+          case 15: {
+            const step =
+              snapshot.automations[0].steps[task1.currentRunningTaskIndex];
+            expect(step.observers['Observer 4']).toStrictEqual('completed');
+            expect(step.observers['Observer 5']).toStrictEqual('completed');
+            break;
+          }
+          default: {
+            break;
+          }
+        }
+      },
+    });
+
+    await task1.start(job);
+  });
 });
