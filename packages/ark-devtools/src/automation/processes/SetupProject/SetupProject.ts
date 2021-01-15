@@ -7,26 +7,26 @@ export default () =>
     const { useFile } = useFileSystem(automator);
 
     // Initialise npm package
-    automator.run(function* () {
+    automator.step(function* () {
       // Run npm init
       yield automator.runOnCli('npm', ['init', '-y']);
       yield useFile('package.json')
         .readFromDisk()
         .parse('json')
-        .act(function* (content, raw, saveFile) {
+        .act(function* (opts) {
           const packageName = yield automator.prompt({
             key: 'package-name',
             question: 'Project name',
             type: 'text-input',
           });
 
-          content.name = packageName;
-          saveFile();
+          opts.content.name = packageName;
+          opts.saveFile();
         });
     });
 
     // Initialise directory
-    automator.run(function* () {
+    automator.step(function* () {
       const manager: ManifestManager = new ManifestManager(
         automator.cwd,
         ManifestUtils.createManifest({})

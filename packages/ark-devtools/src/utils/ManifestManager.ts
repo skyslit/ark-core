@@ -3,6 +3,7 @@ import path from 'path';
 import yaml from 'yaml';
 import traverse from 'traverse';
 import { Automator } from '../automation/core/Automator';
+import getAllPlugins from '../plugins';
 
 export type ManifestType = 'package' | 'module' | 'auto';
 
@@ -44,6 +45,7 @@ export type RNApp = {
 };
 
 export interface Manifest {
+  name?: string;
   Roles?: Array<Role>;
   ServiceEndpoints?: Array<ServiceEndpoint>;
   WebApps?: Array<WebApp>;
@@ -66,12 +68,14 @@ type PluginEvaluator = (opts: {
   };
   log: (content: any, level?: 'log' | 'warn' | 'error') => void;
   data: any;
+  automator: Automator;
 }) => Generator;
 
 type PluginExecutor = (opts: {
   log: (content: any, level?: 'log' | 'warn' | 'error') => void;
   data: any;
   args: any;
+  automator: Automator;
 }) => Generator;
 
 type PluginAction = {
@@ -160,6 +164,7 @@ export class ManifestPlugin {
           });
         },
         data,
+        automator,
       });
 
     const task = new Automator();
@@ -178,6 +183,7 @@ export class ManifestPlugin {
             },
             data,
             args: action.args,
+            automator,
           });
       });
     }
@@ -202,7 +208,7 @@ export class ManifestController {
    */
   static getInstance() {
     if (!ManifestController.instance) {
-      ManifestController.instance = new ManifestController();
+      ManifestController.instance = new ManifestController(getAllPlugins());
     }
     return ManifestController.instance;
   }
@@ -211,9 +217,10 @@ export class ManifestController {
 
   /**
    * Creates new instance of Manifest Controller
+   * @param {Array<ManifestPlugin>} plugins
    */
-  constructor() {
-    this.plugins = [];
+  constructor(plugins?: Array<ManifestPlugin>) {
+    this.plugins = plugins || [];
   }
 
   /**

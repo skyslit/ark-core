@@ -27,6 +27,12 @@ const FileParser: ParserMap = {
   raw: RawParser,
 };
 
+type ContextType = {
+  content: any;
+  raw: string;
+  saveFile: () => boolean;
+};
+
 export const useFileSystem = (automator: Automator) => ({
   createDirectory: (p: string) => {
     return fs.mkdirSync(path.join(automator.cwd, p), { recursive: true });
@@ -51,10 +57,11 @@ export const useFileSystem = (automator: Automator) => ({
   useFile: (p: string) => {
     const filePath = path.join(automator.cwd, p);
     let data: any = null;
-    let parsedData: any = null;
     return {
       readFromDisk: () => {
-        data = fs.readFileSync(filePath, 'utf8');
+        if (fs.existsSync(filePath)) {
+          data = fs.readFileSync(filePath, 'utf8');
+        }
         return {
           parse: (preset: ParsePreset, custom?: Parser<any>) => {
             let parser = custom || null;
@@ -69,22 +76,19 @@ export const useFileSystem = (automator: Automator) => ({
               parser = RawParser;
             }
 
-            parsedData = parser.decode(data);
+            const context = {
+              content: parser.decode(data),
+              raw: data,
+              saveFile() {
+                const dataToSave = parser.encode(context.content);
+                fs.writeFileSync(filePath, dataToSave);
+                return true;
+              },
+            };
 
             return {
-              act: (
-                activator: (
-                  data: any,
-                  raw: string,
-                  saveFile: () => boolean
-                ) => Generator
-              ) => {
-                return () =>
-                  activator(parsedData, data, () => {
-                    const dataToSave = parser.encode(parsedData);
-                    fs.writeFileSync(filePath, dataToSave);
-                    return true;
-                  });
+              act: (activator: (opts: ContextType) => Generator) => {
+                return () => activator(context);
               },
             };
           },
