@@ -10,37 +10,37 @@ export default (props: any) => {
 
   const items = [
     {
-      label: 'Add New Module',
-      value: 'add-module',
-    },
-    {
-      label: 'Install FreePizza Module',
-      value: '4',
-    },
-    {
-      label: 'Add Frontend Project',
-      value: '1',
-    },
-    {
-      label: 'Add Backend Project',
-      value: '2',
-    },
-    {
       label: 'Sync All',
       value: 'sync',
     },
-    {
-      label: 'Run All',
-      value: '5',
-    },
-    {
-      label: 'Build All',
-      value: '6',
-    },
-    {
-      label: 'Publish FreePizza Module',
-      value: '3',
-    },
+    // {
+    //   label: 'Add New Module',
+    //   value: 'add-module',
+    // },
+    // {
+    //   label: 'Install FreePizza Module',
+    //   value: '4',
+    // },
+    // {
+    //   label: 'Add Frontend Project',
+    //   value: '1',
+    // },
+    // {
+    //   label: 'Add Backend Project',
+    //   value: '2',
+    // },
+    // {
+    //   label: 'Run All',
+    //   value: '5',
+    // },
+    // {
+    //   label: 'Build All',
+    //   value: '6',
+    // },
+    // {
+    //   label: 'Publish FreePizza Module',
+    //   value: '3',
+    // },
   ];
 
   return (
