@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ManifestManager, InvalidManifestError } from '@skyslit/ark-devtools';
 import { useAutomator } from './automator';
+import { useBuilder } from './builder';
 import { ProcessRegistryType, Registry } from '../registry';
 import commandLineArgs from 'command-line-args';
 
@@ -51,6 +52,7 @@ export default function (
     hideJobPanel,
     showJobPanel,
   } = useAutomator({ cwd: opts.cwd });
+  const { build, builders } = useBuilder({ cwd: opts.cwd });
 
   const setError = useCallback((err: any) => {
     setErrorData(err);
@@ -90,10 +92,12 @@ export default function (
     jobSnapshot,
     startupOptions: opts.options,
     isJobActive: isActive,
+    builders,
     boot,
     runProcess,
     returnPromptResponse,
     hideJobPanel,
     showJobPanel,
+    build,
   };
 }

@@ -3,6 +3,7 @@ import { Text, Box } from 'ink';
 import Spinner from 'ink-spinner';
 import Automator from './components/automation';
 import Panel from './components/panel';
+import BuilderPanel from './components/builder';
 import useApp from './hooks/master';
 import commandLineArgs from 'command-line-args';
 import { getHelpText } from './cli';
@@ -32,6 +33,7 @@ export default (props: AppPropType) => {
     returnPromptResponse,
     runProcess,
     hideJobPanel,
+    build,
     boot,
   } = useApp({
     cwd,
@@ -42,19 +44,26 @@ export default (props: AppPropType) => {
   let isManagedRuntime: boolean = false;
   if (mode === 'command') {
     isManagedRuntime = true;
+    if (['sync'].indexOf(options.process) > -1) {
+      // Processes
+      useEffect(() => {
+        runProcess(options.process);
+      }, []);
+    } else if (options.process === 'build') {
+      useEffect(() => {
+        build();
+      }, []);
+    }
+  } else {
     useEffect(() => {
-      runProcess(options.process);
+      console.clear();
+      boot();
     }, []);
+
+    useEffect(() => {
+      process.stdin.resume();
+    }, [isJobActive]);
   }
-
-  useEffect(() => {
-    console.clear();
-    boot();
-  }, []);
-
-  useEffect(() => {
-    process.stdin.resume();
-  }, [isJobActive]);
 
   switch (screen) {
     case 'panel': {
@@ -74,7 +83,14 @@ export default (props: AppPropType) => {
     }
     default: {
       if (mode === 'command') {
-        return null;
+        switch (options.process) {
+          case 'build': {
+            return <BuilderPanel />;
+          }
+          default: {
+            return null;
+          }
+        }
       }
       return (
         <Box height={10} alignItems="center" justifyContent="center">

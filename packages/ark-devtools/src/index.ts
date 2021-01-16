@@ -15,6 +15,8 @@ export {
   StepSnapshot,
   WorkerStatus,
 } from './automation/core/Automator';
+export { BackendBuilder } from './builders/BackendBuilder';
+export { SPABuilder } from './builders/FrontendBuilder';
 
 export const Automations = {
   processes: {
