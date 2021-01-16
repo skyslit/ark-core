@@ -7,17 +7,29 @@ export default {
       'package',
       /^name$/,
       (opts) => {
-        opts.evaluate(function* ({ automator }) {
-          const { useFile } = useFileSystem(automator);
+        opts.registerAction('NPM_INIT', function* (opts) {
+          yield opts.automator.runOnCli('npm', ['init', '--y']);
+        });
+
+        opts.registerAction('UPDATE_PACKAGE_JSON', function* (opts) {
+          const { useFile } = useFileSystem(opts.automator);
           yield useFile('package.json')
             .readFromDisk()
             .parse('json')
-            .act(function* (opts) {
-              opts.content = {
-                name: 'Dameem',
-              };
-              opts.saveFile();
+            .act(function* (innerOpts) {
+              innerOpts.content.name = opts.args.name;
+              innerOpts.saveFile();
             });
+        });
+
+        opts.registerAction('INSTALL_DEPENDENCIES', function* () {});
+
+        opts.evaluate(function* (opts) {
+          const { existFile } = useFileSystem(opts.automator);
+          if (!existFile('package.json')) {
+            yield opts.task.push('NPM_INIT');
+            yield opts.task.push('UPDATE_PACKAGE_JSON', { name: opts.data });
+          }
         });
       },
       true

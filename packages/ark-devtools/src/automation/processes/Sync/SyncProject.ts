@@ -28,6 +28,11 @@ export default (controller?: ManifestController) =>
             yield () => targetManifest.sync(automator, controller);
           }
         }
+        automator
+          .getData('MAN_PLUGIN:AUTOMATOR_QUEUE', [])
+          .forEach((innerAutomator) => {
+            automator.job.queueAutomator(innerAutomator);
+          });
       },
       { title: 'Scanning manifest files' }
     );

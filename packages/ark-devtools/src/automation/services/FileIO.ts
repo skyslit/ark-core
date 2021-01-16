@@ -54,6 +54,9 @@ export const useFileSystem = (automator: Automator) => ({
   deleteDirectory: (p: string) => {
     return rimraf.sync(path.join(automator.cwd, p), {});
   },
+  existFile: (p: string) => {
+    return fs.existsSync(path.join(automator.cwd, p));
+  },
   useFile: (p: string) => {
     const filePath = path.join(automator.cwd, p);
     let data: any = null;

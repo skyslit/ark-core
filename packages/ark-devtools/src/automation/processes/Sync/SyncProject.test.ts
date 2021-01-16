@@ -6,14 +6,17 @@ import { Job } from '../../core/Automator';
 import createSyncProcess from './SyncProject';
 import rimraf from 'rimraf';
 import fs from 'fs';
-// import path from 'path';
+import path from 'path';
 
-const testDir = '/test-dir';
+const testDir = path.join(
+  __dirname,
+  '../../../__test__/test-artifacts/setup-project-2'
+);
 
-jest.mock('fs', () => {
-  const memfs = require('memfs');
-  return memfs.createFsFromVolume(memfs.Volume.fromJSON({}, '/test-dir'));
-});
+// jest.mock('fs', () => {
+//   const memfs = require('memfs');
+//   return memfs.createFsFromVolume(memfs.Volume.fromJSON({}, '/test-dir'));
+// });
 
 beforeEach(() => {
   rimraf.sync(testDir);
@@ -39,7 +42,9 @@ describe('project setup', () => {
       throw job.errors[0];
     }
 
-    // console.log(job.getSnapshot());
-    // console.log(fs.readFileSync(path.join(testDir, 'package.json'), 'utf-8'));
+    const packageJsonContent = JSON.parse(
+      fs.readFileSync(path.join(testDir, 'package.json'), 'utf-8')
+    );
+    expect(packageJsonContent.name).toStrictEqual('fairytale');
   });
 });
