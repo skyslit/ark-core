@@ -27,10 +27,11 @@ const FileParser: ParserMap = {
   raw: RawParser,
 };
 
-type ContextType = {
+export type ContextType = {
   content: any;
   raw: string;
   saveFile: () => boolean;
+  automator: Automator;
 };
 
 export const useFileSystem = (automator: Automator) => ({
@@ -57,6 +58,9 @@ export const useFileSystem = (automator: Automator) => ({
   existFile: (p: string) => {
     return fs.existsSync(path.join(automator.cwd, p));
   },
+  readFile: (p: string): string => {
+    return fs.readFileSync(path.join(automator.cwd, p), 'utf-8');
+  },
   useFile: (p: string) => {
     const filePath = path.join(automator.cwd, p);
     let data: any = null;
@@ -79,7 +83,8 @@ export const useFileSystem = (automator: Automator) => ({
               parser = RawParser;
             }
 
-            const context = {
+            const context: ContextType = {
+              automator,
               content: parser.decode(data),
               raw: data,
               saveFile() {

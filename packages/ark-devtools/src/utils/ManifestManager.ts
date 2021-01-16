@@ -69,6 +69,7 @@ type PluginEvaluator = (opts: {
   log: (content: any, level?: 'log' | 'warn' | 'error') => void;
   data: any;
   automator: Automator;
+  manifest: Manifest;
 }) => Generator;
 
 type PluginExecutor = (opts: {
@@ -76,6 +77,7 @@ type PluginExecutor = (opts: {
   data: any;
   args: any;
   automator: Automator;
+  manifest: Manifest;
 }) => Generator;
 
 type PluginAction = {
@@ -139,8 +141,9 @@ export class ManifestPlugin {
    * Run plugin
    * @param {Automator} automator
    * @param {any} data
+   * @param {Manifest} manifest
    */
-  *run(automator: Automator, data: any) {
+  *run(automator: Automator, data: any, manifest: Manifest) {
     if (!this.evaluator) {
       throw new Error('Evaluator has not been implemented');
     }
@@ -165,6 +168,7 @@ export class ManifestPlugin {
         },
         data,
         automator,
+        manifest,
       });
 
     const task = new Automator();
@@ -184,6 +188,7 @@ export class ManifestPlugin {
             data,
             args: action.args,
             automator,
+            manifest,
           });
       });
     }
@@ -404,7 +409,12 @@ export class ManifestManager {
       const plugins = controller.matchPlugins(address, manifestType);
       let j = 0;
       for (j = 0; j < plugins.length; j++) {
-        yield () => plugins[j].run(automator, traverseResult.get(paths[i]));
+        yield () =>
+          plugins[j].run(
+            automator,
+            traverseResult.get(paths[i]),
+            this.configuration
+          );
       }
     }
 

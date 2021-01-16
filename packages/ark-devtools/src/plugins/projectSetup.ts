@@ -1,5 +1,7 @@
 import { createPlugin } from '../utils/ManifestManager';
 import { useFileSystem } from '../automation/services/FileIO';
+import { openPackageJson } from '../automation/helpers/package_json';
+// import platformVersionManager from '../utils/PlatformVersionManager';
 
 export default {
   setup: () =>
@@ -22,14 +24,26 @@ export default {
             });
         });
 
-        opts.registerAction('INSTALL_DEPENDENCIES', function* () {});
+        opts.registerAction('INSTALL_TYPESCRIPT', function* (opts) {
+          yield opts.automator.runOnCli('npm', ['install', 'typescript']);
+        });
 
         opts.evaluate(function* (opts) {
-          const { existFile } = useFileSystem(opts.automator);
+          const { existFile, useFile } = useFileSystem(opts.automator);
           if (!existFile('package.json')) {
-            yield opts.task.push('NPM_INIT');
-            yield opts.task.push('UPDATE_PACKAGE_JSON', { name: opts.data });
+            opts.task.push('NPM_INIT');
+            opts.task.push('UPDATE_PACKAGE_JSON', { name: opts.data });
           }
+
+          yield useFile('package.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              const editor = openPackageJson(fileOpts);
+              if (!editor.hasDependency('typescript')) {
+                opts.task.push('INSTALL_TYPESCRIPT');
+              }
+            });
         });
       },
       true

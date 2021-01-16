@@ -49,6 +49,7 @@
     "unionfs": "^4.4.0"
   },
   "dependencies": {
+    "@schemastore/package": "^0.0.6",
     "babel-loader": "^8.2.2",
     "chalk": "^4.1.0",
     "ejs": "^3.1.5",

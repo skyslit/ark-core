@@ -24,27 +24,31 @@ beforeEach(() => {
 });
 
 describe('project setup', () => {
-  test('should setup npm package, prettier etc...', async () => {
-    // Write a dummy manifest file
-    const manager = new ManifestManager(testDir, {
-      name: 'fairytale',
-    });
-    manager.write();
+  test(
+    'should setup npm package, prettier etc...',
+    async () => {
+      // Write a dummy manifest file
+      const manager = new ManifestManager(testDir, {
+        name: 'fairytale',
+      });
+      manager.write();
 
-    // Prepare the job
-    const job = new Job(null, testDir);
+      // Prepare the job
+      const job = new Job(null, testDir);
 
-    // Prepare the controller
-    const controller = useManifestController();
-    await createSyncProcess(controller).start(job);
+      // Prepare the controller
+      const controller = useManifestController();
+      await createSyncProcess(controller).start(job);
 
-    if (job.errors.length > 0) {
-      throw job.errors[0];
-    }
+      if (job.errors.length > 0) {
+        throw job.errors[0];
+      }
 
-    const packageJsonContent = JSON.parse(
-      fs.readFileSync(path.join(testDir, 'package.json'), 'utf-8')
-    );
-    expect(packageJsonContent.name).toStrictEqual('fairytale');
-  });
+      const packageJsonContent = JSON.parse(
+        fs.readFileSync(path.join(testDir, 'package.json'), 'utf-8')
+      );
+      expect(packageJsonContent.name).toStrictEqual('fairytale');
+    },
+    120 * 1000
+  );
 });
