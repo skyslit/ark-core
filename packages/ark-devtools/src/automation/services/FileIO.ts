@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import rimraf from 'rimraf';
 import { Automator } from '../core/Automator';
+import commentJson from 'comment-json';
 
 type ParsePreset = 'raw' | 'json' | 'ts|tsx' | 'custom';
 
@@ -18,8 +19,13 @@ const RawParser: Parser<string> = {
 };
 
 const JSONParser: Parser<any> = {
-  encode: (input) => JSON.stringify(input),
-  decode: (input) => JSON.parse(input),
+  encode: (input) => commentJson.stringify(input, null, 2),
+  decode: (input) => {
+    if (input) {
+      return commentJson.parse(input, undefined, false);
+    }
+    return JSON.parse(input);
+  },
 };
 
 const FileParser: ParserMap = {

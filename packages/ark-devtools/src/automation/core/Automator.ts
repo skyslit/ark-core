@@ -49,7 +49,7 @@ export class TestMonitor implements IAutomatorInterface {
   }
 }
 
-type ItemMeta = {
+export type ItemMeta = {
   service?: any;
   title?: string;
   description?: string;

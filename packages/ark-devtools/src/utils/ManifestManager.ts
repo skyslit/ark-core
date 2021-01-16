@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
 import traverse from 'traverse';
-import { Automator } from '../automation/core/Automator';
+import { Automator, ItemMeta } from '../automation/core/Automator';
 import getAllPlugins from '../plugins';
 
 export type ManifestType = 'package' | 'module' | 'auto';
@@ -64,7 +64,7 @@ type PluginLog = {
 
 type PluginEvaluator = (opts: {
   task: {
-    push: (id: string, args?: any) => void;
+    push: (id: string, args?: any, meta?: ItemMeta) => void;
   };
   log: (content: any, level?: 'log' | 'warn' | 'error') => void;
   data: any;
@@ -83,6 +83,7 @@ type PluginExecutor = (opts: {
 type PluginAction = {
   id: string;
   args: any;
+  meta: ItemMeta;
 };
 
 /**
@@ -153,10 +154,11 @@ export class ManifestPlugin {
     yield () =>
       this.evaluator({
         task: {
-          push: (id, args) => {
+          push: (id, args, meta) => {
             this.actions.push({
               id,
               args,
+              meta,
             });
           },
         },
@@ -190,7 +192,7 @@ export class ManifestPlugin {
             automator,
             manifest,
           });
-      });
+      }, action.meta);
     }
 
     // Add custom task to queue
