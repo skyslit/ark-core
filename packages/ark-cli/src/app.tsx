@@ -3,7 +3,7 @@ import { Text, Box } from 'ink';
 import Spinner from 'ink-spinner';
 import Automator from './components/automation';
 import Panel from './components/panel';
-import BuilderPanel from './components/builder';
+// import BuilderPanel from './components/builder';
 import useApp from './hooks/master';
 import commandLineArgs from 'command-line-args';
 import { getHelpText } from './cli';
@@ -49,9 +49,9 @@ export default (props: AppPropType) => {
       useEffect(() => {
         runProcess(options.process);
       }, []);
-    } else if (options.process === 'build') {
+    } else if (['build', 'start'].indexOf(options.process) > -1) {
       useEffect(() => {
-        build();
+        build(options.process === 'start' ? 'development' : 'production');
       }, []);
     }
   } else {
@@ -84,9 +84,6 @@ export default (props: AppPropType) => {
     default: {
       if (mode === 'command') {
         switch (options.process) {
-          case 'build': {
-            return <BuilderPanel />;
-          }
           default: {
             return null;
           }

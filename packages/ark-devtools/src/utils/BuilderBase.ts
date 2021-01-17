@@ -7,6 +7,8 @@ import { GhostFileActions } from './ghostFile';
 import memfs from 'memfs';
 import { ufs } from 'unionfs';
 
+export type BuilderMonitor = (err?: Error, result?: Stats) => void;
+
 type Mode = 'development' | 'production';
 export type ConfigurationOptions = {
   mode: Mode;
@@ -19,6 +21,7 @@ export type ConfigurationOptions = {
 export class BuilderBase extends EventEmitter {
   private compiler: webpack.Compiler;
   private watching: any;
+  private monitor: BuilderMonitor;
   /**
    * Creates a new builder base instance
    * @param {EventEmitterOptions} options
@@ -78,6 +81,11 @@ export class BuilderBase extends EventEmitter {
       this.compiler.inputFileSystem = _ufs;
     }
 
+    this.compiler.hooks.invalid.tap('invalid', () => {
+      console.clear();
+      console.log('Compiling...');
+    });
+
     if (opts.watchMode === true) {
       this.watching = this.compiler.watch({}, this.handler.bind(this));
     } else {
@@ -106,6 +114,14 @@ export class BuilderBase extends EventEmitter {
         resolve(true);
       }
     });
+  }
+
+  /**
+   * Attaches a monitor that can be used to listen to events
+   * @param {BuilderMonitor} mon
+   */
+  attachMonitor(mon: BuilderMonitor) {
+    this.monitor = mon;
   }
 
   /**
@@ -192,11 +208,21 @@ export class BuilderBase extends EventEmitter {
   }
 
   /**
+   * Invokes monitor if one's attached
+   * @param {Error} err
+   * @param {Stats} result
+   */
+  private invokeMonitor(err?: Error, result?: Stats) {
+    this.monitor && this.monitor(err, result);
+  }
+
+  /**
    * Handler
    * @param {Error} err
    * @param {Stats} result
    */
   private handler(err?: Error, result?: Stats): void {
+    this.invokeMonitor(err, result);
     if (err) {
       this.emit('error', [
         {

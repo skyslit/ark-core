@@ -52,7 +52,7 @@ export default function (
     hideJobPanel,
     showJobPanel,
   } = useAutomator({ cwd: opts.cwd });
-  const { build, builders } = useBuilder({ cwd: opts.cwd });
+  const { build } = useBuilder({ cwd: opts.cwd });
 
   const setError = useCallback((err: any) => {
     setErrorData(err);
@@ -92,7 +92,6 @@ export default function (
     jobSnapshot,
     startupOptions: opts.options,
     isJobActive: isActive,
-    builders,
     boot,
     runProcess,
     returnPromptResponse,

@@ -32,7 +32,7 @@ export class SPABuilder extends BuilderBase {
   getGhostFiles(opts: ConfigurationOptions): GhostFileActions[] {
     return [
       createGhostFile(
-        path.join(__dirname, './assets/Frontend/root.tsx.ejs'),
+        path.join(__dirname, '../../assets/Frontend/root.tsx.ejs'),
         'src/index.tsx',
         {
           relativeAppFilePath: path.relative(
@@ -70,7 +70,7 @@ export class SPABuilder extends BuilderBase {
       plugins: [
         new HTMLWebpackPlugin({
           filename: `${this.appId}.html`,
-          template: path.resolve(__dirname, './assets/index.template.html'),
+          template: path.resolve(__dirname, '../../assets/index.template.html'),
         }),
       ],
       module: {
@@ -86,6 +86,48 @@ export class SPABuilder extends BuilderBase {
                 ),
                 options: {
                   compact: false,
+                  presets: [
+                    [
+                      path.resolve(
+                        path.join(
+                          __dirname,
+                          '../../node_modules/@babel/preset-env'
+                        )
+                      ),
+                      { targets: { node: 'current' } },
+                    ],
+                    [
+                      path.resolve(
+                        path.join(
+                          __dirname,
+                          '../../node_modules/@babel/preset-typescript'
+                        )
+                      ),
+                      { allowNamespaces: true },
+                    ],
+                    [
+                      path.resolve(
+                        path.join(
+                          __dirname,
+                          '../../node_modules/@babel/preset-react'
+                        )
+                      ),
+                    ],
+                  ],
+                  plugins: [
+                    path.resolve(
+                      path.join(
+                        __dirname,
+                        '../../node_modules/@babel/plugin-proposal-class-properties'
+                      )
+                    ),
+                    path.resolve(
+                      path.join(
+                        __dirname,
+                        '../../node_modules/@babel/plugin-syntax-dynamic-import'
+                      )
+                    ),
+                  ],
                 },
               },
             ],
