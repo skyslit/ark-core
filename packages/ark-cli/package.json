@@ -45,6 +45,7 @@
     "chalk": "^4.1.0",
     "command-line-args": "^5.1.1",
     "command-line-usage": "^6.1.1",
+    "console-clear": "^1.1.1",
     "ink": "^3.0.8",
     "ink-confirm-input": "^2.0.0",
     "ink-multi-select": "^2.0.0",

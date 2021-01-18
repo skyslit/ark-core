@@ -73,6 +73,10 @@ export class SPABuilder extends BuilderBase {
           template: path.resolve(__dirname, '../../assets/index.template.html'),
         }),
       ],
+      stats: {
+        loggingTrace: false,
+        errorStack: false,
+      },
       module: {
         rules: [
           {

@@ -46,6 +46,10 @@ export class BackendBuilder extends BuilderBase {
           allowlist: ['@skyslit/ark-backend'],
         }),
       ],
+      stats: {
+        loggingTrace: false,
+        errorStack: false,
+      },
       plugins: [
         new IgnorePlugin({
           // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4
