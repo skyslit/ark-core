@@ -1,5 +1,5 @@
 /* eslint-disable require-jsdoc */
-import { Compilation, Configuration } from 'webpack';
+import { Configuration } from 'webpack';
 import { BuilderBase, ConfigurationOptions } from '../utils/BuilderBase';
 import path from 'path';
 import memfs from 'memfs';
@@ -180,25 +180,24 @@ describe('build stage: production', () => {
     const builderInstance = new SampleBuilder(
       path.join(cwd, testRoot, 'main.server.ts')
     );
-    builderInstance.on('success', (compilation: Compilation) => {
-      try {
-        const buildOutput: string = outputFileSystem.readFileSync(
-          path.join(cwd, 'build', 'main.js'),
-          'utf-8'
-        );
-        expect(buildOutput).toContain('Server program');
-        expect(buildOutput).toMatchSnapshot();
-        done();
-      } catch (e) {
-        done(e);
+    builderInstance.attachMonitor((err) => {
+      if (err) {
+        done(err);
+      } else {
+        try {
+          const buildOutput: string = outputFileSystem.readFileSync(
+            path.join(cwd, 'build', 'main.js'),
+            'utf-8'
+          );
+          expect(buildOutput).toContain('Server program');
+          expect(buildOutput).toMatchSnapshot();
+          done();
+        } catch (e) {
+          done(e);
+        }
       }
     });
-    builderInstance.on('warning', (warnings) => {
-      done(new Error('Warnings should not be thrown'));
-    });
-    builderInstance.on('error', (errors) => {
-      done(new Error('Error should not be thrown'));
-    });
+
     builderInstance.build(
       {
         mode: 'production',
@@ -208,23 +207,22 @@ describe('build stage: production', () => {
       outputFileSystem
     );
   });
-  // test('warnings operation', () => {
 
-  // });
   test('error operation', (done) => {
     const builderInstance = new SampleBuilder(
       path.join(cwd, testRoot, 'main-error.server.ts')
     );
-    builderInstance.on('success', () => {
-      done(new Error('Should not trigger success'));
+
+    builderInstance.attachMonitor((err, result) => {
+      if (err) {
+        done(err);
+      } else {
+        expect(result.compilation.errors).toHaveLength(1);
+        expect(result.compilation.warnings).toHaveLength(0);
+        done();
+      }
     });
-    builderInstance.on('warning', (warnings) => {
-      done(new Error('Should not trigger warning'));
-    });
-    builderInstance.on('error', (errors) => {
-      expect(errors).toHaveLength(1);
-      done();
-    });
+
     builderInstance.build(
       {
         mode: 'production',

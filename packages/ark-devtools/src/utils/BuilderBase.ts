@@ -227,30 +227,5 @@ export class BuilderBase extends EventEmitter {
    */
   private handler(err?: Error, result?: Stats): void {
     this.invokeMonitor(err, result);
-    // if (err) {
-    //   this.emit('error', [
-    //     {
-    //       message: err.message,
-    //     },
-    //   ]);
-    // } else {
-    //   if (result.hasErrors()) {
-    //     this.emit(
-    //       'error',
-    //       result.compilation.errors,
-    //       result.compilation,
-    //       result
-    //     );
-    //   } else if (result.hasWarnings()) {
-    //     this.emit(
-    //       'warning',
-    //       result.compilation.warnings,
-    //       result.compilation,
-    //       result
-    //     );
-    //   } else {
-    //     this.emit('success', result.compilation, result);
-    //   }
-    // }
   }
 }

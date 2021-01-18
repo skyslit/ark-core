@@ -1,5 +1,4 @@
 /* eslint-disable require-jsdoc */
-import { Compilation } from 'webpack';
 import { BackendBuilder } from '../builders/BackendBuilder';
 import { SPABuilder } from '../builders/FrontendBuilder';
 import path from 'path';
@@ -23,20 +22,18 @@ describe('SPA app builder', () => {
         'admin',
         path.join(__dirname, './test-project/src/admin.client.tsx')
       );
-      builderInstance.on('success', (compilation: Compilation) => {
+
+      builderInstance.attachMonitor((err, result) => {
         try {
+          if (err) throw err;
+          expect(result.compilation.errors).toHaveLength(0);
+          expect(result.compilation.warnings).toHaveLength(0);
           done();
         } catch (e) {
           done(e);
         }
       });
-      builderInstance.on('warning', (warnings) => {
-        done(new Error('Warnings should not be thrown'));
-      });
-      builderInstance.on('error', (errors) => {
-        console.log(errors);
-        done(new Error('Error should not be thrown'));
-      });
+
       builderInstance.build(
         {
           mode: 'production',
@@ -63,20 +60,18 @@ describe('backend builder', () => {
     const builderInstance = new BackendBuilder(
       path.join(__dirname, './test-project/src/services/mock.server.tsx')
     );
-    builderInstance.on('success', (compilation: Compilation) => {
+
+    builderInstance.attachMonitor((err, result) => {
       try {
+        if (err) throw err;
+        expect(result.compilation.errors).toHaveLength(0);
+        expect(result.compilation.warnings).toHaveLength(0);
         done();
       } catch (e) {
         done(e);
       }
     });
-    builderInstance.on('warning', (warnings) => {
-      done(new Error('Warnings should not be thrown'));
-    });
-    builderInstance.on('error', (errors) => {
-      console.log(errors);
-      done(new Error('Error should not be thrown'));
-    });
+
     builderInstance.build(
       {
         mode: 'production',
