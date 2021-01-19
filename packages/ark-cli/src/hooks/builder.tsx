@@ -172,7 +172,9 @@ export const useBuilder = (opts: Options) => {
     };
 
     const clientEntries = await glob('src/*.client.tsx', { cwd: opts.cwd });
-    const serverEntries = await glob('src/main.server.ts', { cwd: opts.cwd });
+    const serverEntries = await glob('src/server/main.server.ts', {
+      cwd: opts.cwd,
+    });
 
     console.clear();
     console.log(chalk.blueBright('Starting compilation...'));

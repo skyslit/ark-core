@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
+import path from 'path';
 import fs from 'fs';
 import {
   ApplicationContext,
@@ -38,6 +39,11 @@ type ServerOpts = {
   listeningListener?: () => void;
 };
 
+type ServiceDef = {
+  serviceId: string;
+  handler: expressApp.RequestHandler;
+};
+
 type WebAppRenderer = {
   render: (initialState?: any) => expressApp.RequestHandler;
 };
@@ -54,6 +60,7 @@ declare global {
         path: string,
         handlers: expressApp.RequestHandler | Array<expressApp.RequestHandler>
       ) => expressApp.Application;
+      useService: (def: ServiceDef) => void;
       useWebApp: (
         appId: string,
         ctx?: ContextScope<any>,
@@ -88,7 +95,12 @@ declare global {
  * @return {string} HTML static content
  */
 function readHtmlFile(htmlFilePath: string): string {
-  return fs.readFileSync(htmlFilePath, 'utf8');
+  if (fs.existsSync(htmlFilePath)) {
+    return fs.readFileSync(htmlFilePath, 'utf8');
+  } else {
+    // Try loading from
+    return fs.readFileSync(path.join(__dirname, '../', htmlFilePath), 'utf8');
+  }
 }
 
 /**
@@ -243,8 +255,12 @@ export const Data = createPointer<Partial<Ark.Data>>(
 export const Backend = createPointer<Partial<Ark.Backend>>(
   (moduleId, controller, context) => ({
     init: () => {
-      if (!context.existData(moduleId, 'express')) {
-        context.setData(moduleId, 'express', expressApp());
+      if (!context.existData('default', 'express')) {
+        const instance = context.setData('default', 'express', expressApp());
+        instance.use(
+          '/_browser',
+          expressApp.static(path.join(__dirname, '../_browser'))
+        );
       }
     },
     useServer: (opts) => {
@@ -261,7 +277,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           moduleId,
           'http',
           http.createServer(
-            context.getData<expressApp.Application>(moduleId, 'express')
+            context.getData<expressApp.Application>('default', 'express')
           )
         );
         controller.run(() => {
@@ -277,11 +293,16 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         });
       }
     },
-    useApp: () => context.getData(moduleId, 'express'),
+    useApp: () => context.getData('default', 'express'),
     useRoute: (method, path, handlers) => {
       return context
-        .getData<expressApp.Application>(moduleId, 'express')
+        .getData<expressApp.Application>('default', 'express')
         [method](path, handlers);
+    },
+    useService: (def: ServiceDef) => {
+      context
+        .getData<expressApp.Application>('default', 'express')
+        .post(`/___service/${moduleId}/${def.serviceId}`, def.handler);
     },
     useWebApp: (appId, ctx, htmlFileName) => {
       if (!htmlFileName) {
@@ -304,3 +325,19 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
     },
   })
 );
+
+/**
+ * Defines business rule, logic
+ * @param {string} serviceId
+ * @param {expressApp.RequestHandler} handler
+ * @return {ServiceDef}
+ */
+export function defineService(
+  serviceId: string,
+  handler: expressApp.RequestHandler
+): ServiceDef {
+  return {
+    serviceId,
+    handler,
+  };
+}

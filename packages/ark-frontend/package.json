@@ -33,14 +33,16 @@
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "5.2.0"
+    "react-router-dom": "5.2.0",
+    "axios": "0.21.1"
   },
   "peerDependencies": {
     "@skyslit/ark-core": "2.0.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "5.2.0"
+    "react-router-dom": "5.2.0",
+    "axios": "0.21.1"
   },
   "dependencies": {
     "redux": "^4.0.5"

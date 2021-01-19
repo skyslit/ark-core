@@ -43,7 +43,7 @@ export class BackendBuilder extends BuilderBase {
       target: 'node',
       externals: [
         nodeExternals({
-          allowlist: ['@skyslit/ark-backend'],
+          allowlist: ['@skyslit/ark-backend', '@skyslit/ark-frontend'],
         }),
       ],
       stats: {
@@ -74,6 +74,34 @@ export class BackendBuilder extends BuilderBase {
                 ),
                 options: {
                   compact: false,
+                  presets: [
+                    [
+                      path.resolve(
+                        path.join(
+                          __dirname,
+                          '../../node_modules/@babel/preset-env'
+                        )
+                      ),
+                      { targets: { node: 'current' } },
+                    ],
+                    [
+                      path.resolve(
+                        path.join(
+                          __dirname,
+                          '../../node_modules/@babel/preset-typescript'
+                        )
+                      ),
+                      { allowNamespaces: true },
+                    ],
+                    [
+                      path.resolve(
+                        path.join(
+                          __dirname,
+                          '../../node_modules/@babel/preset-react'
+                        )
+                      ),
+                    ],
+                  ],
                 },
               },
             ],

@@ -7,6 +7,7 @@ import {
   createPointer,
   extractRef,
 } from '@skyslit/ark-core';
+import axios from 'axios';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter, Switch, Route, RouteProps } from 'react-router-dom';
 
@@ -34,6 +35,14 @@ declare global {
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
+        useService: (
+          serviceId: string
+        ) => {
+          isLoading: boolean;
+          data: any;
+          err: any;
+          invoke: (body?: any) => void;
+        };
         useLayout: <T>(
           refId: string,
           component?: ArkReactComponent<T>
@@ -188,6 +197,29 @@ export function createReactApp(fn: ContextScope<any>): ContextScope<any> {
 export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
+    useService: (serviceId: string) => {
+      const [isLoading, setLoading] = React.useState<boolean>(false);
+      const [data, setData] = React.useState(null);
+      const [err, setError] = React.useState(null);
+      return {
+        isLoading,
+        data,
+        err,
+        invoke: (body?: any) => {
+          setLoading(true);
+          axios
+            .post(`/___service/${moduleId}/${serviceId}`, body)
+            .then((response) => {
+              setData(response.data);
+              setLoading(false);
+            })
+            .catch((err) => {
+              setError(err);
+              setLoading(false);
+            });
+        },
+      };
+    },
     useStore: (refId, defaultVal = null) => {
       const ref = extractRef(refId, moduleId);
       const fullyQualifiedRefId = `${ref.moduleName}/${ref.refId}`;
