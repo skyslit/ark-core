@@ -8,6 +8,7 @@ import {
   createPointer,
 } from '@skyslit/ark-core';
 import expressApp from 'express';
+import Joi from 'joi';
 import {
   SchemaDefinition,
   Model,
@@ -328,18 +329,361 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
   })
 );
 
+// ------------------ SERVICE BEGIN ------------------
+
+export type ArkUser = {
+  _id: string;
+  name: string;
+  emailAddress: string;
+};
+
+export type ServiceInput = {
+  isAuthenticated: boolean;
+  policies: Array<string>;
+  user: ArkUser;
+  params: any;
+  query: any;
+  input: any;
+  body: any;
+};
+
+export type Capabilities = {
+  serviceId: string;
+  params?: any;
+};
+
+export type ServiceResponseData<T = {}> = T & {
+  capabilities: Array<Capabilities>;
+};
+
+export type ServiceResponse<M, D> = {
+  type: 'success' | 'error';
+  meta?: M;
+  data?: Array<D>;
+  capabilities?: Array<Capabilities>;
+  errCode?: number;
+  err?: Error | any;
+  [key: string]: any;
+};
+
+export type RuleDefinitionOptions = {
+  input: ServiceInput;
+  allowPolicy: (policyName: string) => boolean;
+  denyPolicy: (policyName: string) => boolean;
+  allow: () => void;
+  deny: (msg?: string) => void;
+};
+
+export type RuleDefinition = (options: RuleDefinitionOptions) => any;
+
+export type LogicDefinitionOptions = {
+  success: (meta: any, data?: any | Array<any>) => ServiceResponse<any, any>;
+  error: (err: Error | any, httpCode?: number) => ServiceResponse<any, any>;
+};
+
+export type LogicDefinition = (
+  options: LogicDefinitionOptions
+) => ServiceResponse<any, any> | Promise<ServiceResponse<any, any>>;
+
+export type ServiceDefinitionOptions = {
+  defineValidator: (schema: Joi.Schema) => void;
+  definePre: () => void;
+  defineRule: (def: RuleDefinition) => void;
+  defineLogic: (def: LogicDefinition) => void;
+  defineCapabilities: () => void;
+};
+
+export type ServiceDefinition = (options: ServiceDefinitionOptions) => void;
+export type ServiceDefinitionMeta = {
+  def: ServiceDefinition;
+  name: string;
+};
+
 /**
- * Defines business rule, logic
- * @param {string} serviceId
- * @param {expressApp.RequestHandler} handler
- * @return {ServiceDef}
+ * Defines new business service
+ * @param {string} name
+ * @param {ServiceDefinition} def
+ * @return {ServiceDefinition}
  */
 export function defineService(
-  serviceId: string,
-  handler: expressApp.RequestHandler
-): ServiceDef {
+  name: string,
+  def: ServiceDefinition
+): ServiceDefinitionMeta {
   return {
-    serviceId,
-    handler,
+    name,
+    def,
   };
+}
+
+export type ServiceRunnerOptions = {
+  disableValidation: boolean;
+  disablePre: boolean;
+  disableRule: boolean;
+  disableLogic: boolean;
+  disableCapabilities: boolean;
+};
+
+type RunnerContext = {
+  validationRunner: () => any | Promise<any>;
+  preRunner: () => any | Promise<any>;
+  ruleRunner: () => any | Promise<any>;
+  logicRunner: () => any | Promise<any>;
+  capRunner: () => any | Promise<any>;
+};
+
+type RunnerStat = {
+  result: ServiceResponse<any, any>;
+  allowed: boolean;
+  denied: boolean;
+  denials: string[];
+  isValid: boolean;
+  validationErrors: Array<{ key: string; message: string }>;
+};
+
+/**
+ * Checks required policy with received policy and returns
+ * true if matches, otherwise false
+ * @param {string} policyName
+ * @param {Array<string>} policies
+ * @return {boolean}
+ */
+export function shouldAllow(
+  policyName: string,
+  policies: Array<string>
+): boolean {
+  if (Array.isArray(policies)) {
+    if (policies.length > 0) {
+      return policies.indexOf(policyName) > -1;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks required policy with received policy and returns
+ * false if matches, otherwise true
+ * @param {string} policyName
+ * @param {Array<string>} policies
+ * @return {boolean}
+ */
+export function shouldDeny(
+  policyName: string,
+  policies: Array<string>
+): boolean {
+  if (Array.isArray(policies)) {
+    if (policies.length > 0) {
+      return policies.indexOf(policyName) > -1;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Run business service
+ * @param {ServiceDefinitionMeta} service
+ * @param {ServiceInput} args
+ * @param {ServiceRunnerOptions} opts
+ * @return {Promise<Result>}
+ */
+export function runService(
+  service: ServiceDefinitionMeta,
+  args?: Partial<ServiceInput>,
+  opts?: Partial<ServiceRunnerOptions>
+): Promise<RunnerStat> {
+  args = Object.assign<ServiceInput, Partial<ServiceInput>>(
+    {
+      isAuthenticated: false,
+      policies: [],
+      params: {},
+      user: null,
+      query: {},
+      input: {},
+      body: {},
+    },
+    args || {}
+  );
+
+  opts = Object.assign<ServiceRunnerOptions, Partial<ServiceRunnerOptions>>(
+    {
+      disableValidation: false,
+      disablePre: false,
+      disableRule: false,
+      disableLogic: false,
+      disableCapabilities: false,
+    },
+    opts || {}
+  );
+
+  return new Promise<RunnerStat>((resolve, reject) => {
+    const ctx: RunnerContext = {
+      validationRunner: null,
+      preRunner: null,
+      ruleRunner: null,
+      logicRunner: null,
+      capRunner: null,
+    };
+
+    const stat: RunnerStat = {
+      result: null,
+      allowed: true,
+      denied: false,
+      denials: [],
+      isValid: true,
+      validationErrors: [],
+    };
+
+    const allow = () => (stat.allowed = true);
+    const deny = (msg?: string) => {
+      stat.denied = true;
+      if (msg) {
+        stat.denials.push(msg);
+      }
+    };
+
+    const isRuleSatisfied = () =>
+      stat.allowed === true && stat.denied === false;
+
+    const _init = () =>
+      Promise.resolve(
+        service.def({
+          defineValidator: (schema) =>
+            (ctx.validationRunner = () => {
+              stat.isValid = false;
+              try {
+                Joi.assert(args.input, schema, {
+                  abortEarly: false,
+                });
+                stat.isValid = true;
+              } catch (e) {
+                try {
+                  stat.validationErrors = e.details.map((d: any) => ({
+                    key: d.path[0],
+                    message: d.message,
+                  }));
+                } catch (e) {
+                  // Do nothing
+                }
+              }
+            }),
+          definePre: () => {},
+          defineRule: (def) =>
+            (ctx.ruleRunner = () => {
+              stat.allowed = false;
+              if (stat.isValid === true) {
+                return def({
+                  input: args as ServiceInput,
+                  allowPolicy: (policyName: string) => {
+                    if (shouldAllow(policyName, args.policies)) {
+                      allow();
+                      return true;
+                    } else {
+                      // deny(`Missing required policy to execute this action. Required policy: '${policyName}'`);
+                    }
+                    return false;
+                  },
+                  denyPolicy: (policyName: string) => {
+                    if (shouldDeny(policyName, args.policies)) {
+                      deny(
+                        `This action is forbidden due to policy '${policyName}'`
+                      );
+                      return true;
+                    }
+                    return false;
+                  },
+                  allow,
+                  deny,
+                });
+              } else {
+                return Promise.resolve(false);
+              }
+            }),
+          defineLogic: (def) =>
+            (ctx.logicRunner = () => {
+              if (stat.isValid === false) {
+                stat.result = {
+                  type: 'error',
+                  err: 'Validation error',
+                  errCode: 400,
+                };
+                return Promise.resolve(stat.result);
+              }
+
+              if (isRuleSatisfied() === true) {
+                return Promise.resolve(
+                  def({
+                    success: (meta, data) => ({
+                      type: 'success',
+                      meta,
+                      data,
+                    }),
+                    error: (err, errCode = 500) => ({
+                      type: 'error',
+                      errCode,
+                      err,
+                    }),
+                  })
+                ).then((response) => {
+                  stat.result = response;
+                  return stat.result;
+                });
+              } else {
+                stat.result = {
+                  type: 'error',
+                  err: 'Permission denied',
+                  errCode: 401,
+                };
+                return Promise.resolve(stat.result);
+              }
+            }),
+          defineCapabilities: () => {},
+        })
+      );
+
+    [
+      ['disableValidation', 'validationRunner'],
+      ['disablePre', 'preRunner'],
+      ['disableRule', 'ruleRunner'],
+      ['disableLogic', 'logicRunner'],
+      ['disableCapabilities', 'capRunner'],
+    ]
+      .reduce(
+        (actor, config) => {
+          return actor.then((v: any) => {
+            if (config.length > 2 || config.length < 1)
+              throw new Error('System failure, code: INVALID_RUNNER_CONF');
+            let shouldRun: boolean = config.length === 1;
+            if (config.length === 2) {
+              // @ts-ignore
+              shouldRun = !opts[config[0]];
+            }
+
+            if (shouldRun === true) {
+              // @ts-ignore
+              const action = ctx[config.length === 2 ? config[1] : config[0]];
+              if (action) {
+                return Promise.resolve(action());
+              }
+            }
+            return Promise.resolve(v || false);
+          });
+        },
+        _init().then((v) => {
+          if (!ctx.logicRunner) {
+            return reject(
+              new Error(
+                `You likely forgot to define logic for service ${service.name}`
+              )
+            );
+          }
+
+          return v;
+        })
+      )
+      .then(() => {
+        resolve(stat);
+      })
+      .catch(reject);
+  });
 }
