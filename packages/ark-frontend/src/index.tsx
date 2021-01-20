@@ -268,12 +268,6 @@ export const Frontend = createPointer<Ark.MERN.React>(
         false,
         'components'
       );
-      // findResourceByRef(
-      //     'Component',
-      //     refId,
-      //     moduleId,
-      //     context,
-      // );
     },
     useLayout: (refId, componentCreator = null) => {
       return context.useDataFromContext(
@@ -291,19 +285,6 @@ export const Frontend = createPointer<Ark.MERN.React>(
         false,
         'layouts'
       );
-      //   findResourceByRef(
-      //     'Layout',
-      //     refId,
-      //     moduleId,
-      //     context,
-      //     componentCreator ? arkToReactComponent(
-      //         componentCreator,
-      //         refId,
-      //         moduleId,
-      //         controller,
-      //         context
-      //     ) : null
-      // )
     },
     mapRoute: (path, Component, layoutRefId = null, opts = {}) => {
       let Layout: any = null;
