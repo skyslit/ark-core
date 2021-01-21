@@ -367,7 +367,7 @@ export type ServiceResponse<M, D> = {
 };
 
 export type RuleDefinitionOptions = {
-  input: ServiceInput;
+  args: ServiceInput;
   allowPolicy: (policyName: string) => boolean;
   denyPolicy: (policyName: string) => boolean;
   allow: () => void;
@@ -377,6 +377,7 @@ export type RuleDefinitionOptions = {
 export type RuleDefinition = (options: RuleDefinitionOptions) => any;
 
 export type LogicDefinitionOptions = {
+  args: ServiceInput;
   success: (meta: any, data?: any | Array<any>) => ServiceResponse<any, any>;
   error: (err: Error | any, httpCode?: number) => ServiceResponse<any, any>;
 };
@@ -387,7 +388,7 @@ export type LogicDefinition = (
 
 export type ServiceDefinitionOptions = {
   defineValidator: (schema: Joi.Schema) => void;
-  definePre: () => void;
+  definePre: (key: string, callback: (args: ServiceInput) => any) => void;
   defineRule: (def: RuleDefinition) => void;
   defineLogic: (def: LogicDefinition) => void;
   defineCapabilities: () => void;
@@ -438,6 +439,7 @@ type RunnerStat = {
   denials: string[];
   isValid: boolean;
   validationErrors: Array<{ key: string; message: string }>;
+  args: ServiceInput;
 };
 
 /**
@@ -532,6 +534,7 @@ export function runService(
       denials: [],
       isValid: true,
       validationErrors: [],
+      args: args as any,
     };
 
     const allow = () => (stat.allowed = true);
@@ -567,13 +570,28 @@ export function runService(
                 }
               }
             }),
-          definePre: () => {},
+          definePre: (key: string, callback: (args: ServiceInput) => any) =>
+            (ctx.preRunner = async () => {
+              if (!args.input) {
+                args.input = {};
+              }
+
+              if (!args.input[key]) {
+                try {
+                  args.input[key] = await Promise.resolve(
+                    callback(args as any)
+                  );
+                } catch (e) {
+                  throw e;
+                }
+              }
+            }),
           defineRule: (def) =>
             (ctx.ruleRunner = () => {
               stat.allowed = false;
               if (stat.isValid === true) {
                 return def({
-                  input: args as ServiceInput,
+                  args: args as ServiceInput,
                   allowPolicy: (policyName: string) => {
                     if (shouldAllow(policyName, args.policies)) {
                       allow();
@@ -613,6 +631,7 @@ export function runService(
               if (isRuleSatisfied() === true) {
                 return Promise.resolve(
                   def({
+                    args: args as any,
                     success: (meta, data) => ({
                       type: 'success',
                       meta,
@@ -684,6 +703,13 @@ export function runService(
       .then(() => {
         resolve(stat);
       })
-      .catch(reject);
+      .catch((err) => {
+        stat.result = {
+          type: 'error',
+          errCode: 500,
+          err,
+        };
+        resolve(stat);
+      });
   });
 }

@@ -29,6 +29,44 @@ describe('utility', () => {
   });
 });
 
+describe('definePre tests', () => {
+  const TestService = defineService('TestService', (options) => {
+    options.definePre('dbObj', () => {
+      return 'Object from database';
+    });
+
+    options.defineLogic((opts) => {
+      return opts.success({
+        message: 'Test',
+      });
+    });
+  });
+
+  test('input should have dbObj when dbId is provided', async () => {
+    const output = await runService(TestService, {
+      input: {
+        dbId: '123',
+      },
+    });
+
+    expect(output.args.input.dbObj).toStrictEqual('Object from database');
+    expect(output.result.type).toStrictEqual('success');
+    expect(output.result.meta.message).toStrictEqual('Test');
+  });
+
+  test('input should have dbObj when dbObj is provided', async () => {
+    const output = await runService(TestService, {
+      input: {
+        dbObj: 'Passthru information',
+      },
+    });
+
+    expect(output.args.input.dbObj).toStrictEqual('Passthru information');
+    expect(output.result.type).toStrictEqual('success');
+    expect(output.result.meta.message).toStrictEqual('Test');
+  });
+});
+
 describe('defineRule test', () => {
   const TestServiceWithRuleChecking = defineService(
     'TestService',
@@ -180,5 +218,58 @@ describe('defineValidator test', () => {
 
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Hello World');
+  });
+});
+
+describe('error handling', () => {
+  test('error on definePre', async () => {
+    const TestService = defineService('TestService', (options) => {
+      options.definePre('dbObj', () => {
+        throw new Error('Intentional error');
+      });
+
+      options.defineLogic((opts) => {
+        return opts.success({
+          message: 'Test',
+        });
+      });
+    });
+
+    const output = await runService(TestService);
+
+    expect(output.result.type).toStrictEqual('error');
+    expect(output.result.errCode).toStrictEqual(500);
+  });
+
+  test('error on defineRule', async () => {
+    const TestService = defineService('TestService', (options) => {
+      options.defineRule(() => {
+        throw new Error('Intentional error');
+      });
+
+      options.defineLogic((opts) => {
+        return opts.success({
+          message: 'Test',
+        });
+      });
+    });
+
+    const output = await runService(TestService);
+
+    expect(output.result.type).toStrictEqual('error');
+    expect(output.result.errCode).toStrictEqual(500);
+  });
+
+  test('error on defineLogic', async () => {
+    const TestService = defineService('TestService', (options) => {
+      options.defineLogic((opts) => {
+        throw new Error('Intentional error');
+      });
+    });
+
+    const output = await runService(TestService);
+
+    expect(output.result.type).toStrictEqual('error');
+    expect(output.result.errCode).toStrictEqual(500);
   });
 });
