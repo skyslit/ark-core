@@ -331,6 +331,50 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
 
 // ------------------ SERVICE BEGIN ------------------
 
+type ControllerRegistryItem = {
+  def: ServiceDefinitionMeta;
+  alias: string;
+  method: HttpVerbs;
+  path: string;
+};
+
+/**
+ * Provides service discovery
+ */
+export class ServiceController {
+  static instance: ServiceController;
+  /**
+   * Creates a singleton instance of the class
+   * @return {ServiceController}
+   */
+  static getInstance(): ServiceController {
+    if (!ServiceController.instance) {
+      ServiceController.instance = new ServiceController();
+    }
+    return ServiceController.instance;
+  }
+
+  private regisry: Array<ControllerRegistryItem> = [];
+
+  /**
+   * Registers a new service
+   * @param {ControllerRegistryItem} item
+   */
+  register(item: ControllerRegistryItem) {
+    this.regisry.push(item);
+  }
+
+  /**
+   * Finds service def by key
+   * @param {string} key
+   * @param {string} alias
+   * @return {ControllerRegistryItem}
+   */
+  find(key: string, alias: string): ControllerRegistryItem {
+    return this.regisry.find((r) => r.alias === alias && r.def.name === key);
+  }
+}
+
 export type ArkUser = {
   _id: string;
   name: string;
@@ -386,12 +430,52 @@ export type LogicDefinition = (
   options: LogicDefinitionOptions
 ) => ServiceResponse<any, any> | Promise<ServiceResponse<any, any>>;
 
+export type CapabilityMeta = {
+  serviceName: string;
+  rel: string;
+  opts?: CapabilityCreationOption;
+};
+
+export type HypermediaLink = {
+  href: string;
+  rel: string;
+  method: HttpVerbs;
+  params?: any;
+};
+
+export type CapabilityCreationOption = {
+  path?: string;
+  method?: HttpVerbs;
+  params?: {
+    [key: string]: any;
+  };
+  args?: ServiceInput;
+};
+
+export type CapabilitiesDefinitionOptions = {
+  result: ServiceResponse<any, any>;
+  args: ServiceInput;
+  attachLinks: (
+    item: object | Array<object>,
+    metaCreator: CapabilityMeta[] | ((item: object) => CapabilityMeta[])
+  ) => void;
+  createLink: (
+    rel: string,
+    serviceId: string,
+    opts?: CapabilityCreationOption
+  ) => CapabilityMeta;
+};
+
+export type CapabilitiesDefinition = (
+  options: CapabilitiesDefinitionOptions
+) => void;
+
 export type ServiceDefinitionOptions = {
   defineValidator: (schema: Joi.Schema) => void;
   definePre: (key: string, callback: (args: ServiceInput) => any) => void;
   defineRule: (def: RuleDefinition) => void;
   defineLogic: (def: LogicDefinition) => void;
-  defineCapabilities: () => void;
+  defineCapabilities: (def: CapabilitiesDefinition) => void;
 };
 
 export type ServiceDefinition = (options: ServiceDefinitionOptions) => void;
@@ -422,6 +506,8 @@ export type ServiceRunnerOptions = {
   disableRule: boolean;
   disableLogic: boolean;
   disableCapabilities: boolean;
+  controller: ServiceController;
+  aliasMode: 'service' | 'rest';
 };
 
 type RunnerContext = {
@@ -483,6 +569,64 @@ export function shouldDeny(
 }
 
 /**
+ * Resolves and attaches link to object
+ * @param {object} item
+ * @param {CapabilityMeta[]|function} metaCreator
+ * @param {ServiceInput} args
+ * @param {ServiceRunnerOptions} opts
+ * @return {Promise<boolean>}
+ */
+export async function resolveLink(
+  item: object,
+  metaCreator: CapabilityMeta[] | ((item: object) => CapabilityMeta[]),
+  args: ServiceInput,
+  opts: ServiceRunnerOptions
+): Promise<boolean> {
+  const generatedLinks: Array<HypermediaLink> = [];
+  let linkMetas: CapabilityMeta[] = [];
+  if (typeof metaCreator === 'function') {
+    linkMetas = metaCreator(item);
+  } else if (Array.isArray(metaCreator)) {
+    linkMetas = metaCreator;
+  }
+  let i = 0;
+  for (i = 0; i < linkMetas.length; i++) {
+    const targetDef = opts.controller.find(
+      linkMetas[i].serviceName,
+      opts.aliasMode
+    );
+    const output = await runService(
+      targetDef.def,
+      args,
+      Object.assign<ServiceRunnerOptions, Partial<ServiceRunnerOptions>>(opts, {
+        disableLogic: true,
+        disableCapabilities: true,
+      })
+    );
+    if (output.allowed === true) {
+      const item: HypermediaLink = {
+        rel: linkMetas[i].rel,
+        href: targetDef.path,
+        method: targetDef.method,
+      };
+      if (opts.aliasMode === 'service') {
+        try {
+          item.params = linkMetas[i].opts.params;
+        } catch (e) {
+          // Do nothing
+        }
+      }
+      generatedLinks.push(item);
+    }
+  }
+
+  // Attach the links
+  (item as any).links = generatedLinks;
+
+  return true;
+}
+
+/**
  * Run business service
  * @param {ServiceDefinitionMeta} service
  * @param {ServiceInput} args
@@ -514,6 +658,8 @@ export function runService(
       disableRule: false,
       disableLogic: false,
       disableCapabilities: false,
+      controller: ServiceController.getInstance(),
+      aliasMode: 'rest',
     },
     opts || {}
   );
@@ -656,7 +802,68 @@ export function runService(
                 return Promise.resolve(stat.result);
               }
             }),
-          defineCapabilities: () => {},
+          defineCapabilities: (def) =>
+            (ctx.capRunner = async () => {
+              if (stat.result) {
+                if (stat.result.type !== 'success') {
+                  return false;
+                }
+              }
+
+              const attachmentRegistry: Array<{
+                item: object | Array<object>;
+                metaCreator:
+                  | CapabilityMeta[]
+                  | ((item: object) => CapabilityMeta[]);
+              }> = [];
+
+              await Promise.resolve(
+                def({
+                  args: args as any,
+                  result: stat.result,
+                  createLink: (rel, serviceId, opts) => ({
+                    rel,
+                    serviceName: serviceId,
+                    opts,
+                  }),
+                  attachLinks: (item, metaCreator) => {
+                    attachmentRegistry.push({
+                      item,
+                      metaCreator,
+                    });
+                  },
+                })
+              );
+
+              let i: number = 0;
+              for (i = 0; i < attachmentRegistry.length; i++) {
+                const item = attachmentRegistry[i].item;
+                const metaCreator = attachmentRegistry[i].metaCreator;
+                let success = false;
+                if (Array.isArray(item)) {
+                  let j = 0;
+                  for (j = 0; j < item.length; j++) {
+                    success = await resolveLink(
+                      item[j],
+                      metaCreator,
+                      args as any,
+                      opts as any
+                    );
+                    if (success === false)
+                      throw new Error('Hypermedia link resolution failed');
+                  }
+                } else {
+                  success = await resolveLink(
+                    item,
+                    metaCreator,
+                    args as any,
+                    opts as any
+                  );
+                }
+                if (success === false)
+                  throw new Error('Hypermedia link resolution failed');
+              }
+            }),
         })
       );
 

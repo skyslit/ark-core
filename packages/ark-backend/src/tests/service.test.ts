@@ -1,5 +1,137 @@
-import { defineService, runService, shouldAllow, shouldDeny } from '../index';
+import {
+  defineService,
+  runService,
+  shouldAllow,
+  shouldDeny,
+  ServiceController,
+} from '../index';
 import Joi from 'joi';
+
+describe('ServiceController', () => {
+  const controller = new ServiceController();
+  const CreateProject = defineService('CreateProject', (options) => {
+    options.defineLogic((opts) => {
+      return opts.success(
+        {
+          message: 'created',
+        },
+        {
+          _id: 'p-200',
+          name: 'Cash Balance Monitoring',
+        }
+      );
+    });
+
+    options.defineCapabilities((opts) => {
+      opts.attachLinks(opts.result.meta, [
+        opts.createLink('self', 'GetProject'),
+        opts.createLink('delete', 'DeleteProject'),
+      ]);
+    });
+  });
+
+  const GetAllProjects = defineService('GetAllProjects', (options) => {
+    options.defineLogic((opts) => {
+      return opts.success(
+        {
+          totalItems: 20,
+          pageSize: 5,
+        },
+        [
+          {
+            _id: 'p-200',
+            name: 'Cash Balance Monitoring',
+          },
+          {
+            _id: 'p-100',
+            name: 'Accounts Payable',
+          },
+        ]
+      );
+    });
+  });
+
+  const GetProject = defineService('GetProject', (options) => {
+    options.defineLogic((opts) => {
+      return opts.success(
+        {},
+        {
+          _id: 'p-100',
+          name: 'Accounts Payable',
+        }
+      );
+    });
+  });
+
+  const UpdateProjectById = defineService('UpdateProjectById', (options) => {
+    options.defineLogic((opts) => {
+      return opts.success({
+        message: 'updated',
+      });
+    });
+  });
+
+  const DeleteProject = defineService('DeleteProject', (options) => {
+    options.defineRule((opts) => {
+      opts.allowPolicy('ProjectDelete');
+    });
+    options.defineLogic((opts) => {
+      return opts.success({
+        message: 'deleted',
+      });
+    });
+  });
+
+  controller.register({
+    def: CreateProject,
+    alias: 'service',
+    method: 'post',
+    path: `/__services/${CreateProject.name}`,
+  });
+
+  controller.register({
+    def: GetAllProjects,
+    alias: 'service',
+    method: 'post',
+    path: `/__services/${GetAllProjects.name}`,
+  });
+
+  controller.register({
+    def: GetProject,
+    alias: 'service',
+    method: 'post',
+    path: `/__services/${GetProject.name}`,
+  });
+
+  controller.register({
+    def: UpdateProjectById,
+    alias: 'service',
+    method: 'post',
+    path: `/__services/${UpdateProjectById.name}`,
+  });
+
+  controller.register({
+    def: DeleteProject,
+    alias: 'service',
+    method: 'post',
+    path: `/__services/${DeleteProject.name}`,
+  });
+
+  test('defineCapabilities()', async () => {
+    // eslint-disable-next-line no-unused-vars
+    const output = await runService(
+      CreateProject,
+      {
+        policies: ['ProjectDelete'],
+      },
+      {
+        aliasMode: 'service',
+        controller,
+      }
+    );
+    console.log(output.result.meta);
+  });
+});
 
 describe('utility', () => {
   test('should allow', () => {
