@@ -26,6 +26,15 @@ describe('ServiceController', () => {
       opts.attachLinks(opts.result.meta, [
         opts.createLink('self', 'GetProject'),
         opts.createLink('delete', 'DeleteProject'),
+        opts.createLink('update-owner', 'UpdateProjectOwner', {
+          path: '/custom/path',
+          method: 'put',
+        }),
+        opts.createLink('update', 'UpdateProjectById', {
+          input: {
+            projectId: opts.result.data._id,
+          },
+        }),
       ]);
     });
   });
@@ -63,7 +72,37 @@ describe('ServiceController', () => {
     });
   });
 
+  const UpdateProjectOwner = defineService('UpdateProjectOwner', (options) => {
+    options.defineLogic((opts) => {
+      return opts.success({ success: true });
+    });
+  });
+
   const UpdateProjectById = defineService('UpdateProjectById', (options) => {
+    options.definePre('project', (args) => {
+      if (args.input.projectId === 'p-200') {
+        return {
+          _id: 'p-200',
+          name: 'Accounts Payable',
+          userId: 'u-100',
+        };
+      }
+
+      return null;
+    });
+
+    options.defineRule((opts) => {
+      try {
+        if (opts.args.input.project) {
+          if (opts.args.input.project.userId === opts.args.user._id) {
+            opts.allowPolicy('ProjectWrite');
+          }
+        }
+      } catch (e) {
+        // Do nothing
+      }
+    });
+
     options.defineLogic((opts) => {
       return opts.success({
         message: 'updated',
@@ -104,10 +143,17 @@ describe('ServiceController', () => {
   });
 
   controller.register({
+    def: UpdateProjectOwner,
+    alias: 'service',
+    method: 'post',
+    path: `/__services/${UpdateProjectOwner.name}/:projectId`,
+  });
+
+  controller.register({
     def: UpdateProjectById,
     alias: 'service',
     method: 'post',
-    path: `/__services/${UpdateProjectById.name}`,
+    path: `/__services/${UpdateProjectById.name}/:projectId`,
   });
 
   controller.register({
@@ -117,8 +163,24 @@ describe('ServiceController', () => {
     path: `/__services/${DeleteProject.name}`,
   });
 
-  test('defineCapabilities()', async () => {
-    // eslint-disable-next-line no-unused-vars
+  test('user without delete policy should not see delete link', async () => {
+    const output = await runService(
+      CreateProject,
+      {
+        policies: [],
+      },
+      {
+        aliasMode: 'service',
+        controller,
+      }
+    );
+
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'delete')
+    ).toHaveLength(0);
+  });
+
+  test('user with delete policy should see delete link', async () => {
     const output = await runService(
       CreateProject,
       {
@@ -129,7 +191,106 @@ describe('ServiceController', () => {
         controller,
       }
     );
-    console.log(output.result.meta);
+
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'delete')
+    ).toHaveLength(1);
+  });
+
+  test('hypermedia link generation should take meta input', async () => {
+    const output = await runService(
+      CreateProject,
+      {
+        policies: ['ProjectWrite'],
+        user: {
+          _id: 'u-100',
+          emailAddress: 'someone@example.com',
+          name: 'Test User 100',
+        },
+      },
+      {
+        aliasMode: 'service',
+        controller,
+      }
+    );
+
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'update')
+    ).toHaveLength(1);
+  });
+
+  test('generated link href should be compiled with params', async () => {
+    const output = await runService(
+      CreateProject,
+      {
+        policies: ['ProjectWrite'],
+        user: {
+          _id: 'u-100',
+          emailAddress: 'someone@example.com',
+          name: 'Test User 100',
+        },
+      },
+      {
+        aliasMode: 'service',
+        controller,
+      }
+    );
+
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'update')[0].href
+    ).toContain('/p-200');
+  });
+
+  test('self link should have proper href and method', async () => {
+    const output = await runService(
+      CreateProject,
+      {
+        policies: ['ProjectWrite'],
+        user: {
+          _id: 'u-100',
+          emailAddress: 'someone@example.com',
+          name: 'Test User 100',
+        },
+      },
+      {
+        aliasMode: 'service',
+        controller,
+      }
+    );
+
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'self')[0].href
+    ).toStrictEqual('/__services/GetProject');
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'self')[0].method
+    ).toStrictEqual('post');
+  });
+
+  test('update-owner link should have custom href and method', async () => {
+    const output = await runService(
+      CreateProject,
+      {
+        policies: ['ProjectWrite'],
+        user: {
+          _id: 'u-100',
+          emailAddress: 'someone@example.com',
+          name: 'Test User 100',
+        },
+      },
+      {
+        aliasMode: 'service',
+        controller,
+      }
+    );
+
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'update-owner')[0]
+        .href
+    ).toStrictEqual('/custom/path');
+    expect(
+      output.result.meta.links.filter((l: any) => l.rel === 'update-owner')[0]
+        .method
+    ).toStrictEqual('put');
   });
 });
 
@@ -395,6 +556,23 @@ describe('error handling', () => {
   test('error on defineLogic', async () => {
     const TestService = defineService('TestService', (options) => {
       options.defineLogic((opts) => {
+        throw new Error('Intentional error');
+      });
+    });
+
+    const output = await runService(TestService);
+
+    expect(output.result.type).toStrictEqual('error');
+    expect(output.result.errCode).toStrictEqual(500);
+  });
+
+  test('error on defineCapabilities', async () => {
+    const TestService = defineService('TestService', (options) => {
+      options.defineLogic((opts) => {
+        return opts.success({ success: true });
+      });
+
+      options.defineCapabilities(() => {
         throw new Error('Intentional error');
       });
     });

@@ -22,6 +22,7 @@ import http from 'http';
 import { initReactRouterApp } from '@skyslit/ark-frontend';
 import { Route, StaticRouter, Switch } from 'react-router-dom';
 import * as HTMLParser from 'node-html-parser';
+import * as pathToRegexp from 'path-to-regexp';
 
 type HttpVerbs =
   | 'all'
@@ -333,7 +334,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
 
 type ControllerRegistryItem = {
   def: ServiceDefinitionMeta;
-  alias: string;
+  alias: 'service' | 'rest';
   method: HttpVerbs;
   path: string;
 };
@@ -403,7 +404,7 @@ export type ServiceResponseData<T = {}> = T & {
 export type ServiceResponse<M, D> = {
   type: 'success' | 'error';
   meta?: M;
-  data?: Array<D>;
+  data?: Array<D> | D;
   capabilities?: Array<Capabilities>;
   errCode?: number;
   err?: Error | any;
@@ -433,23 +434,22 @@ export type LogicDefinition = (
 export type CapabilityMeta = {
   serviceName: string;
   rel: string;
-  opts?: CapabilityCreationOption;
+  opts?: HypermediaLinkCreationOption;
 };
 
 export type HypermediaLink = {
   href: string;
   rel: string;
   method: HttpVerbs;
-  params?: any;
+  input?: any;
 };
 
-export type CapabilityCreationOption = {
+export type HypermediaLinkCreationOption = {
   path?: string;
   method?: HttpVerbs;
-  params?: {
+  input?: {
     [key: string]: any;
   };
-  args?: ServiceInput;
 };
 
 export type CapabilitiesDefinitionOptions = {
@@ -462,7 +462,7 @@ export type CapabilitiesDefinitionOptions = {
   createLink: (
     rel: string,
     serviceId: string,
-    opts?: CapabilityCreationOption
+    opts?: HypermediaLinkCreationOption
   ) => CapabilityMeta;
 };
 
@@ -595,9 +595,22 @@ export async function resolveLink(
       linkMetas[i].serviceName,
       opts.aliasMode
     );
+
+    let vInput: any = {};
+    try {
+      vInput = linkMetas[i].opts.input;
+    } catch (e) {
+      // Do nothing
+    }
+
     const output = await runService(
       targetDef.def,
-      args,
+      {
+        input: vInput,
+        isAuthenticated: args.isAuthenticated,
+        policies: args.policies,
+        user: args.user,
+      },
       Object.assign<ServiceRunnerOptions, Partial<ServiceRunnerOptions>>(opts, {
         disableLogic: true,
         disableCapabilities: true,
@@ -609,9 +622,32 @@ export async function resolveLink(
         href: targetDef.path,
         method: targetDef.method,
       };
+
+      // Override
+      if (linkMetas[i].opts) {
+        // Override path
+        if (linkMetas[i].opts.path && linkMetas[i].opts.path !== '') {
+          item.href = linkMetas[i].opts.path;
+        }
+        // custom method
+        if (linkMetas[i].opts.method) {
+          item.method = linkMetas[i].opts.method;
+        }
+      }
+
+      try {
+        if (linkMetas[i].opts && linkMetas[i].opts.input) {
+          item.href = pathToRegexp.compile(targetDef.path, {
+            encode: encodeURIComponent,
+          })(linkMetas[i].opts.input);
+        }
+      } catch (e) {
+        // Do nothing
+      }
+
       if (opts.aliasMode === 'service') {
         try {
-          item.params = linkMetas[i].opts.params;
+          item.input = linkMetas[i].opts.input;
         } catch (e) {
           // Do nothing
         }
