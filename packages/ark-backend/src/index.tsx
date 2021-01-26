@@ -7,7 +7,7 @@ import {
   ContextScope,
   createPointer,
 } from '@skyslit/ark-core';
-import expressApp from 'express';
+import expressApp, { NextFunction, Request, Response } from 'express';
 import Joi from 'joi';
 import {
   SchemaDefinition,
@@ -23,6 +23,7 @@ import { initReactRouterApp } from '@skyslit/ark-frontend';
 import { Route, StaticRouter, Switch } from 'react-router-dom';
 import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
+import jwt from 'jsonwebtoken';
 
 type HttpVerbs =
   | 'all'
@@ -41,13 +42,26 @@ type ServerOpts = {
   listeningListener?: () => void;
 };
 
-type ServiceDef = {
-  serviceId: string;
-  handler: expressApp.RequestHandler;
+type ServiceAlias = 'service' | 'rest';
+
+type ServiceConsumerOptions = {
+  alias: ServiceAlias;
+  path: string;
+  method: HttpVerbs;
+  controller: ServiceController;
+  skipServiceRegistration: boolean;
+  skipBearerTokenCheck: boolean;
 };
 
 type WebAppRenderer = {
   render: (initialState?: any) => expressApp.RequestHandler;
+};
+
+type AuthOptions = {
+  jwtSecretKey: jwt.Secret;
+  jwtSignOptions?: jwt.SignOptions;
+  jwtVerifyOptions?: jwt.VerifyOptions;
+  jwtDecodeOptions?: jwt.DecodeOptions;
 };
 
 declare global {
@@ -64,7 +78,11 @@ declare global {
         path: string,
         handlers: expressApp.RequestHandler | Array<expressApp.RequestHandler>
       ) => expressApp.Application;
-      useService: (def: ServiceDef) => void;
+      useService: (
+        def: ServiceDefinitionMeta,
+        opts?: Partial<ServiceConsumerOptions>
+      ) => void;
+      enableAuth: (opts: AuthOptions) => void;
       useWebApp: (
         appId: string,
         ctx?: ContextScope<any>,
@@ -265,6 +283,11 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           '/_browser',
           expressApp.static(path.join(__dirname, '../_browser'))
         );
+        instance.use((req, res, next) => {
+          (req as any).user = null;
+          (req as any).isAuthenticated = false;
+          next();
+        });
       }
     },
     useServer: (opts) => {
@@ -303,10 +326,157 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         .getData<expressApp.Application>('default', 'express')
         [method](path, handlers);
     },
-    useService: (def: ServiceDef) => {
+    useService: (
+      service: ServiceDefinitionMeta,
+      _opts: Partial<ServiceConsumerOptions> = null
+    ) => {
+      const authOpts = context.getData<AuthOptions>('default', 'authOpts');
+      const opts = Object.assign<
+        ServiceConsumerOptions,
+        Partial<ServiceConsumerOptions>
+      >(
+        {
+          alias: 'service',
+          path: `/___service/${moduleId}/${service.name}`,
+          method: 'post',
+          controller: ServiceController.getInstance(),
+          skipServiceRegistration: false,
+          skipBearerTokenCheck: false,
+        },
+        _opts
+      );
+
+      if (opts.skipServiceRegistration === false) {
+        // Register
+        opts.controller.register({
+          def: service,
+          path: opts.path,
+          alias: opts.alias,
+          method: opts.method,
+        });
+      }
+
       context
         .getData<expressApp.Application>('default', 'express')
-        .post(`/___service/${moduleId}/${def.serviceId}`, def.handler);
+        [opts.method](
+          opts.path,
+          ([
+            async (req: Request, res: Response, next: NextFunction) => {
+              if (!authOpts || opts.skipBearerTokenCheck === true) {
+                return next();
+              }
+
+              let token = req.headers['authorization'];
+              if (token) {
+                if (token.startsWith('Bearer ')) {
+                  token = token.replace('Bearer ', '');
+                }
+
+                let identityPayload = null;
+                try {
+                  identityPayload = jwt.verify(token, authOpts.jwtSecretKey);
+                } catch (e) {
+                  /** Do nothing */
+                }
+                (req as any).user = identityPayload;
+                (req as any).isAuthenticated = identityPayload ? true : false;
+              }
+
+              next();
+            },
+            async (req: Request, res: Response, next: NextFunction) => {
+              let stat: RunnerStat;
+              try {
+                stat = await runService(
+                  service,
+                  {
+                    req: req,
+                    res: res,
+                    body: req.body,
+                    params: req.params,
+                    query: req.query,
+                    isAuthenticated: (req as any).isAuthenticated,
+                    user: (req as any).user,
+                    input: {
+                      ...req.body,
+                      ...req.params,
+                      ...req.query,
+                    },
+                  },
+                  {
+                    disablePre: false,
+                    disableRule: false,
+                    disableLogic: false,
+                    disableValidation: false,
+                    disableCapabilities: false,
+                    controller: opts.controller,
+                    aliasMode: opts.alias,
+                    context: context,
+                  }
+                );
+              } catch (e) {
+                stat = e;
+              }
+
+              if (stat) {
+                if (stat.isValid === true) {
+                  if (stat.allowed === true) {
+                    if (stat.result && stat.result.type === 'success') {
+                      res.status(200).json(stat.result);
+                    } else {
+                      // Error
+                      let message: string = 'Unknown error';
+                      try {
+                        if (stat.result.err.message) {
+                          message = stat.result.err.message;
+                        }
+                      } catch (e) {
+                        /** Do nothing */
+                      }
+
+                      res.status(stat.result.errCode || 500).json({
+                        message,
+                      });
+                    }
+                  } else {
+                    // Not allowed
+                    if (stat.args.isAuthenticated === true) {
+                      // Forbidden
+                      res.status(403).json({
+                        message: 'Access forbidden',
+                      });
+                    } else {
+                      // Unauthorized
+                      res.status(401).json({
+                        message: 'Your request is unauthorized',
+                      });
+                    }
+                  }
+                } else {
+                  // Invalid
+
+                  let message: string = 'Your request is not valid';
+                  try {
+                    message = stat.validationErrors[0].message;
+                  } catch (e) {
+                    /** Do nothing */
+                  }
+
+                  res.status(400).json({
+                    message,
+                    validationErrors: stat.validationErrors,
+                  });
+                }
+              } else {
+                // Pass thru if response is falsy
+                next();
+              }
+            },
+          ] as any[]).filter(Boolean)
+        );
+    },
+    enableAuth: (opts) => {
+      context.setData('default', 'authOpts', opts);
     },
     useWebApp: (appId, ctx, htmlFileName) => {
       if (!htmlFileName) {
@@ -371,7 +541,7 @@ export class ServiceController {
    * @param {string} alias
    * @return {ControllerRegistryItem}
    */
-  find(key: string, alias: string): ControllerRegistryItem {
+  find(key: string, alias: ServiceAlias): ControllerRegistryItem {
     return this.regisry.find((r) => r.alias === alias && r.def.name === key);
   }
 }
@@ -390,6 +560,8 @@ export type ServiceInput = {
   query: any;
   input: any;
   body: any;
+  req: Request;
+  res: Response;
 };
 
 export type Capabilities = {
@@ -425,6 +597,7 @@ export type LogicDefinitionOptions = {
   args: ServiceInput;
   success: (meta: any, data?: any | Array<any>) => ServiceResponse<any, any>;
   error: (err: Error | any, httpCode?: number) => ServiceResponse<any, any>;
+  security: SecurityPointers;
 };
 
 export type LogicDefinition = (
@@ -507,7 +680,8 @@ export type ServiceRunnerOptions = {
   disableLogic: boolean;
   disableCapabilities: boolean;
   controller: ServiceController;
-  aliasMode: 'service' | 'rest';
+  aliasMode: ServiceAlias;
+  context: ApplicationContext;
 };
 
 type RunnerContext = {
@@ -683,6 +857,8 @@ export function runService(
       query: {},
       input: {},
       body: {},
+      req: null,
+      res: null,
     },
     args || {}
   );
@@ -696,6 +872,7 @@ export function runService(
       disableCapabilities: false,
       controller: ServiceController.getInstance(),
       aliasMode: 'rest',
+      context: ApplicationContext.getInstance(),
     },
     opts || {}
   );
@@ -824,6 +1001,8 @@ export function runService(
                       errCode,
                       err,
                     }),
+                    // eslint-disable-next-line new-cap
+                    security: Security('default', null, opts.context),
                   })
                 ).then((response) => {
                   stat.result = response;
@@ -956,3 +1135,102 @@ export function runService(
       });
   });
 }
+
+type JwtService = {
+  sign: (
+    payload: string | object | Buffer,
+    secret?: jwt.Secret,
+    opts?: jwt.SignOptions
+  ) => string;
+  verify: (
+    token: string,
+    secret?: jwt.Secret,
+    opts?: jwt.VerifyOptions
+  ) => string | object | Buffer;
+  decode: (
+    token: string,
+    opts?: jwt.DecodeOptions
+  ) => string | { [key: string]: any };
+};
+
+type SecurityPointers = {
+  jwt: JwtService;
+};
+
+export const Security = createPointer<SecurityPointers>(
+  (moduleId, controller, context) => ({
+    jwt: {
+      decode: (token, opts?) => {
+        const authOpts = context.getData<AuthOptions>('default', 'authOpts');
+        let decodeOptions = opts;
+
+        try {
+          if (authOpts) {
+            decodeOptions = Object.assign(
+              authOpts.jwtDecodeOptions || {},
+              opts || {}
+            );
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        return jwt.decode(token, decodeOptions);
+      },
+      verify: (token, secret?, opts?) => {
+        const authOpts = context.getData<AuthOptions>('default', 'authOpts');
+        let key = secret;
+        let verifyOptions = opts;
+
+        try {
+          if (authOpts) {
+            verifyOptions = Object.assign(
+              authOpts.jwtVerifyOptions || {},
+              opts || {}
+            );
+            if (!secret) {
+              key = authOpts.jwtSecretKey;
+            }
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        if (!key) {
+          throw new Error(
+            'secret key must be provided or can be configured globally using enableAuth'
+          );
+        }
+
+        return jwt.verify(token, key, verifyOptions);
+      },
+      sign: (payload, secret?, _signOpts?: jwt.SignOptions) => {
+        const authOpts = context.getData<AuthOptions>('default', 'authOpts');
+        let key = secret;
+        let signOptions = _signOpts;
+
+        try {
+          if (authOpts) {
+            signOptions = Object.assign(
+              authOpts.jwtSignOptions || {},
+              _signOpts || {}
+            );
+            if (!secret) {
+              key = authOpts.jwtSecretKey;
+            }
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        if (!key) {
+          throw new Error(
+            'secret key must be provided or can be configured globally using enableAuth'
+          );
+        }
+
+        return jwt.sign(payload, key, signOptions);
+      },
+    },
+  })
+);
