@@ -32,8 +32,7 @@ describe('utils', () => {
 
       context
         .activate(({ use }) => {
-          const { enableAuth } = use(Backend);
-          const { jwt } = use(Security);
+          const { jwt, enableAuth } = use(Security);
           enableAuth({
             jwtSecretKey: 'test_key_123',
           });
@@ -55,8 +54,7 @@ describe('utils', () => {
 
       context
         .activate(({ use }) => {
-          const { enableAuth } = use(Backend);
-          const { jwt } = use(Security);
+          const { jwt, enableAuth } = use(Security);
           enableAuth({
             jwtSecretKey: 'test_key_123',
           });
@@ -83,8 +81,7 @@ describe('utils', () => {
 
       context
         .activate(({ use }) => {
-          const { enableAuth } = use(Backend);
-          const { jwt } = use(Security);
+          const { jwt, enableAuth } = use(Security);
           enableAuth({
             jwtSecretKey: 'test_key_123',
           });
@@ -305,7 +302,8 @@ describe('Backend services', () => {
       const serviceController = new ServiceController();
       context
         .activate(({ use }) => {
-          const { enableAuth, useService } = use(Backend);
+          const { useService } = use(Backend);
+          const { enableAuth } = use(Security);
 
           enableAuth({
             jwtSecretKey: 'my_secret_123',
@@ -341,6 +339,335 @@ describe('Backend services', () => {
                       expect(res.body.meta.message).toStrictEqual(
                         'This is from meta'
                       );
+                      done();
+                    })
+                    .catch(done);
+                })
+                .catch(done);
+            })
+            .catch(done);
+        });
+    });
+
+    test('should say 403 for forbidden request', (done) => {
+      const loginService = defineService('LOGIN', (opts) => {
+        opts.defineLogic((opts) => {
+          return opts.success({
+            token: opts.security.jwt.sign({
+              _id: 'u-100',
+              name: 'John',
+              email: 'john@doe.com',
+            }),
+          });
+        });
+      });
+
+      const testService = defineService('TEST', (opts) => {
+        opts.defineRule((opts) => {
+          if (opts.args.isAuthenticated) {
+            opts.allowPolicy('SAMPLE_POLICY');
+          }
+        });
+        opts.defineLogic((opts) => {
+          return opts.success({
+            message: 'This is from meta',
+            user: opts.args.user,
+          });
+        });
+      });
+
+      const context = new ApplicationContext();
+      const serviceController = new ServiceController();
+      context
+        .activate(({ use }) => {
+          const { useService } = use(Backend);
+          const { enableAuth } = use(Security);
+
+          enableAuth({
+            jwtSecretKey: 'my_secret_123',
+          });
+
+          useService(testService, {
+            controller: serviceController,
+          });
+
+          useService(loginService, {
+            controller: serviceController,
+          });
+        })
+        .finally(() => {
+          // Try accessing protected route
+          supertest(context.getData('default', 'express'))
+            .post('/___service/default/TEST')
+            .expect(401)
+            .then((res) => {
+              // Login
+              supertest(context.getData('default', 'express'))
+                .post('/___service/default/LOGIN')
+                .expect(200)
+                .then((res) => {
+                  const token = res.body.meta.token;
+                  // Access the protected route again with token
+                  supertest(context.getData('default', 'express'))
+                    .post('/___service/default/TEST')
+                    .set('Authorization', token)
+                    .expect(403)
+                    .then((res) => {
+                      expect(res.body.message).toStrictEqual(
+                        'Access forbidden'
+                      );
+                      done();
+                    })
+                    .catch(done);
+                })
+                .catch(done);
+            })
+            .catch(done);
+        });
+    });
+
+    test('should say 200 when policy is matched', (done) => {
+      const loginService = defineService('LOGIN', (opts) => {
+        opts.defineLogic((opts) => {
+          return opts.success({
+            token: opts.security.jwt.sign({
+              _id: 'u-100',
+              name: 'John',
+              email: 'john@doe.com',
+              policies: ['SAMPLE_POLICY'],
+            }),
+          });
+        });
+      });
+
+      const testService = defineService('TEST', (opts) => {
+        opts.defineRule((opts) => {
+          if (opts.args.isAuthenticated) {
+            opts.allowPolicy('SAMPLE_POLICY');
+          }
+        });
+        opts.defineLogic((opts) => {
+          return opts.success({
+            message: 'This is from meta',
+            user: opts.args.user,
+          });
+        });
+      });
+
+      const context = new ApplicationContext();
+      const serviceController = new ServiceController();
+      context
+        .activate(({ use }) => {
+          const { useService } = use(Backend);
+          const { enableAuth } = use(Security);
+
+          enableAuth({
+            jwtSecretKey: 'my_secret_123',
+          });
+
+          useService(testService, {
+            controller: serviceController,
+          });
+
+          useService(loginService, {
+            controller: serviceController,
+          });
+        })
+        .finally(() => {
+          // Try accessing protected route
+          supertest(context.getData('default', 'express'))
+            .post('/___service/default/TEST')
+            .expect(401)
+            .then((res) => {
+              // Login
+              supertest(context.getData('default', 'express'))
+                .post('/___service/default/LOGIN')
+                .expect(200)
+                .then((res) => {
+                  const token = res.body.meta.token;
+                  // Access the protected route again with token
+                  supertest(context.getData('default', 'express'))
+                    .post('/___service/default/TEST')
+                    .set('Authorization', token)
+                    .expect(200)
+                    .then((res) => {
+                      done();
+                    })
+                    .catch(done);
+                })
+                .catch(done);
+            })
+            .catch(done);
+        });
+    });
+
+    test('should say 200 when user name is John', (done) => {
+      const loginService = defineService('LOGIN', (opts) => {
+        opts.defineLogic((opts) => {
+          return opts.success({
+            token: opts.security.jwt.sign({
+              _id: 'u-100',
+              name: 'John',
+              email: 'john@doe.com',
+              role: 'STANDARD_USER',
+            }),
+          });
+        });
+      });
+
+      const testService = defineService('TEST', (opts) => {
+        opts.defineRule((opts) => {
+          if (opts.args.isAuthenticated) {
+            opts.allowPolicy('SAMPLE_POLICY');
+          }
+        });
+        opts.defineLogic((opts) => {
+          return opts.success({
+            message: 'This is from meta',
+            user: opts.args.user,
+          });
+        });
+      });
+
+      const context = new ApplicationContext();
+      const serviceController = new ServiceController();
+      context
+        .activate(({ use }) => {
+          const { useService } = use(Backend);
+          const { enableAuth, definePolicyExtractor } = use(Security);
+
+          enableAuth({
+            jwtSecretKey: 'my_secret_123',
+          });
+
+          definePolicyExtractor('global', (args) => {
+            if (args.isAuthenticated === true) {
+              if (args.user.name === 'John') {
+                return ['SAMPLE_POLICY'];
+              }
+            }
+          });
+
+          definePolicyExtractor('test-extractor', (args) => {
+            return ['TEST_POLICY'];
+          });
+
+          useService(testService, {
+            controller: serviceController,
+            policyExtractorRefs: ['test-extractor', 'global'],
+          });
+
+          useService(loginService, {
+            controller: serviceController,
+          });
+        })
+        .finally(() => {
+          // Try accessing protected route
+          supertest(context.getData('default', 'express'))
+            .post('/___service/default/TEST')
+            .expect(401)
+            .then((res) => {
+              // Login
+              supertest(context.getData('default', 'express'))
+                .post('/___service/default/LOGIN')
+                .expect(200)
+                .then((res) => {
+                  const token = res.body.meta.token;
+                  // Access the protected route again with token
+                  supertest(context.getData('default', 'express'))
+                    .post('/___service/default/TEST')
+                    .set('Authorization', token)
+                    .expect(200)
+                    .then((res) => {
+                      expect(res.body.meta.message).toStrictEqual(
+                        'This is from meta'
+                      );
+                      expect(res.body.meta.user.name).toStrictEqual('John');
+                      done();
+                    })
+                    .catch(done);
+                })
+                .catch(done);
+            })
+            .catch(done);
+        });
+    });
+
+    test('should say 403 when user name is not John', (done) => {
+      const loginService = defineService('LOGIN', (opts) => {
+        opts.defineLogic((opts) => {
+          return opts.success({
+            token: opts.security.jwt.sign({
+              _id: 'u-100',
+              name: 'Sam',
+              email: 'john@doe.com',
+              role: 'STANDARD_USER',
+            }),
+          });
+        });
+      });
+
+      const testService = defineService('TEST', (opts) => {
+        opts.defineRule((opts) => {
+          if (opts.args.isAuthenticated) {
+            opts.allowPolicy('SAMPLE_POLICY');
+          }
+        });
+        opts.defineLogic((opts) => {
+          return opts.success({
+            message: 'This is from meta',
+            user: opts.args.user,
+          });
+        });
+      });
+
+      const context = new ApplicationContext();
+      const serviceController = new ServiceController();
+      context
+        .activate(({ use }) => {
+          const { useService } = use(Backend);
+          const { enableAuth, definePolicyExtractor } = use(Security);
+
+          enableAuth({
+            jwtSecretKey: 'my_secret_123',
+          });
+
+          definePolicyExtractor('global', (args) => {
+            if (args.isAuthenticated === true) {
+              if (args.user.name === 'John') {
+                return ['SAMPLE_POLICY'];
+              }
+            }
+          });
+
+          useService(testService, {
+            controller: serviceController,
+            policyExtractorRefs: ['global'],
+          });
+
+          useService(loginService, {
+            controller: serviceController,
+          });
+        })
+        .finally(() => {
+          // Try accessing protected route
+          supertest(context.getData('default', 'express'))
+            .post('/___service/default/TEST')
+            .expect(401)
+            .then((res) => {
+              // Login
+              supertest(context.getData('default', 'express'))
+                .post('/___service/default/LOGIN')
+                .expect(200)
+                .then((res) => {
+                  const token = res.body.meta.token;
+                  // Access the protected route again with token
+                  supertest(context.getData('default', 'express'))
+                    .post('/___service/default/TEST')
+                    .set('Authorization', token)
+                    .expect(403)
+                    .then((res) => {
+                      expect(res.body.message).toBeTruthy();
                       done();
                     })
                     .catch(done);

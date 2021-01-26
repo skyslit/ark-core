@@ -51,6 +51,7 @@ type ServiceConsumerOptions = {
   controller: ServiceController;
   skipServiceRegistration: boolean;
   skipBearerTokenCheck: boolean;
+  policyExtractorRefs: string[];
 };
 
 type WebAppRenderer = {
@@ -82,7 +83,6 @@ declare global {
         def: ServiceDefinitionMeta,
         opts?: Partial<ServiceConsumerOptions>
       ) => void;
-      enableAuth: (opts: AuthOptions) => void;
       useWebApp: (
         appId: string,
         ctx?: ContextScope<any>,
@@ -342,6 +342,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           controller: ServiceController.getInstance(),
           skipServiceRegistration: false,
           skipBearerTokenCheck: false,
+          policyExtractorRefs: [],
         },
         _opts
       );
@@ -386,6 +387,19 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
             },
             async (req: Request, res: Response, next: NextFunction) => {
               let stat: RunnerStat;
+
+              let policies: string[] = [];
+
+              try {
+                if ((req as any).isAuthenticated === true) {
+                  if (Array.isArray((req as any).user.policies)) {
+                    policies = (req as any).user.policies;
+                  }
+                }
+              } catch (e) {
+                /** Do nothing */
+              }
+
               try {
                 stat = await runService(
                   service,
@@ -397,6 +411,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
                     query: req.query,
                     isAuthenticated: (req as any).isAuthenticated,
                     user: (req as any).user,
+                    policies,
                     input: {
                       ...req.body,
                       ...req.params,
@@ -412,6 +427,18 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
                     controller: opts.controller,
                     aliasMode: opts.alias,
                     context: context,
+                    policyExtractors: opts.policyExtractorRefs.reduce<
+                      PolicyExtractor[]
+                    >((acc, item) => {
+                      acc.push(
+                        context.take<PolicyExtractor>(
+                          moduleId,
+                          item,
+                          'policy_extractor'
+                        )
+                      );
+                      return acc;
+                    }, []),
                   }
                 );
               } catch (e) {
@@ -474,9 +501,6 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
             },
           ] as any[]).filter(Boolean)
         );
-    },
-    enableAuth: (opts) => {
-      context.setData('default', 'authOpts', opts);
     },
     useWebApp: (appId, ctx, htmlFileName) => {
       if (!htmlFileName) {
@@ -550,6 +574,7 @@ export type ArkUser = {
   _id: string;
   name: string;
   emailAddress: string;
+  policies?: string[];
 };
 
 export type ServiceInput = {
@@ -675,6 +700,7 @@ export function defineService(
 
 export type ServiceRunnerOptions = {
   disableValidation: boolean;
+  disablePolicyExtraction: boolean;
   disablePre: boolean;
   disableRule: boolean;
   disableLogic: boolean;
@@ -682,11 +708,13 @@ export type ServiceRunnerOptions = {
   controller: ServiceController;
   aliasMode: ServiceAlias;
   context: ApplicationContext;
+  policyExtractors: Array<PolicyExtractor>;
 };
 
 type RunnerContext = {
   validationRunner: () => any | Promise<any>;
   preRunner: () => any | Promise<any>;
+  policyExtractionAggregator: () => any | Promise<any>;
   ruleRunner: () => any | Promise<any>;
   logicRunner: () => any | Promise<any>;
   capRunner: () => any | Promise<any>;
@@ -839,16 +867,16 @@ export async function resolveLink(
 /**
  * Run business service
  * @param {ServiceDefinitionMeta} service
- * @param {ServiceInput} args
- * @param {ServiceRunnerOptions} opts
+ * @param {ServiceInput} args_
+ * @param {ServiceRunnerOptions} opts_
  * @return {Promise<Result>}
  */
 export function runService(
   service: ServiceDefinitionMeta,
-  args?: Partial<ServiceInput>,
-  opts?: Partial<ServiceRunnerOptions>
+  args_?: Partial<ServiceInput>,
+  opts_?: Partial<ServiceRunnerOptions>
 ): Promise<RunnerStat> {
-  args = Object.assign<ServiceInput, Partial<ServiceInput>>(
+  const args = Object.assign<ServiceInput, Partial<ServiceInput>>(
     {
       isAuthenticated: false,
       policies: [],
@@ -860,12 +888,16 @@ export function runService(
       req: null,
       res: null,
     },
-    args || {}
+    args_ || {}
   );
 
-  opts = Object.assign<ServiceRunnerOptions, Partial<ServiceRunnerOptions>>(
+  const opts = Object.assign<
+    ServiceRunnerOptions,
+    Partial<ServiceRunnerOptions>
+  >(
     {
       disableValidation: false,
+      disablePolicyExtraction: false,
       disablePre: false,
       disableRule: false,
       disableLogic: false,
@@ -873,13 +905,29 @@ export function runService(
       controller: ServiceController.getInstance(),
       aliasMode: 'rest',
       context: ApplicationContext.getInstance(),
+      policyExtractors: [],
     },
-    opts || {}
+    opts_ || {}
   );
 
   return new Promise<RunnerStat>((resolve, reject) => {
     const ctx: RunnerContext = {
       validationRunner: null,
+      policyExtractionAggregator: async () => {
+        let extractedPolicies: string[] = [];
+        let i: number = 0;
+        for (i = 0; i < opts.policyExtractors.length; i++) {
+          extractedPolicies = await Promise.resolve(
+            opts.policyExtractors[i](args)
+          );
+          if (
+            Array.isArray(extractedPolicies) &&
+            extractedPolicies.length > 0
+          ) {
+            args.policies.push(...extractedPolicies);
+          }
+        }
+      },
       preRunner: null,
       ruleRunner: null,
       logicRunner: null,
@@ -1062,7 +1110,7 @@ export function runService(
                       item[j],
                       metaCreator,
                       args as any,
-                      opts as any
+                      opts
                     );
                     if (success === false)
                       throw new Error('Hypermedia link resolution failed');
@@ -1072,7 +1120,7 @@ export function runService(
                     item,
                     metaCreator,
                     args as any,
-                    opts as any
+                    opts
                   );
                 }
                 if (success === false)
@@ -1085,6 +1133,7 @@ export function runService(
     [
       ['disableValidation', 'validationRunner'],
       ['disablePre', 'preRunner'],
+      ['disablePolicyExtraction', 'policyExtractionAggregator'],
       ['disableRule', 'ruleRunner'],
       ['disableLogic', 'logicRunner'],
       ['disableCapabilities', 'capRunner'],
@@ -1153,12 +1202,24 @@ type JwtService = {
   ) => string | { [key: string]: any };
 };
 
+type PolicyExtractor = (
+  args: ServiceInput
+) => Array<string> | Promise<Array<string>>;
+
 type SecurityPointers = {
   jwt: JwtService;
+  enableAuth: (opts: AuthOptions) => void;
+  definePolicyExtractor: (refId: string, extractor: PolicyExtractor) => void;
 };
 
 export const Security = createPointer<SecurityPointers>(
   (moduleId, controller, context) => ({
+    definePolicyExtractor: (refId, extractor) => {
+      context.put(moduleId, refId, extractor, false, 'policy_extractor');
+    },
+    enableAuth: (opts) => {
+      context.setData('default', 'authOpts', opts);
+    },
     jwt: {
       decode: (token, opts?) => {
         const authOpts = context.getData<AuthOptions>('default', 'authOpts');
