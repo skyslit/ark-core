@@ -155,6 +155,25 @@ export class BuilderBase extends EventEmitter {
   }
 
   /**
+   * Gets stylesheet test expression
+   * @return {RegExp}
+   */
+  getStyleTestExp(): RegExp {
+    return /\.(scss|css|sass|less)$/i;
+  }
+
+  /**
+   * Get static assets rule configuration
+   * @return {any}
+   */
+  getAssetRule(): any {
+    return {
+      test: /\.(png|svg|jpg|jpeg|gif)$/i,
+      type: 'asset/resource',
+    };
+  }
+
+  /**
    * Create alias mapping with peer dependencies
    * @param {string[]} dependencies
    * @param {string=} cwd Defaults to process.cwd()

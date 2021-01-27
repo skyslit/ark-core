@@ -52,6 +52,7 @@ export class SPABuilder extends BuilderBase {
       context: cwd,
       mode,
       resolve: {
+        modules: ['scripts', 'node_modules'],
         extensions: ['.json', '.ts', '.tsx', '.js', '.jsx'],
         alias: {
           ...this.mapPeerDependencies(
@@ -81,64 +82,56 @@ export class SPABuilder extends BuilderBase {
         rules: [
           {
             test: /\.(ts|tsx|js|jsx)$/,
+            exclude: /node_modules/,
             use: [
               {
-                loader: path.resolve(
-                  __dirname,
-                  '../../node_modules',
-                  'babel-loader'
-                ),
+                loader: require.resolve('babel-loader'),
                 options: {
                   compact: false,
                   presets: [
                     [
-                      path.resolve(
-                        path.join(
-                          __dirname,
-                          '../../node_modules/@babel/preset-env'
-                        )
-                      ),
-                      { targets: { node: 'current' } },
+                      require.resolve('@babel/preset-env'),
+                      {
+                        targets: { browsers: ['last 2 versions'] },
+                        modules: false,
+                      },
                     ],
                     [
-                      path.resolve(
-                        path.join(
-                          __dirname,
-                          '../../node_modules/@babel/preset-typescript'
-                        )
-                      ),
+                      require.resolve('@babel/preset-typescript'),
                       { allowNamespaces: true },
                     ],
-                    [
-                      path.resolve(
-                        path.join(
-                          __dirname,
-                          '../../node_modules/@babel/preset-react'
-                        )
-                      ),
-                    ],
+                    [require.resolve('@babel/preset-react')],
                   ],
+                  cacheDirectory: true,
                   plugins: [
-                    path.resolve(
-                      path.join(
-                        __dirname,
-                        '../../node_modules/@babel/plugin-proposal-class-properties'
-                      )
-                    ),
-                    path.resolve(
-                      path.join(
-                        __dirname,
-                        '../../node_modules/@babel/plugin-syntax-dynamic-import'
-                      )
-                    ),
+                    [
+                      require.resolve('babel-plugin-import'),
+                      { libraryName: 'antd', style: true },
+                    ],
+                    require.resolve('@babel/plugin-proposal-class-properties'),
+                    require.resolve('@babel/plugin-syntax-dynamic-import'),
                   ],
                 },
               },
             ],
           },
+          this.getAssetRule(),
           {
-            test: /\.(png|svg|jpg|jpeg|gif)$/i,
-            type: 'asset/resource',
+            test: this.getStyleTestExp(),
+            use: [
+              {
+                loader: require.resolve('style-loader'),
+              },
+              {
+                loader: require.resolve('css-loader'),
+              },
+              {
+                loader: require.resolve('sass-loader'),
+              },
+              {
+                loader: require.resolve('less-loader'),
+              },
+            ],
           },
         ],
       },

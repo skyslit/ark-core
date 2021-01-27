@@ -1,4 +1,4 @@
-import { Configuration, IgnorePlugin } from 'webpack';
+import { Configuration } from 'webpack';
 import nodeExternals from 'webpack-node-externals';
 import { BuilderBase, ConfigurationOptions } from '../utils/BuilderBase';
 import path from 'path';
@@ -25,6 +25,7 @@ export class BackendBuilder extends BuilderBase {
       context: cwd,
       mode,
       resolve: {
+        modules: ['scripts', 'node_modules'],
         extensions: ['.json', '.ts', '.tsx', '.js', '.jsx'],
         alias: {
           ...this.mapPeerDependencies(
@@ -50,65 +51,45 @@ export class BackendBuilder extends BuilderBase {
         loggingTrace: false,
         errorStack: false,
       },
-      plugins: [
-        new IgnorePlugin({
-          // Ignores css/scss/jpg/jpeg/png/svg/gif/mp3/mp4
-          checkResource: (res) => {
-            // eslint-disable-next-line no-unused-vars
-            // const regex = /.(s?css|jpe?g|png|svg|gif|mp(3|4)|webp)/gmi;
-            const regex = /.(s?css)/gim;
-            return regex.test(res).valueOf() ? true : false;
-          },
-        }),
-      ],
+      plugins: [],
       module: {
         rules: [
           {
             test: /\.(ts|tsx|js|jsx)$/,
+            exclude: /node_modules/,
             use: [
               {
-                loader: path.resolve(
-                  __dirname,
-                  '../../node_modules',
-                  'babel-loader'
-                ),
+                loader: require.resolve('babel-loader'),
                 options: {
                   compact: false,
                   presets: [
                     [
-                      path.resolve(
-                        path.join(
-                          __dirname,
-                          '../../node_modules/@babel/preset-env'
-                        )
-                      ),
-                      { targets: { node: 'current' } },
+                      require.resolve('@babel/preset-env'),
+                      { targets: { node: 'current' }, modules: false },
                     ],
                     [
-                      path.resolve(
-                        path.join(
-                          __dirname,
-                          '../../node_modules/@babel/preset-typescript'
-                        )
-                      ),
+                      require.resolve('@babel/preset-typescript'),
                       { allowNamespaces: true },
                     ],
+                    [require.resolve('@babel/preset-react')],
+                  ],
+                  cacheDirectory: true,
+                  plugins: [
                     [
-                      path.resolve(
-                        path.join(
-                          __dirname,
-                          '../../node_modules/@babel/preset-react'
-                        )
-                      ),
+                      require.resolve('babel-plugin-import'),
+                      { libraryName: 'antd' },
                     ],
+                    require.resolve('@babel/plugin-proposal-class-properties'),
+                    require.resolve('@babel/plugin-syntax-dynamic-import'),
                   ],
                 },
               },
             ],
           },
+          this.getAssetRule(),
           {
-            test: /\.(png|svg|jpg|jpeg|gif)$/i,
-            type: 'asset/resource',
+            test: this.getStyleTestExp(),
+            loader: require.resolve('ignore-loader'),
           },
         ],
       },

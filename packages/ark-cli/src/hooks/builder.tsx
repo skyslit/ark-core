@@ -7,6 +7,16 @@ import { BackendBuilder, SPABuilder } from '@skyslit/ark-devtools';
 import { spawn, ChildProcess } from 'child_process';
 
 const clear = require('console-clear');
+const isInteractive: boolean = true;
+
+/**
+ * Clears console
+ */
+function clearConsole() {
+  if (isInteractive === true) {
+    clear();
+  }
+}
 
 type Options = {
   cwd: string;
@@ -40,7 +50,7 @@ export const useBuilder = (opts: Options) => {
     };
 
     const renderSnapshot = () => {
-      clear();
+      clearConsole();
       let hasErrors: boolean = false;
       let hasWarnings: boolean = false;
       let error: any = null;
@@ -176,7 +186,7 @@ export const useBuilder = (opts: Options) => {
       cwd: opts.cwd,
     });
 
-    console.clear();
+    clearConsole();
     console.log(chalk.blueBright('Starting compilation...'));
     if (serverEntries.length > 0) {
       if (clientEntries.length > 0) {
