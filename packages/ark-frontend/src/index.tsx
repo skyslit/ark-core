@@ -6,8 +6,9 @@ import {
   ControllerContext,
   createPointer,
   extractRef,
+  ServiceResponse,
 } from '@skyslit/ark-core';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter, Switch, Route, RouteProps } from 'react-router-dom';
 
@@ -17,6 +18,28 @@ export type ComponentPropType = {
   use: <T extends (...args: any) => any>(creators: T) => ReturnType<T>;
   currentModuleId: string;
   children?: any;
+};
+
+type StoreHook = <T>(
+  refId: string,
+  defaultVal?: T,
+  useReactState?: boolean
+) => [T, (val: T) => void];
+type ServiceHookOptions = {
+  serviceId: string;
+  useRedux: boolean;
+  ajax: AxiosRequestConfig;
+};
+type ServiceHook<
+  T = ServiceResponse<any, any>,
+  E = ServiceResponse<any, any>
+> = (
+  serviceId: string | Partial<ServiceHookOptions>
+) => {
+  isLoading: boolean;
+  response: T;
+  err: E;
+  invoke: (body?: any) => void;
 };
 
 export type ArkReactComponent<T> = (
@@ -30,19 +53,12 @@ declare global {
     namespace MERN {
       // eslint-disable-next-line no-unused-vars
       interface React {
-        useStore: <T>(refId: string, defaultVal?: T) => [T, (val: T) => void];
+        useStore: StoreHook;
         useComponent: <T>(
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
-        useService: (
-          serviceId: string
-        ) => {
-          isLoading: boolean;
-          data: any;
-          err: any;
-          invoke: (body?: any) => void;
-        };
+        useService: ServiceHook;
         useLayout: <T>(
           refId: string,
           component?: ArkReactComponent<T>
@@ -86,7 +102,19 @@ export function initReactRouterApp(
   scope: ContextScope<any>,
   ctx: ApplicationContext = new ApplicationContext()
 ) {
-  ctx.setData('default', 'store', createStore(createReducer()));
+  let reduxDevtoolEnhancer: any = undefined;
+  try {
+    reduxDevtoolEnhancer =
+      (global.window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
+      (global.window as any).__REDUX_DEVTOOLS_EXTENSION__();
+  } catch (e) {
+    /** Do nothing */
+  }
+  ctx.setData(
+    'default',
+    'store',
+    createStore(createReducer(), reduxDevtoolEnhancer)
+  );
 
   return ctx.activate(scope).then(() => {
     // Extracts all routes from every module
@@ -130,17 +158,19 @@ export function makeApp(
   ctx: ApplicationContext = new ApplicationContext()
 ): Promise<React.FunctionComponent> {
   return initReactRouterApp(scope, ctx).then((PureAppConfig) => {
-    return Promise.resolve(() => (
-      <HelmetProvider>
-        <BrowserRouter>
-          <Switch>
-            {PureAppConfig.map((route) => (
-              <Route key={route.path} {...route} />
-            ))}
-          </Switch>
-        </BrowserRouter>
-      </HelmetProvider>
-    ));
+    return Promise.resolve(() => {
+      return (
+        <HelmetProvider>
+          <BrowserRouter>
+            <Switch>
+              {PureAppConfig.map((route) => (
+                <Route key={route.path} {...route} />
+              ))}
+            </Switch>
+          </BrowserRouter>
+        </HelmetProvider>
+      );
+    });
   });
 }
 
@@ -194,64 +224,121 @@ export function createReactApp(fn: ContextScope<any>): ContextScope<any> {
   return fn;
 }
 
+const useStoreCreator: (
+  moduleId: string,
+  ctx: ApplicationContext
+) => StoreHook = (moduleId, ctx) => (
+  refId,
+  defaultVal = null,
+  useReactState: boolean = false
+) => {
+  if (useReactState === false) {
+    const ref = extractRef(refId, moduleId);
+    const fullyQualifiedRefId = `${ref.moduleName}/${ref.refId}`;
+    const store = ctx.getData<Store>('default', 'store');
+    const [localStateVal, updateLocalStateVal] = React.useState(
+      store.getState()[fullyQualifiedRefId] || defaultVal
+    );
+
+    React.useEffect(() => {
+      const unsubscribe = store.subscribe(() => {
+        const updatedVal = store.getState()[fullyQualifiedRefId];
+        if (localStateVal !== updatedVal) {
+          updateLocalStateVal(updatedVal);
+        }
+      });
+
+      return () => unsubscribe();
+    }, [fullyQualifiedRefId]);
+
+    return [
+      localStateVal,
+      (value) => {
+        store.dispatch({
+          type: 'SET_ITEM',
+          payload: {
+            value,
+            key: fullyQualifiedRefId,
+          },
+        });
+      },
+    ];
+  } else {
+    return React.useState(defaultVal);
+  }
+};
+
+const getServiceUrl = (modId: string, service: string) =>
+  `/___service/${modId}/${service}`;
+
+const useServiceCreator: (
+  modId: string,
+  ctx: ApplicationContext
+) => ServiceHook = (modId, ctx) => (service) => {
+  const option: ServiceHookOptions = Object.assign<
+    ServiceHookOptions,
+    Partial<ServiceHookOptions>
+  >(
+    {
+      useRedux: false,
+      serviceId: typeof service === 'string' ? service : undefined,
+      ajax: {
+        method: 'post',
+      },
+    },
+    typeof service === 'string' ? {} : service
+  );
+
+  if (typeof service === 'string') {
+    option.ajax.url = getServiceUrl(modId, service);
+    option.ajax.method = 'post';
+  } else {
+    try {
+      option.ajax.url = getServiceUrl(modId, service.serviceId);
+      if (service.ajax) {
+        option.ajax = { ...option.ajax, ...service.ajax };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const [isLoading, setLoading] = useStoreCreator(modId, ctx)<boolean>(
+    `IS_LOADING_${option.serviceId}`,
+    null,
+    !option.useRedux
+  );
+  const [response, setResponse] = useStoreCreator(modId, ctx)<
+    ServiceResponse<any, any>
+  >(`RESPONSE_${option.serviceId}`, null, !option.useRedux);
+  const [err, setError] = useStoreCreator(modId, ctx)<
+    ServiceResponse<any, any>
+  >(`ERROR_${option.serviceId}`, null, !option.useRedux);
+
+  return {
+    isLoading: isLoading || false,
+    response,
+    err,
+    invoke: (data?: any) => {
+      setLoading(true);
+      axios(Object.assign(option.ajax, { data }))
+        .then((response) => {
+          setResponse(response.data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err);
+          setLoading(false);
+        });
+    },
+  };
+};
+
 export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
-    useService: (serviceId: string) => {
-      const [isLoading, setLoading] = React.useState<boolean>(false);
-      const [data, setData] = React.useState(null);
-      const [err, setError] = React.useState(null);
-      return {
-        isLoading,
-        data,
-        err,
-        invoke: (body?: any) => {
-          setLoading(true);
-          axios
-            .post(`/___service/${moduleId}/${serviceId}`, body)
-            .then((response) => {
-              setData(response.data);
-              setLoading(false);
-            })
-            .catch((err) => {
-              setError(err);
-              setLoading(false);
-            });
-        },
-      };
-    },
-    useStore: (refId, defaultVal = null) => {
-      const ref = extractRef(refId, moduleId);
-      const fullyQualifiedRefId = `${ref.moduleName}/${ref.refId}`;
-      const store = context.getData<Store>('default', 'store');
-      const [localStateVal, updateLocalStateVal] = React.useState(
-        store.getState()[fullyQualifiedRefId] || defaultVal
-      );
-
-      React.useEffect(() => {
-        const unsubscribe = store.subscribe(() => {
-          const updatedVal = store.getState()[fullyQualifiedRefId];
-          if (localStateVal !== updatedVal) {
-            updateLocalStateVal(updatedVal);
-          }
-        });
-
-        return () => unsubscribe();
-      }, [fullyQualifiedRefId]);
-
-      return [
-        localStateVal,
-        (value) => {
-          store.dispatch({
-            type: 'SET_ITEM',
-            payload: {
-              value,
-              key: fullyQualifiedRefId,
-            },
-          });
-        },
-      ];
-    },
+    useService: useServiceCreator(moduleId, context),
+    useStore: useStoreCreator(moduleId, context),
     useComponent: (refId, componentCreator = null) => {
       return context.useDataFromContext(
         moduleId,

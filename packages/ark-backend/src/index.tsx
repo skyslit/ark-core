@@ -6,6 +6,7 @@ import {
   ApplicationContext,
   ContextScope,
   createPointer,
+  ServiceResponse,
 } from '@skyslit/ark-core';
 import expressApp, { NextFunction, Request, Response } from 'express';
 import Joi from 'joi';
@@ -587,25 +588,6 @@ export type ServiceInput = {
   body: any;
   req: Request;
   res: Response;
-};
-
-export type Capabilities = {
-  serviceId: string;
-  params?: any;
-};
-
-export type ServiceResponseData<T = {}> = T & {
-  capabilities: Array<Capabilities>;
-};
-
-export type ServiceResponse<M, D> = {
-  type: 'success' | 'error';
-  meta?: M;
-  data?: Array<D> | D;
-  capabilities?: Array<Capabilities>;
-  errCode?: number;
-  err?: Error | any;
-  [key: string]: any;
 };
 
 export type RuleDefinitionOptions = {
