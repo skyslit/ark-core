@@ -32,6 +32,7 @@ describe('utils', () => {
 
       context
         .activate(({ use }) => {
+          const {} = use(Backend);
           const { jwt, enableAuth } = use(Security);
           enableAuth({
             jwtSecretKey: 'test_key_123',
@@ -54,6 +55,7 @@ describe('utils', () => {
 
       context
         .activate(({ use }) => {
+          const {} = use(Backend);
           const { jwt, enableAuth } = use(Security);
           enableAuth({
             jwtSecretKey: 'test_key_123',
@@ -81,6 +83,7 @@ describe('utils', () => {
 
       context
         .activate(({ use }) => {
+          const {} = use(Backend);
           const { jwt, enableAuth } = use(Security);
           enableAuth({
             jwtSecretKey: 'test_key_123',

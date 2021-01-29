@@ -10,7 +10,13 @@ import {
 } from '@skyslit/ark-core';
 import axios, { AxiosRequestConfig } from 'axios';
 import { HelmetProvider } from 'react-helmet-async';
-import { BrowserRouter, Switch, Route, RouteProps } from 'react-router-dom';
+import {
+  BrowserRouter,
+  StaticRouter,
+  Switch,
+  Route,
+  RouteProps,
+} from 'react-router-dom';
 
 export type RenderMode = 'ssr' | 'csr';
 
@@ -42,6 +48,16 @@ type ServiceHook<
   invoke: (body?: any) => void;
 };
 
+type ContextHook<
+  T = ServiceResponse<any, any>,
+  E = ServiceResponse<any, any>
+> = () => {
+  isLoading: boolean;
+  response: T;
+  err: E;
+  invoke: (body?: any) => void;
+};
+
 export type ArkReactComponent<T> = (
   props: ComponentPropType & T
 ) => JSX.Element;
@@ -59,6 +75,7 @@ declare global {
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
         useService: ServiceHook;
+        useContext: ContextHook;
         useLayout: <T>(
           refId: string,
           component?: ArkReactComponent<T>
@@ -95,12 +112,14 @@ const createReducer = (initialState = {}) => (
  * Initializes pure routed app
  * that can be used to render both in browser and node js
  * @param {ContextScope<any>} scope
- * @param {ApplicationContext} ctx
+ * @param {ApplicationContext=} ctx
+ * @param {object=} initialState
  * @return {Promise<React.FunctionComponent>}
  */
 export function initReactRouterApp(
   scope: ContextScope<any>,
-  ctx: ApplicationContext = new ApplicationContext()
+  ctx: ApplicationContext = new ApplicationContext(),
+  initialState: { [key: string]: any } = {}
 ) {
   let reduxDevtoolEnhancer: any = undefined;
   try {
@@ -113,7 +132,7 @@ export function initReactRouterApp(
   ctx.setData(
     'default',
     'store',
-    createStore(createReducer(), reduxDevtoolEnhancer)
+    createStore(createReducer(initialState), reduxDevtoolEnhancer)
   );
 
   return ctx.activate(scope).then(() => {
@@ -145,33 +164,86 @@ export function initReactRouterApp(
   });
 }
 
+type MakeAppOptions = { url: string; initialState?: any };
+
+// eslint-disable-next-line camelcase
+declare const ___hydrated_redux___: any;
+
 /**
  * Run react application
  * @param {RenderMode} mode
  * @param {ContextScope<any>} scope
  * @param {ApplicationContext} ctx
+ * @param {object=} opts_
  * @return {Promise<React.FunctionComponent>}
  */
 export function makeApp(
   mode: RenderMode,
   scope: ContextScope<any>,
-  ctx: ApplicationContext = new ApplicationContext()
+  ctx: ApplicationContext = new ApplicationContext(),
+  opts_: Partial<MakeAppOptions> = null
 ): Promise<React.FunctionComponent> {
-  return initReactRouterApp(scope, ctx).then((PureAppConfig) => {
-    return Promise.resolve(() => {
-      return (
-        <HelmetProvider>
-          <BrowserRouter>
-            <Switch>
-              {PureAppConfig.map((route) => (
-                <Route key={route.path} {...route} />
-              ))}
-            </Switch>
-          </BrowserRouter>
-        </HelmetProvider>
-      );
-    });
-  });
+  const opts: MakeAppOptions = Object.assign<
+    MakeAppOptions,
+    Partial<MakeAppOptions>
+  >(
+    {
+      url: undefined,
+      initialState: {},
+    },
+    opts_
+  );
+
+  if (mode === 'csr') {
+    if (!opts.initialState) {
+      opts.initialState = {};
+    }
+
+    opts.initialState = Object.assign(
+      {},
+      ___hydrated_redux___,
+      opts.initialState
+    );
+  }
+
+  return initReactRouterApp(scope, ctx, opts.initialState).then(
+    (PureAppConfig) => {
+      return Promise.resolve(() => {
+        const main = useContextCreator(ctx)();
+        const context: any = {};
+
+        React.useEffect(() => {
+          main.invoke();
+        }, []);
+
+        if (!main.response) {
+          return <div>Application booting up...</div>;
+        }
+
+        let Router: any = BrowserRouter;
+        let routerProps: any = {};
+        if (mode === 'ssr') {
+          Router = StaticRouter;
+          routerProps = {
+            location: opts ? opts.url : '',
+            context,
+          };
+        }
+
+        return (
+          <HelmetProvider>
+            <Router {...routerProps}>
+              <Switch>
+                {PureAppConfig.map((route) => (
+                  <Route key={route.path} {...route} />
+                ))}
+              </Switch>
+            </Router>
+          </HelmetProvider>
+        );
+      });
+    }
+  );
 }
 
 /**
@@ -334,11 +406,24 @@ const useServiceCreator: (
   };
 };
 
+const useContextCreator: (context: ApplicationContext) => ContextHook = (
+  context: ApplicationContext
+) => () => {
+  return useServiceCreator(
+    'default',
+    context
+  )({
+    serviceId: '___context',
+    useRedux: true,
+  });
+};
+
 export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
     useService: useServiceCreator(moduleId, context),
     useStore: useStoreCreator(moduleId, context),
+    useContext: useContextCreator(context),
     useComponent: (refId, componentCreator = null) => {
       return context.useDataFromContext(
         moduleId,

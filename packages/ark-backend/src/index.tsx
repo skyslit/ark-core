@@ -20,8 +20,7 @@ import {
   Connection,
 } from 'mongoose';
 import http from 'http';
-import { initReactRouterApp } from '@skyslit/ark-frontend';
-import { Route, StaticRouter, Switch } from 'react-router-dom';
+import { makeApp } from '@skyslit/ark-frontend';
 import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
 import jwt from 'jsonwebtoken';
@@ -59,6 +58,11 @@ type WebAppRenderer = {
   render: (initialState?: any) => expressApp.RequestHandler;
 };
 
+type UseServicePointer = (
+  def: ServiceDefinitionMeta,
+  opts?: Partial<ServiceConsumerOptions>
+) => void;
+
 type AuthOptions = {
   jwtSecretKey: jwt.Secret;
   jwtSignOptions?: jwt.SignOptions;
@@ -80,10 +84,7 @@ declare global {
         path: string,
         handlers: expressApp.RequestHandler | Array<expressApp.RequestHandler>
       ) => expressApp.Application;
-      useService: (
-        def: ServiceDefinitionMeta,
-        opts?: Partial<ServiceConsumerOptions>
-      ) => void;
+      useService: UseServicePointer;
       useWebApp: (
         appId: string,
         ctx?: ContextScope<any>,
@@ -140,21 +141,20 @@ function createWebAppRenderer(
     render: (initialState) => {
       return (req, res, next) => {
         const webAppContext = new ApplicationContext();
-        initReactRouterApp(scope, webAppContext)
-          .then((PureAppConfig) => {
+
+        makeApp('ssr', scope, webAppContext, { url: req.url, initialState })
+          .then((App) => {
+            const store: any = webAppContext.getData('default', 'store');
             const htmlContent = readHtmlFile(htmlFileName);
             const htmlContentNode = HTMLParser.parse(htmlContent);
 
-            const appStr = ReactDOMServer.renderToString(
-              <StaticRouter>
-                <Switch>
-                  {PureAppConfig.map((route) => (
-                    <Route key={route.path} {...route} />
-                  ))}
-                </Switch>
-              </StaticRouter>
+            const appStr = ReactDOMServer.renderToString(<App />);
+            const scriptNode = HTMLParser.parse(
+              `<script>const ___hydrated_redux___=${JSON.stringify(
+                store.getState()
+              )};</script>`
             );
-
+            htmlContentNode.querySelector('head').appendChild(scriptNode);
             htmlContentNode.querySelector('#root').set_content(appStr);
             res.send(htmlContentNode.toString());
           })
@@ -275,6 +275,191 @@ export const Data = createPointer<Partial<Ark.Data>>(
   })
 );
 
+const createAuthMiddleware = (authOpts: AuthOptions) => async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  (req as any).user = null;
+  (req as any).isAuthenticated = false;
+
+  if (!authOpts) {
+    return next();
+  }
+
+  let token = req.headers['authorization'];
+  if (token) {
+    if (token.startsWith('Bearer ')) {
+      token = token.replace('Bearer ', '');
+    }
+
+    let identityPayload = null;
+    try {
+      identityPayload = jwt.verify(token, authOpts.jwtSecretKey);
+    } catch (e) {
+      /** Do nothing */
+    }
+    (req as any).user = identityPayload;
+    (req as any).isAuthenticated = identityPayload ? true : false;
+  }
+
+  next();
+};
+
+export const useServiceCreator: (
+  moduleId: string,
+  context: ApplicationContext
+) => UseServicePointer = (moduleId: string, context: ApplicationContext) => (
+  service: ServiceDefinitionMeta,
+  _opts: Partial<ServiceConsumerOptions> = null
+) => {
+  const opts = Object.assign<
+    ServiceConsumerOptions,
+    Partial<ServiceConsumerOptions>
+  >(
+    {
+      alias: 'service',
+      path: `/___service/${moduleId}/${service.name}`,
+      method: 'post',
+      controller: ServiceController.getInstance(),
+      skipServiceRegistration: false,
+      skipBearerTokenCheck: false,
+      policyExtractorRefs: [],
+    },
+    _opts
+  );
+
+  if (opts.skipServiceRegistration === false) {
+    // Register
+    opts.controller.register({
+      def: service,
+      path: opts.path,
+      alias: opts.alias,
+      method: opts.method,
+    });
+  }
+
+  context.getData<expressApp.Application>('default', 'express')[opts.method](
+    opts.path,
+    ([
+      async (req: Request, res: Response, next: NextFunction) => {
+        let stat: RunnerStat;
+
+        let policies: string[] = [];
+
+        try {
+          if ((req as any).isAuthenticated === true) {
+            if (Array.isArray((req as any).user.policies)) {
+              policies = (req as any).user.policies;
+            }
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        try {
+          stat = await runService(
+            service,
+            {
+              req: req,
+              res: res,
+              body: req.body,
+              params: req.params,
+              query: req.query,
+              isAuthenticated: (req as any).isAuthenticated,
+              user: (req as any).user,
+              policies,
+              input: {
+                ...req.body,
+                ...req.params,
+                ...req.query,
+              },
+            },
+            {
+              disablePre: false,
+              disableRule: false,
+              disableLogic: false,
+              disableValidation: false,
+              disableCapabilities: false,
+              controller: opts.controller,
+              aliasMode: opts.alias,
+              context: context,
+              policyExtractors: opts.policyExtractorRefs.reduce<
+                PolicyExtractor[]
+              >((acc, item) => {
+                acc.push(
+                  context.take<PolicyExtractor>(
+                    moduleId,
+                    item,
+                    'policy_extractor'
+                  )
+                );
+                return acc;
+              }, []),
+            }
+          );
+        } catch (e) {
+          stat = e;
+        }
+
+        if (stat) {
+          if (stat.isValid === true) {
+            if (stat.allowed === true) {
+              if (stat.result && stat.result.type === 'success') {
+                res.status(200).json(stat.result);
+              } else {
+                // Error
+                let message: string = 'Unknown error';
+                try {
+                  if (stat.result.err.message) {
+                    message = stat.result.err.message;
+                  }
+                } catch (e) {
+                  /** Do nothing */
+                }
+
+                res.status(stat.result.errCode || 500).json({
+                  message,
+                });
+              }
+            } else {
+              // Not allowed
+              if (stat.args.isAuthenticated === true) {
+                // Forbidden
+                res.status(403).json({
+                  message: 'Access forbidden',
+                });
+              } else {
+                // Unauthorized
+                res.status(401).json({
+                  message: 'Your request is unauthorized',
+                });
+              }
+            }
+          } else {
+            // Invalid
+
+            let message: string = 'Your request is not valid';
+            try {
+              message = stat.validationErrors[0].message;
+            } catch (e) {
+              /** Do nothing */
+            }
+
+            res.status(400).json({
+              message,
+              validationErrors: stat.validationErrors,
+            });
+          }
+        } else {
+          // Pass thru if response is falsy
+          next();
+        }
+      },
+    ] as any[]).filter(Boolean)
+  );
+};
+
 export const Backend = createPointer<Partial<Ark.Backend>>(
   (moduleId, controller, context) => ({
     init: () => {
@@ -327,182 +512,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         .getData<expressApp.Application>('default', 'express')
         [method](path, handlers);
     },
-    useService: (
-      service: ServiceDefinitionMeta,
-      _opts: Partial<ServiceConsumerOptions> = null
-    ) => {
-      const authOpts = context.getData<AuthOptions>('default', 'authOpts');
-      const opts = Object.assign<
-        ServiceConsumerOptions,
-        Partial<ServiceConsumerOptions>
-      >(
-        {
-          alias: 'service',
-          path: `/___service/${moduleId}/${service.name}`,
-          method: 'post',
-          controller: ServiceController.getInstance(),
-          skipServiceRegistration: false,
-          skipBearerTokenCheck: false,
-          policyExtractorRefs: [],
-        },
-        _opts
-      );
-
-      if (opts.skipServiceRegistration === false) {
-        // Register
-        opts.controller.register({
-          def: service,
-          path: opts.path,
-          alias: opts.alias,
-          method: opts.method,
-        });
-      }
-
-      context
-        .getData<expressApp.Application>('default', 'express')
-        [opts.method](
-          opts.path,
-          ([
-            async (req: Request, res: Response, next: NextFunction) => {
-              if (!authOpts || opts.skipBearerTokenCheck === true) {
-                return next();
-              }
-
-              let token = req.headers['authorization'];
-              if (token) {
-                if (token.startsWith('Bearer ')) {
-                  token = token.replace('Bearer ', '');
-                }
-
-                let identityPayload = null;
-                try {
-                  identityPayload = jwt.verify(token, authOpts.jwtSecretKey);
-                } catch (e) {
-                  /** Do nothing */
-                }
-                (req as any).user = identityPayload;
-                (req as any).isAuthenticated = identityPayload ? true : false;
-              }
-
-              next();
-            },
-            async (req: Request, res: Response, next: NextFunction) => {
-              let stat: RunnerStat;
-
-              let policies: string[] = [];
-
-              try {
-                if ((req as any).isAuthenticated === true) {
-                  if (Array.isArray((req as any).user.policies)) {
-                    policies = (req as any).user.policies;
-                  }
-                }
-              } catch (e) {
-                /** Do nothing */
-              }
-
-              try {
-                stat = await runService(
-                  service,
-                  {
-                    req: req,
-                    res: res,
-                    body: req.body,
-                    params: req.params,
-                    query: req.query,
-                    isAuthenticated: (req as any).isAuthenticated,
-                    user: (req as any).user,
-                    policies,
-                    input: {
-                      ...req.body,
-                      ...req.params,
-                      ...req.query,
-                    },
-                  },
-                  {
-                    disablePre: false,
-                    disableRule: false,
-                    disableLogic: false,
-                    disableValidation: false,
-                    disableCapabilities: false,
-                    controller: opts.controller,
-                    aliasMode: opts.alias,
-                    context: context,
-                    policyExtractors: opts.policyExtractorRefs.reduce<
-                      PolicyExtractor[]
-                    >((acc, item) => {
-                      acc.push(
-                        context.take<PolicyExtractor>(
-                          moduleId,
-                          item,
-                          'policy_extractor'
-                        )
-                      );
-                      return acc;
-                    }, []),
-                  }
-                );
-              } catch (e) {
-                stat = e;
-              }
-
-              if (stat) {
-                if (stat.isValid === true) {
-                  if (stat.allowed === true) {
-                    if (stat.result && stat.result.type === 'success') {
-                      res.status(200).json(stat.result);
-                    } else {
-                      // Error
-                      let message: string = 'Unknown error';
-                      try {
-                        if (stat.result.err.message) {
-                          message = stat.result.err.message;
-                        }
-                      } catch (e) {
-                        /** Do nothing */
-                      }
-
-                      res.status(stat.result.errCode || 500).json({
-                        message,
-                      });
-                    }
-                  } else {
-                    // Not allowed
-                    if (stat.args.isAuthenticated === true) {
-                      // Forbidden
-                      res.status(403).json({
-                        message: 'Access forbidden',
-                      });
-                    } else {
-                      // Unauthorized
-                      res.status(401).json({
-                        message: 'Your request is unauthorized',
-                      });
-                    }
-                  }
-                } else {
-                  // Invalid
-
-                  let message: string = 'Your request is not valid';
-                  try {
-                    message = stat.validationErrors[0].message;
-                  } catch (e) {
-                    /** Do nothing */
-                  }
-
-                  res.status(400).json({
-                    message,
-                    validationErrors: stat.validationErrors,
-                  });
-                }
-              } else {
-                // Pass thru if response is falsy
-                next();
-              }
-            },
-          ] as any[]).filter(Boolean)
-        );
-    },
+    useService: useServiceCreator(moduleId, context),
     useWebApp: (appId, ctx, htmlFileName) => {
       if (!htmlFileName) {
         htmlFileName = `${appId}.html`;
@@ -510,6 +520,28 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
 
       if (!htmlFileName.toLowerCase().endsWith('.html')) {
         htmlFileName = `${htmlFileName}.html`;
+      }
+
+      let hasContextInitialized: boolean = context.getData<boolean>(
+        'default',
+        'hasContextApiCreated',
+        false
+      );
+
+      if (!hasContextInitialized) {
+        const useService = useServiceCreator(moduleId, context);
+        hasContextInitialized = context.setData<boolean>(
+          'default',
+          'hasContextApiCreated',
+          true
+        );
+        useService(
+          defineService('___context', (opts) => {
+            opts.defineLogic((opts) => {
+              return opts.success({ message: 'Hello' });
+            });
+          })
+        );
       }
 
       // const jsPath = `${path.basename(htmlFileName)}.js`;
@@ -1201,6 +1233,14 @@ export const Security = createPointer<SecurityPointers>(
     },
     enableAuth: (opts) => {
       context.setData('default', 'authOpts', opts);
+      // Attach middleware
+      const app = context.getData<expressApp.Application>('default', 'express');
+      if (!app) {
+        throw new Error(
+          'Backend has not been initialized, use(Backend) before use(Security)'
+        );
+      }
+      app.use(createAuthMiddleware(opts));
     },
     jwt: {
       decode: (token, opts?) => {
