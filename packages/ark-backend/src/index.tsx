@@ -6,6 +6,7 @@ import {
   ApplicationContext,
   ContextScope,
   createPointer,
+  extractRef,
   ServiceResponse,
 } from '@skyslit/ark-core';
 import expressApp, { NextFunction, Request, Response } from 'express';
@@ -72,6 +73,16 @@ type AuthOptions = {
 
 declare global {
   // eslint-disable-next-line no-unused-vars
+  namespace Express {
+    // eslint-disable-next-line no-unused-vars
+    interface Request {
+      isAuthenticated: boolean;
+      user: ArkUser;
+      policies: Array<string>;
+      input: { [key: string]: any };
+    }
+  }
+  // eslint-disable-next-line no-unused-vars
   namespace Ark {
     // eslint-disable-next-line no-unused-vars
     interface Security {}
@@ -127,22 +138,111 @@ function readHtmlFile(htmlFilePath: string): string {
   }
 }
 
+type ServiceReq = [string, (string | object)?, object?];
+
+/**
+ * Create request payload
+ * @param {ServiceReq} item
+ * @return {any}
+ */
+export function createReq(item: ServiceReq) {
+  let serviceRefId: string = '';
+  let localAliasId: string = undefined;
+  let input: any = {};
+
+  if (item.length < 1 || item.length > 3) {
+    throw new Error('Request definition expects 1-3 items');
+  }
+
+  serviceRefId = item[0];
+  if (typeof item[1] === 'string') {
+    localAliasId = item[1];
+    if (item[2]) {
+      input = item[2];
+    }
+  } else {
+    input = item[1];
+  }
+
+  return {
+    serviceRefId,
+    localAliasId,
+    input,
+  };
+}
+
 /**
  * Creates Web App Server-Side Render
  * @param {ContextScope<any>} scope
  * @param {string} htmlFileName
+ * @param {string} moduleId
  * @return {WebAppRenderer}
  */
 function createWebAppRenderer(
   scope: ContextScope<any>,
-  htmlFileName: string
+  htmlFileName: string,
+  moduleId: string
 ): WebAppRenderer {
   return {
-    render: (initialState) => {
-      return (req, res, next) => {
+    render: (
+      initialState,
+      reqs: Array<ServiceReq> = [['default/___context']]
+    ) => {
+      return async (req, res, next) => {
         const webAppContext = new ApplicationContext();
+        const serviceState: any = {};
 
-        makeApp('ssr', scope, webAppContext, { url: req.url, initialState })
+        try {
+          const parsedReqs = reqs.map(createReq);
+
+          await parsedReqs.reduce((acc, item) => {
+            return acc.then(() => {
+              return new Promise((resolve, reject) => {
+                const ref = extractRef(item.serviceRefId, moduleId);
+                const registryItem = ServiceController.getInstance().find(
+                  ref.refId,
+                  'service',
+                  ref.moduleName
+                );
+                if (!registryItem) {
+                  return reject(
+                    new Error(
+                      `'${ref.refId}' cannot be retrived under module '${ref.moduleName}'. Please make sure you are using the right moduleId/resId combination.`
+                    )
+                  );
+                }
+                runService(registryItem.def, {
+                  input: Object.assign(req.input, item.input),
+                  isAuthenticated: req.isAuthenticated,
+                  user: req.user,
+                  policies: req.policies,
+                  body: req.body,
+                  params: req.params,
+                  query: req.query,
+                  req,
+                  res,
+                })
+                  .then((val) => {
+                    console.log(val.result);
+                    serviceState[`default/IS_LOADING_${ref.refId}`] = false;
+                    serviceState[`default/RESPONSE_${ref.refId}`] = val.result;
+                    serviceState[`default/ERROR_${ref.refId}`] = null;
+                    resolve(true);
+                  })
+                  .catch((err) => {
+                    reject(err);
+                  });
+              });
+            });
+          }, (() => Promise.resolve(true))());
+        } catch (e) {
+          return next(e);
+        }
+
+        makeApp('ssr', scope, webAppContext, {
+          url: req.url,
+          initialState: serviceState,
+        })
           .then((App) => {
             const store: any = webAppContext.getData('default', 'store');
             const htmlContent = readHtmlFile(htmlFileName);
@@ -280,9 +380,6 @@ const createAuthMiddleware = (authOpts: AuthOptions) => async (
   res: Response,
   next: NextFunction
 ) => {
-  (req as any).user = null;
-  (req as any).isAuthenticated = false;
-
   if (!authOpts) {
     return next();
   }
@@ -299,8 +396,17 @@ const createAuthMiddleware = (authOpts: AuthOptions) => async (
     } catch (e) {
       /** Do nothing */
     }
-    (req as any).user = identityPayload;
-    (req as any).isAuthenticated = identityPayload ? true : false;
+    req.user = identityPayload as any;
+    req.isAuthenticated = identityPayload ? true : false;
+    try {
+      if (req.isAuthenticated === true) {
+        if (Array.isArray(req.user.policies)) {
+          req.policies = req.user.policies;
+        }
+      }
+    } catch (e) {
+      /** Do nothing */
+    }
   }
 
   next();
@@ -334,6 +440,7 @@ export const useServiceCreator: (
     opts.controller.register({
       def: service,
       path: opts.path,
+      moduleId,
       alias: opts.alias,
       method: opts.method,
     });
@@ -345,18 +452,6 @@ export const useServiceCreator: (
       async (req: Request, res: Response, next: NextFunction) => {
         let stat: RunnerStat;
 
-        let policies: string[] = [];
-
-        try {
-          if ((req as any).isAuthenticated === true) {
-            if (Array.isArray((req as any).user.policies)) {
-              policies = (req as any).user.policies;
-            }
-          }
-        } catch (e) {
-          /** Do nothing */
-        }
-
         try {
           stat = await runService(
             service,
@@ -366,14 +461,10 @@ export const useServiceCreator: (
               body: req.body,
               params: req.params,
               query: req.query,
-              isAuthenticated: (req as any).isAuthenticated,
-              user: (req as any).user,
-              policies,
-              input: {
-                ...req.body,
-                ...req.params,
-                ...req.query,
-              },
+              isAuthenticated: req.isAuthenticated,
+              user: req.user,
+              policies: req.policies,
+              input: req.input,
             },
             {
               disablePre: false,
@@ -470,8 +561,14 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           expressApp.static(path.join(__dirname, '../_browser'))
         );
         instance.use((req, res, next) => {
-          (req as any).user = null;
-          (req as any).isAuthenticated = false;
+          req.user = null;
+          req.isAuthenticated = false;
+          req.policies = [];
+          req.input = {
+            ...req.body,
+            ...req.params,
+            ...req.query,
+          };
           next();
         });
       }
@@ -549,7 +646,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
       return context.useDataFromContext(
         moduleId,
         appId,
-        ctx ? createWebAppRenderer(ctx, htmlFileName) : undefined,
+        ctx ? createWebAppRenderer(ctx, htmlFileName, moduleId) : undefined,
         false,
         'pwa'
       );
@@ -561,6 +658,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
 
 type ControllerRegistryItem = {
   def: ServiceDefinitionMeta;
+  moduleId?: string;
   alias: 'service' | 'rest';
   method: HttpVerbs;
   path: string;
@@ -589,17 +687,28 @@ export class ServiceController {
    * @param {ControllerRegistryItem} item
    */
   register(item: ControllerRegistryItem) {
-    this.regisry.push(item);
+    this.regisry.push(Object.assign({ moduleId: 'default' }, item));
   }
 
   /**
    * Finds service def by key
    * @param {string} key
    * @param {string} alias
+   * @param {string} moduleId
    * @return {ControllerRegistryItem}
    */
-  find(key: string, alias: ServiceAlias): ControllerRegistryItem {
-    return this.regisry.find((r) => r.alias === alias && r.def.name === key);
+  find(
+    key: string,
+    alias: ServiceAlias,
+    moduleId: string = 'default'
+  ): ControllerRegistryItem {
+    const ref = extractRef(key, moduleId);
+    return this.regisry.find(
+      (r) =>
+        r.alias === alias &&
+        r.def.name === ref.refId &&
+        r.moduleId === ref.moduleName
+    );
   }
 }
 
@@ -723,6 +832,7 @@ export type ServiceRunnerOptions = {
   aliasMode: ServiceAlias;
   context: ApplicationContext;
   policyExtractors: Array<PolicyExtractor>;
+  moduleId: string;
 };
 
 type RunnerContext = {
@@ -809,7 +919,8 @@ export async function resolveLink(
   for (i = 0; i < linkMetas.length; i++) {
     const targetDef = opts.controller.find(
       linkMetas[i].serviceName,
-      opts.aliasMode
+      opts.aliasMode,
+      opts.moduleId
     );
 
     let vInput: any = {};
@@ -920,6 +1031,7 @@ export function runService(
       aliasMode: 'rest',
       context: ApplicationContext.getInstance(),
       policyExtractors: [],
+      moduleId: 'default',
     },
     opts_ || {}
   );
