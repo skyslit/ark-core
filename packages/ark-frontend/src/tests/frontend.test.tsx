@@ -266,4 +266,65 @@ describe('functionality tests', () => {
       })
       .catch(done);
   });
+
+  test('useRouteConfig() should work as expected', (done) => {
+    const TestComponentA = createComponent(() => {
+      return <h1>Component A</h1>;
+    });
+
+    const TestComponentB = createComponent(() => {
+      return <h1>Component B</h1>;
+    });
+
+    const Layout = createComponent((props) => {
+      return (
+        <div>
+          <h1>Layout D</h1>
+          {props.children}
+        </div>
+      );
+    });
+
+    const testModuleA = createModule(({ use }) => {
+      const { useComponent, useLayout } = use(Frontend);
+      useComponent('test-compo-a', TestComponentA);
+      useLayout('layout-a', Layout);
+    });
+
+    const testModuleB = createModule(({ use }) => {
+      const { useComponent } = use(Frontend);
+      useComponent('test-compo-b', TestComponentB);
+    });
+
+    const testContext = createReactApp(({ use, useModule, run }) => {
+      const { useRouteConfig, useComponent, useLayout } = use(Frontend);
+      useModule('modA', testModuleA);
+      useModule('modB', testModuleB);
+
+      useRouteConfig(() => [
+        {
+          path: '/',
+          component: useComponent('modB/test-compo-b'),
+          layout: useLayout('modA/layout-a'),
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {},
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Comp/i).textContent).toBe('Component B');
+        done();
+      })
+      .catch(done);
+  });
 });

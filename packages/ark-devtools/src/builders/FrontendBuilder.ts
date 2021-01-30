@@ -65,6 +65,7 @@ export class SPABuilder extends BuilderBase {
       },
       entry: path.join(cwd, 'src', 'index.tsx'),
       output: {
+        publicPath: '/',
         filename: `_browser/${this.appId}.js`,
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',

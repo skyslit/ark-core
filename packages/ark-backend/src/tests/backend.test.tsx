@@ -25,6 +25,8 @@ declare global {
   }
 }
 
+process.env.disableServerLog = 'true';
+
 describe('utils', () => {
   describe('useJwt', () => {
     test('should sign with default options', (done) => {

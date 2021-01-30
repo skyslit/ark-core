@@ -99,7 +99,6 @@ export const useBuilder = (opts: Options) => {
           ${chalk.green('Compiled successfully')}
         `).trim()
         );
-        console.log('');
       }
     };
 
@@ -113,8 +112,6 @@ export const useBuilder = (opts: Options) => {
       appProcess = spawn('node', [appPath], {
         stdio: 'inherit',
       });
-      console.log(chalk.gray('running application...'));
-      console.log('');
     };
 
     const buildBackend = (entryFilePaths: string[]) => {

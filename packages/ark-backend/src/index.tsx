@@ -33,6 +33,7 @@ import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
 
 type HttpVerbs =
   | 'all'
@@ -528,6 +529,20 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
     init: () => {
       if (!context.existData('default', 'express')) {
         const instance = context.setData('default', 'express', expressApp());
+
+        let disableServerLog: boolean = false;
+        try {
+          if (process.env.disableServerLog) {
+            disableServerLog = Boolean(process.env.disableServerLog);
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        if (disableServerLog === false) {
+          instance.use(morgan('dev'));
+        }
+
         instance.use(
           '/_browser',
           expressApp.static(path.join(__dirname, '../_browser'))
@@ -568,6 +583,10 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           )
         );
         controller.run(() => {
+          httpServer.on('listening', () => {
+            console.log(`Listening on port: ${opts.port}`);
+            console.log('');
+          });
           httpServer.listen(
             opts.port,
             opts.hostname,
@@ -576,6 +595,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           );
         });
         context.pushRollbackAction(() => {
+          httpServer.removeAllListeners();
           httpServer.close();
         });
       }
@@ -1455,6 +1475,7 @@ export const Security = createPointer<SecurityPointers>(
           'Backend has not been initialized, use(Backend) before use(Security)'
         );
       }
+
       app.use(createAuthMiddleware(opts));
     },
     jwt: {

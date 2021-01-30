@@ -16,16 +16,19 @@ import {
   Switch,
   Route,
   RouteProps,
+  Redirect,
 } from 'react-router-dom';
 import ReactDOMServer from 'react-dom/server';
 
 export type RenderMode = 'ssr' | 'csr';
 
+axios.defaults.withCredentials = true;
+
 export type ComponentPropType = {
   use: <T extends (...args: any) => any>(creators: T) => ReturnType<T>;
   currentModuleId: string;
   children?: any;
-};
+} & { [key: string]: any };
 
 type StoreHook = <T>(
   refId: string,
@@ -50,18 +53,31 @@ type ServiceHook<
   isLoading: boolean;
   response: T;
   err: E;
-  invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => void;
+  invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
 };
 
 type ContextHook<
   T = ServiceResponse<any, any>,
   E = ServiceResponse<any, any>
 > = () => {
+  hasInitialized: boolean;
   isLoading: boolean;
   response: T;
   err: E;
-  invoke: (body?: any) => void;
+  invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
 };
+
+type MapRoute = (
+  path: string,
+  component: React.ComponentClass | React.FunctionComponent,
+  layoutRefId?: string,
+  opts?: RouteProps
+) => void;
+
+type RouteConfigItem = {
+  layout?: any;
+  Route?: 'public' | 'auth' | 'protected' | React.FunctionComponent<{}>;
+} & RouteProps;
 
 export type ArkReactComponent<T> = (
   props: ComponentPropType & T
@@ -85,12 +101,8 @@ declare global {
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
-        mapRoute: (
-          path: string,
-          component: React.ComponentClass | React.FunctionComponent,
-          layoutRefId?: string,
-          opts?: RouteProps
-        ) => void;
+        mapRoute: MapRoute;
+        useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
       }
     }
   }
@@ -141,28 +153,9 @@ export function initReactRouterApp(
   );
 
   return ctx.activate(scope).then(() => {
-    // Extracts all routes from every module
-    const routes: any[] = Object.keys(ctx.data).reduce(
-      (accumulator, moduleKey) => {
-        if (ctx.data[moduleKey]['routes']) {
-          return [
-            ...accumulator,
-            ...Object.keys(ctx.data[moduleKey]['routes']).reduce(
-              (accumulator, pathKey) => {
-                if (ctx.data[moduleKey]['routes'][pathKey]) {
-                  return [
-                    ...accumulator,
-                    ctx.data[moduleKey]['routes'][pathKey],
-                  ];
-                }
-                return accumulator;
-              },
-              []
-            ),
-          ];
-        }
-        return accumulator;
-      },
+    const routes = ctx.getData<RouteConfigItem[]>(
+      'default',
+      'routeConfigs',
       []
     );
     return Promise.resolve(routes);
@@ -240,6 +233,7 @@ export function makeApp(
 
         let Router: any = BrowserRouter;
         let routerProps: any = {};
+
         if (mode === 'ssr') {
           Router = StaticRouter;
           routerProps = {
@@ -252,9 +246,38 @@ export function makeApp(
           <HelmetProvider>
             <Router {...routerProps}>
               <Switch>
-                {PureAppConfig.map((route) => (
-                  <Route key={route.path} {...route} />
-                ))}
+                {PureAppConfig.map((config) => {
+                  let RouteComponent: any;
+
+                  if (!config.Route) {
+                    config.Route = 'public';
+                  }
+
+                  if (config.Route === 'auth') {
+                    RouteComponent = (props: any) => (
+                      <Routers.AuthRoute
+                        {...props}
+                        redirectUrl={'/'}
+                        isAuthenticated={main.response.meta.isAuthenticated}
+                      />
+                    );
+                  } else if (config.Route === 'protected') {
+                    RouteComponent = (props: any) => (
+                      <Routers.ProtectedRoute
+                        {...props}
+                        loginUrl={'/auth/login'}
+                        isAuthenticated={main.response.meta.isAuthenticated}
+                      />
+                    );
+                  } else if (config.Route === 'public') {
+                    RouteComponent = Route;
+                  } else {
+                    RouteComponent = config.Route;
+                  }
+
+                  const _props = config;
+                  return <RouteComponent key={config.path} {..._props} />;
+                })}
               </Switch>
             </Router>
           </HelmetProvider>
@@ -401,7 +424,7 @@ const useStoreCreator: (
         }
       });
 
-      return () => unsubscribe();
+      return unsubscribe;
     }, [fullyQualifiedRefId]);
 
     return [
@@ -478,31 +501,37 @@ const useServiceCreator: (
     response,
     err,
     invoke: (data?, opts_?) => {
-      const opts: ServiceInvokeOptions = Object.assign<
-        ServiceInvokeOptions,
-        Partial<ServiceInvokeOptions>
-      >(
-        {
-          force: false,
-        },
-        opts_
-      );
+      return new Promise((resolve, reject) => {
+        const opts: ServiceInvokeOptions = Object.assign<
+          ServiceInvokeOptions,
+          Partial<ServiceInvokeOptions>
+        >(
+          {
+            force: false,
+          },
+          opts_
+        );
 
-      if (hasInitialized !== true || opts.force === true) {
-        setLoading(true);
-        setError(null);
-        setResponse(null);
-        axios(Object.assign(option.ajax, { data }))
-          .then((response) => {
-            setHasInitialized(true);
-            setResponse(response.data);
-            setLoading(false);
-          })
-          .catch((err) => {
-            setError(err);
-            setLoading(false);
-          });
-      }
+        if (hasInitialized !== true || opts.force === true) {
+          setLoading(true);
+          setError(null);
+          setResponse(null);
+          axios(Object.assign(option.ajax, { data }))
+            .then((response) => {
+              setHasInitialized(true);
+              setResponse(response.data);
+              setLoading(false);
+              resolve(response.data);
+            })
+            .catch((err) => {
+              setError(err);
+              setLoading(false);
+              reject(err);
+            });
+        } else {
+          resolve(false);
+        }
+      });
     },
   };
 };
@@ -517,6 +546,106 @@ const useContextCreator: (context: ApplicationContext) => ContextHook = (
     serviceId: '___context',
     useRedux: true,
   });
+};
+
+const mapRouteCreator = (
+  moduleId: string,
+  context: ApplicationContext
+): MapRoute => (path, Component, layoutRefId = null, opts = {}) => {
+  let Layout: any = null;
+  if (layoutRefId) {
+    Layout = context.take(moduleId, layoutRefId, 'layouts');
+  }
+
+  const routeConfigs = context.getData<RouteConfigItem[]>(
+    'default',
+    'routeConfigs',
+    []
+  );
+  routeConfigs.push({
+    path,
+    component: Layout
+      ? (props: any) => (
+          <Layout {...props}>
+            <Component {...props} />
+          </Layout>
+        )
+      : Component,
+    ...opts,
+  });
+};
+
+export const Routers = {
+  ProtectedRoute: createComponent(
+    ({ component, use, currentModuleId, children, ...rest }) => {
+      const { useContext } = use(Frontend);
+      const { hasInitialized, isLoading, response } = useContext();
+      let isAuthenticated: boolean = false;
+      try {
+        if (hasInitialized === true && isLoading === false) {
+          if (response) {
+            isAuthenticated = response.meta.isAuthenticated;
+          }
+        }
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      const Component: any = component;
+      return (
+        <Route
+          {...rest}
+          render={({ location }) =>
+            isAuthenticated ? (
+              <Component {...rest} />
+            ) : (
+              <Redirect
+                to={{
+                  pathname: '/auth/login',
+                  state: { from: location },
+                }}
+              />
+            )
+          }
+        />
+      );
+    }
+  ),
+  AuthRoute: createComponent(
+    ({ component, use, currentModuleId, children, ...rest }) => {
+      const { useContext } = use(Frontend);
+      const { hasInitialized, isLoading, response } = useContext();
+      let isAuthenticated: boolean = false;
+      try {
+        if (hasInitialized === true && isLoading === false) {
+          if (response) {
+            isAuthenticated = response.meta.isAuthenticated;
+          }
+        }
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      const Component: any = component;
+      return (
+        <Route
+          {...rest}
+          render={({ location }) =>
+            !isAuthenticated ? (
+              <Component {...rest} />
+            ) : (
+              <Redirect
+                to={{
+                  pathname: '/',
+                  state: { from: location },
+                }}
+              />
+            )
+          }
+        />
+      );
+    }
+  ),
 };
 
 export const Frontend = createPointer<Ark.MERN.React>(
@@ -559,26 +688,29 @@ export const Frontend = createPointer<Ark.MERN.React>(
         'layouts'
       );
     },
-    mapRoute: (path, Component, layoutRefId = null, opts = {}) => {
-      let Layout: any = null;
-      if (layoutRefId) {
-        Layout = context.take(moduleId, layoutRefId, 'layouts');
-      }
-
-      const routes: any = context.getData(moduleId, 'routes', {});
-      routes[path] = Object.assign<Partial<RouteProps>, RouteProps>(
-        {
-          component: Layout
-            ? (props: any) => (
-                <Layout {...props}>
-                  <Component {...props} />
-                </Layout>
-              )
-            : Component,
-          path,
-        },
-        opts
-      );
+    mapRoute: mapRouteCreator(moduleId, context),
+    useRouteConfig: (configCreator) => {
+      controller.ensureInitializing();
+      controller.run(() => {
+        const routeConfigs = context.getData<RouteConfigItem[]>(
+          'default',
+          'routeConfigs',
+          []
+        );
+        routeConfigs.push(
+          ...configCreator().map((item) => {
+            const RawComponent = item.component;
+            item.component = item.layout
+              ? (props: any) => (
+                  <item.layout {...props}>
+                    <RawComponent {...props} />
+                  </item.layout>
+                )
+              : item.component;
+            return item;
+          })
+        );
+      });
     },
   })
 );
