@@ -3,6 +3,35 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.1.0](https://github.com/skyslit/ark/compare/v2.0.13...v2.1.0) (2021-01-30)
+
+
+### Bug Fixes
+
+* business service logic added ([5e6c283](https://github.com/skyslit/ark/commit/5e6c2837ffb7748af63a6bfdccb4617214426d71))
+* css slow loading in SSR ([5e40dd6](https://github.com/skyslit/ark/commit/5e40dd6b7c90bed317b666048b7fe4a82eb8f409))
+
+
+### Features
+
+* added defineCapabilities fn in business service ([d54e844](https://github.com/skyslit/ark/commit/d54e844549c658f3a3aa73a4b82f6b8f6883cc5b))
+* added definePre support in services ([b7cc3c8](https://github.com/skyslit/ark/commit/b7cc3c8e633b91e6a9ac695f95cd511497843e4d))
+* added hypermedia feature to service ([97fc322](https://github.com/skyslit/ark/commit/97fc322d2fafe19f5bc713ca05b18ae65a61f311))
+* added Joi schema support for service validation ([a7e1cb4](https://github.com/skyslit/ark/commit/a7e1cb4580027f71eba5636d0a561fec67cc37e6))
+* added redux service content in the backend ([2294f3b](https://github.com/skyslit/ark/commit/2294f3bd8c10a5a63aceedd304bf2ba203c6bc9e))
+* added server request logger ([53afb0d](https://github.com/skyslit/ark/commit/53afb0db0a82be6bd50bee878936ccd906178937))
+* added service support in backend ([49a31b1](https://github.com/skyslit/ark/commit/49a31b1df77716f3e88e7d6da35c101e269f0653))
+* added support for policy extractor ([7ee80df](https://github.com/skyslit/ark/commit/7ee80df6cdf39d7a6ae85b12180e2b797288ddf1))
+* added support for redux usage in useService hook ([c81c794](https://github.com/skyslit/ark/commit/c81c794c4bf6a86808ec130087a09d0a39e5d5e7))
+* authentication flow implemented ([0f9fc25](https://github.com/skyslit/ark/commit/0f9fc25c0d30bbe3c587c7dfae32ab37e2afc56e))
+* now invoke() supports force option ([d7354ed](https://github.com/skyslit/ark/commit/d7354ed75fb010e05b6dc61957bd61d96ad86535))
+* redux ssr implemented ([96706bd](https://github.com/skyslit/ark/commit/96706bde71e8ea4f7e6aca797897875766cbfccc))
+* server side service call implemented ([0a11e1e](https://github.com/skyslit/ark/commit/0a11e1e18f6f6879feba3636c55539187be37901))
+
+
+
+
+
 ## 2.0.13 (2021-01-02)
 
 **Note:** Version bump only for package @skyslit/ark-backend
