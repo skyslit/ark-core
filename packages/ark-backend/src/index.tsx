@@ -186,15 +186,13 @@ function createWebAppRenderer(
   moduleId: string
 ): WebAppRenderer {
   return {
-    render: (
-      initialState,
-      reqs: Array<ServiceReq> = [['default/___context']]
-    ) => {
+    render: (initialState, reqs_: Array<ServiceReq> = []) => {
       return async (req, res, next) => {
         const webAppContext = new ApplicationContext();
         let serviceState: any = {};
 
         try {
+          const reqs: Array<ServiceReq> = [['default/___context'], ...reqs_];
           const parsedReqs = reqs.map(createReq);
 
           await parsedReqs.reduce((acc, item) => {
@@ -518,6 +516,10 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         instance.use(
           '/_browser',
           expressApp.static(path.join(__dirname, '../_browser'))
+        );
+        instance.use(
+          '/assets',
+          expressApp.static(path.join(__dirname, '../assets'))
         );
         instance.use((req, res, next) => {
           req.user = null;

@@ -3,6 +3,7 @@ import { BuilderBase, ConfigurationOptions } from '../utils/BuilderBase';
 import path from 'path';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
 import { GhostFileActions, createGhostFile } from '../utils/ghostFile';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 
 /**
  * SPA Builder
@@ -73,6 +74,9 @@ export class SPABuilder extends BuilderBase {
           filename: `${this.appId}.html`,
           template: path.resolve(__dirname, '../../assets/index.template.html'),
         }),
+        new MiniCssExtractPlugin({
+          filename: `./assets/[name].css`,
+        }),
       ],
       stats: {
         loggingTrace: false,
@@ -119,8 +123,14 @@ export class SPABuilder extends BuilderBase {
           {
             test: this.getStyleTestExp(),
             use: [
+              // {
+              //   loader: require.resolve('style-loader'),
+              //   options: {
+              //     injectType: 'linkTag'
+              //   }
+              // },
               {
-                loader: require.resolve('style-loader'),
+                loader: MiniCssExtractPlugin.loader,
               },
               {
                 loader: require.resolve('css-loader'),
