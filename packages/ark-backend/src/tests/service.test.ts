@@ -345,6 +345,9 @@ describe('definePre tests', () => {
     expect(output.args.input.dbObj).toStrictEqual('Object from database');
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Test');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Test');
   });
 
   test('input should have dbObj when dbObj is provided', async () => {
@@ -357,6 +360,9 @@ describe('definePre tests', () => {
     expect(output.args.input.dbObj).toStrictEqual('Passthru information');
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Test');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Test');
   });
 });
 
@@ -388,6 +394,9 @@ describe('defineRule test', () => {
     const output = await runService(TestServiceWithRuleChecking);
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(401);
+
+    expect(output.responseCode).toStrictEqual(401);
+    expect(output.response.message).toStrictEqual('Permission denied');
   });
 
   test('result should be 401 error', async () => {
@@ -396,6 +405,9 @@ describe('defineRule test', () => {
     });
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(401);
+
+    expect(output.responseCode).toStrictEqual(401);
+    expect(output.response.message).toStrictEqual('Permission denied');
   });
 
   test('result should be success', async () => {
@@ -404,12 +416,18 @@ describe('defineRule test', () => {
     });
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Hello World');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Hello World');
   });
 
   test('public test > result should be success', async () => {
     const output = await runService(PublicTestService);
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Hello World');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Hello World');
   });
 
   test('public test > result should be success (with policies specified in input)', async () => {
@@ -418,6 +436,9 @@ describe('defineRule test', () => {
     });
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Hello World');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Hello World');
   });
 
   test('result should fail when no policy is specified in rule definition', async () => {
@@ -442,6 +463,9 @@ describe('defineRule test', () => {
     );
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(401);
+
+    expect(output.responseCode).toStrictEqual(401);
+    expect(output.response.message).toStrictEqual('Permission denied');
   });
 });
 
@@ -479,6 +503,10 @@ describe('defineValidator test', () => {
     expect(output.validationErrors[1].message).toStrictEqual(
       'Full name is required'
     );
+
+    expect(output.responseCode).toStrictEqual(400);
+    expect(output.response.message).toStrictEqual('Please enter your username');
+    expect(output.response.validationErrors).toHaveLength(2);
   });
 
   test('validation should succeed', async () => {
@@ -511,6 +539,10 @@ describe('defineValidator test', () => {
 
     expect(output.result.type).toStrictEqual('success');
     expect(output.result.meta.message).toStrictEqual('Hello World');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.type).toStrictEqual('success');
+    expect(output.response.meta.message).toStrictEqual('Hello World');
   });
 });
 
@@ -532,6 +564,9 @@ describe('error handling', () => {
 
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(500);
+
+    expect(output.responseCode).toStrictEqual(500);
+    expect(output.response.message).toStrictEqual('Intentional error');
   });
 
   test('error on defineRule', async () => {
@@ -551,6 +586,9 @@ describe('error handling', () => {
 
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(500);
+
+    expect(output.responseCode).toStrictEqual(500);
+    expect(output.response.message).toStrictEqual('Intentional error');
   });
 
   test('error on defineLogic', async () => {
@@ -564,6 +602,9 @@ describe('error handling', () => {
 
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(500);
+
+    expect(output.responseCode).toStrictEqual(500);
+    expect(output.response.message).toStrictEqual('Intentional error');
   });
 
   test('error on defineCapabilities', async () => {
@@ -581,5 +622,8 @@ describe('error handling', () => {
 
     expect(output.result.type).toStrictEqual('error');
     expect(output.result.errCode).toStrictEqual(500);
+
+    expect(output.responseCode).toStrictEqual(500);
+    expect(output.response.message).toStrictEqual('Intentional error');
   });
 });

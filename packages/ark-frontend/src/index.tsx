@@ -17,6 +17,7 @@ import {
   Route,
   RouteProps,
 } from 'react-router-dom';
+import ReactDOMServer from 'react-dom/server';
 
 export type RenderMode = 'ssr' | 'csr';
 
@@ -170,6 +171,15 @@ type MakeAppOptions = { url: string; initialState?: any };
 declare const ___hydrated_redux___: any;
 
 /**
+ * Render react to string
+ * @param {any} Component
+ * @return {string}
+ */
+export function renderToString(Component: any) {
+  return ReactDOMServer.renderToString(<Component />);
+}
+
+/**
  * Run react application
  * @param {RenderMode} mode
  * @param {ContextScope<any>} scope
@@ -199,11 +209,15 @@ export function makeApp(
       opts.initialState = {};
     }
 
-    opts.initialState = Object.assign(
-      {},
-      ___hydrated_redux___,
-      opts.initialState
-    );
+    try {
+      opts.initialState = Object.assign(
+        {},
+        ___hydrated_redux___,
+        opts.initialState
+      );
+    } catch (e) {
+      /** Do nothing */
+    }
   }
 
   return initReactRouterApp(scope, ctx, opts.initialState).then(
@@ -296,6 +310,65 @@ export function createReactApp(fn: ContextScope<any>): ContextScope<any> {
   return fn;
 }
 
+/**
+ * Creates a fully qualified ref id
+ * @param {string} refId
+ * @param {string} moduleId
+ * @return {string}
+ */
+export function getFullyQualifiedReduxRefId(
+  refId: string,
+  moduleId: string
+): string {
+  return `${moduleId}/${refId}`;
+}
+
+/**
+ * Creates a redux snapshot object
+ * @param {string} refId
+ * @param {string} moduleId
+ * @param {any} val
+ * @return {object}
+ */
+export function reduxStateSnapshot(
+  refId: string,
+  moduleId: string,
+  val: any
+): object {
+  const ref = extractRef(refId, moduleId);
+  return {
+    [getFullyQualifiedReduxRefId(ref.refId, ref.moduleName)]: val,
+  };
+}
+
+/**
+ * Creates service state from backend
+ * @param {string} serviceRefId
+ * @param {string} moduleId
+ * @param {any} stat
+ * @return {object}
+ */
+export function reduxServiceStateSnapshot(
+  serviceRefId: string,
+  moduleId: string,
+  stat: any
+): object {
+  const ref = extractRef(serviceRefId, moduleId);
+  return {
+    ...reduxStateSnapshot(`IS_LOADING_${ref.refId}`, moduleId, false),
+    ...reduxStateSnapshot(
+      `RESPONSE_${ref.refId}`,
+      moduleId,
+      stat.responseCode === 200 ? stat.response : null
+    ),
+    ...reduxStateSnapshot(
+      `ERROR_${ref.refId}`,
+      moduleId,
+      stat.responseCode !== 200 ? stat.response : null
+    ),
+  };
+}
+
 const useStoreCreator: (
   moduleId: string,
   ctx: ApplicationContext
@@ -306,7 +379,10 @@ const useStoreCreator: (
 ) => {
   if (useReactState === false) {
     const ref = extractRef(refId, moduleId);
-    const fullyQualifiedRefId = `${ref.moduleName}/${ref.refId}`;
+    const fullyQualifiedRefId = getFullyQualifiedReduxRefId(
+      ref.refId,
+      ref.moduleName
+    );
     const store = ctx.getData<Store>('default', 'store');
     const [localStateVal, updateLocalStateVal] = React.useState(
       store.getState()[fullyQualifiedRefId] || defaultVal

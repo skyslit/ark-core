@@ -1,5 +1,3 @@
-import React from 'react';
-import ReactDOMServer from 'react-dom/server';
 import path from 'path';
 import fs from 'fs';
 import {
@@ -21,7 +19,11 @@ import {
   Connection,
 } from 'mongoose';
 import http from 'http';
-import { makeApp } from '@skyslit/ark-frontend';
+import {
+  makeApp,
+  renderToString,
+  reduxServiceStateSnapshot,
+} from '@skyslit/ark-frontend';
 import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
 import jwt from 'jsonwebtoken';
@@ -190,7 +192,7 @@ function createWebAppRenderer(
     ) => {
       return async (req, res, next) => {
         const webAppContext = new ApplicationContext();
-        const serviceState: any = {};
+        let serviceState: any = {};
 
         try {
           const parsedReqs = reqs.map(createReq);
@@ -223,10 +225,10 @@ function createWebAppRenderer(
                   res,
                 })
                   .then((val) => {
-                    console.log(val.result);
-                    serviceState[`default/IS_LOADING_${ref.refId}`] = false;
-                    serviceState[`default/RESPONSE_${ref.refId}`] = val.result;
-                    serviceState[`default/ERROR_${ref.refId}`] = null;
+                    serviceState = {
+                      ...serviceState,
+                      ...reduxServiceStateSnapshot(ref.refId, moduleId, val),
+                    };
                     resolve(true);
                   })
                   .catch((err) => {
@@ -241,14 +243,18 @@ function createWebAppRenderer(
 
         makeApp('ssr', scope, webAppContext, {
           url: req.url,
-          initialState: serviceState,
+          initialState: Object.assign(
+            {},
+            initialState || {},
+            serviceState || {}
+          ),
         })
           .then((App) => {
             const store: any = webAppContext.getData('default', 'store');
             const htmlContent = readHtmlFile(htmlFileName);
             const htmlContentNode = HTMLParser.parse(htmlContent);
 
-            const appStr = ReactDOMServer.renderToString(<App />);
+            const appStr = renderToString(App);
             const scriptNode = HTMLParser.parse(
               `<script>const ___hydrated_redux___=${JSON.stringify(
                 store.getState()
@@ -494,54 +500,7 @@ export const useServiceCreator: (
         }
 
         if (stat) {
-          if (stat.isValid === true) {
-            if (stat.allowed === true) {
-              if (stat.result && stat.result.type === 'success') {
-                res.status(200).json(stat.result);
-              } else {
-                // Error
-                let message: string = 'Unknown error';
-                try {
-                  if (stat.result.err.message) {
-                    message = stat.result.err.message;
-                  }
-                } catch (e) {
-                  /** Do nothing */
-                }
-
-                res.status(stat.result.errCode || 500).json({
-                  message,
-                });
-              }
-            } else {
-              // Not allowed
-              if (stat.args.isAuthenticated === true) {
-                // Forbidden
-                res.status(403).json({
-                  message: 'Access forbidden',
-                });
-              } else {
-                // Unauthorized
-                res.status(401).json({
-                  message: 'Your request is unauthorized',
-                });
-              }
-            }
-          } else {
-            // Invalid
-
-            let message: string = 'Your request is not valid';
-            try {
-              message = stat.validationErrors[0].message;
-            } catch (e) {
-              /** Do nothing */
-            }
-
-            res.status(400).json({
-              message,
-              validationErrors: stat.validationErrors,
-            });
-          }
+          res.status(stat.responseCode).json(stat.response);
         } else {
           // Pass thru if response is falsy
           next();
@@ -828,6 +787,7 @@ export type ServiceRunnerOptions = {
   disableRule: boolean;
   disableLogic: boolean;
   disableCapabilities: boolean;
+  disableResponseFromatter: boolean;
   controller: ServiceController;
   aliasMode: ServiceAlias;
   context: ApplicationContext;
@@ -842,6 +802,7 @@ type RunnerContext = {
   ruleRunner: () => any | Promise<any>;
   logicRunner: () => any | Promise<any>;
   capRunner: () => any | Promise<any>;
+  responseFromatter: () => void;
 };
 
 type RunnerStat = {
@@ -852,6 +813,8 @@ type RunnerStat = {
   isValid: boolean;
   validationErrors: Array<{ key: string; message: string }>;
   args: ServiceInput;
+  response: any;
+  responseCode: number;
 };
 
 /**
@@ -989,6 +952,37 @@ export async function resolveLink(
   return true;
 }
 
+const getServiceErrorCode = (code: number, stat?: RunnerStat) => {
+  let _code = code;
+  try {
+    if (stat) {
+      _code =
+        typeof stat.result.errCode === 'number' ? stat.result.errCode : _code;
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+  return _code;
+};
+
+const getServiceErrorMessage = (message: string, stat?: RunnerStat) => {
+  let _message = message;
+  try {
+    if (stat) {
+      if (typeof stat.result.err === 'object') {
+        if (typeof stat.result.err.message === 'string') {
+          _message = stat.result.err.message;
+        }
+      } else if (typeof stat.result.err === 'string') {
+        _message = stat.result.err;
+      }
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+  return _message;
+};
+
 /**
  * Run business service
  * @param {ServiceDefinitionMeta} service
@@ -1027,6 +1021,7 @@ export function runService(
       disableRule: false,
       disableLogic: false,
       disableCapabilities: false,
+      disableResponseFromatter: false,
       controller: ServiceController.getInstance(),
       aliasMode: 'rest',
       context: ApplicationContext.getInstance(),
@@ -1058,6 +1053,65 @@ export function runService(
       ruleRunner: null,
       logicRunner: null,
       capRunner: null,
+      responseFromatter: () => {
+        if (stat) {
+          if (stat.isValid === true) {
+            if (stat.allowed === true) {
+              if (stat.result && stat.result.type === 'success') {
+                stat.responseCode = getServiceErrorCode(200, stat);
+                stat.response = stat.result;
+              } else {
+                // Error
+                let message: string = 'Unknown error';
+                try {
+                  if (stat.result.err.message) {
+                    message = stat.result.err.message;
+                  }
+                } catch (e) {
+                  /** Do nothing */
+                }
+                stat.responseCode = getServiceErrorCode(500, stat);
+                stat.response = {
+                  message: getServiceErrorMessage(message, stat),
+                };
+              }
+            } else {
+              // Not allowed
+              if (stat.args.isAuthenticated === true) {
+                // Forbidden
+                stat.responseCode = getServiceErrorCode(403, stat);
+                stat.response = {
+                  message: getServiceErrorMessage('Access forbidden', stat),
+                };
+              } else {
+                // Unauthorized
+                stat.responseCode = getServiceErrorCode(401, stat);
+                stat.response = {
+                  message: getServiceErrorMessage(
+                    'Your request is unauthorized',
+                    stat
+                  ),
+                };
+              }
+            }
+          } else {
+            // Invalid
+            let message: string = 'Your request is not valid';
+            try {
+              message = stat.validationErrors[0].message;
+            } catch (e) {
+              /** Do nothing */
+            }
+            stat.responseCode = getServiceErrorCode(400, stat);
+            stat.response = {
+              message: getServiceErrorMessage(message),
+              validationErrors: stat.validationErrors,
+            };
+          }
+        } else {
+          // Pass thru if response is falsy
+        }
+      },
     };
 
     const stat: RunnerStat = {
@@ -1068,6 +1122,8 @@ export function runService(
       isValid: true,
       validationErrors: [],
       args: args as any,
+      response: null,
+      responseCode: 200,
     };
 
     const allow = () => (stat.allowed = true);
@@ -1183,11 +1239,19 @@ export function runService(
                   return stat.result;
                 });
               } else {
-                stat.result = {
-                  type: 'error',
-                  err: 'Permission denied',
-                  errCode: 401,
-                };
+                if (args.isAuthenticated === true) {
+                  stat.result = {
+                    type: 'error',
+                    err: 'Access forbidden',
+                    errCode: 403,
+                  };
+                } else {
+                  stat.result = {
+                    type: 'error',
+                    err: 'Permission denied',
+                    errCode: 401,
+                  };
+                }
                 return Promise.resolve(stat.result);
               }
             }),
@@ -1263,6 +1327,7 @@ export function runService(
       ['disableRule', 'ruleRunner'],
       ['disableLogic', 'logicRunner'],
       ['disableCapabilities', 'capRunner'],
+      ['disableResponseFromatter', 'responseFromatter'],
     ]
       .reduce(
         (actor, config) => {
@@ -1306,6 +1371,9 @@ export function runService(
           errCode: 500,
           err,
         };
+        if (!opts.disableResponseFromatter) {
+          ctx.responseFromatter();
+        }
         resolve(stat);
       });
   });

@@ -1,7 +1,13 @@
 import React from 'react';
 import { render, cleanup } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
-import { createReactApp, Frontend, createComponent, makeApp } from '../index';
+import {
+  createReactApp,
+  Frontend,
+  createComponent,
+  makeApp,
+  reduxServiceStateSnapshot,
+} from '../index';
 
 describe('functionality tests', () => {
   let ctx: ApplicationContext;
@@ -202,7 +208,14 @@ describe('functionality tests', () => {
       useModule('modA', testModuleA);
     });
 
-    makeApp('csr', testContext, ctx)
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {},
+        }),
+      },
+    })
       .then((App) => {
         const { getByText } = render(<App />);
         expect(getByText(/View/i).textContent).toBe('View A modA');
@@ -238,7 +251,14 @@ describe('functionality tests', () => {
       useModule('modB', testModuleB);
     });
 
-    makeApp('csr', testContext, ctx)
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {},
+        }),
+      },
+    })
       .then((App) => {
         const { getByText } = render(<App />);
         expect(getByText(/Comp/i).textContent).toBe('Component B');
