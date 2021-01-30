@@ -37,16 +37,20 @@ type ServiceHookOptions = {
   useRedux: boolean;
   ajax: AxiosRequestConfig;
 };
+type ServiceInvokeOptions = {
+  force: boolean;
+};
 type ServiceHook<
   T = ServiceResponse<any, any>,
   E = ServiceResponse<any, any>
 > = (
   serviceId: string | Partial<ServiceHookOptions>
 ) => {
+  hasInitialized: boolean;
   isLoading: boolean;
   response: T;
   err: E;
-  invoke: (body?: any) => void;
+  invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => void;
 };
 
 type ContextHook<
@@ -355,6 +359,7 @@ export function reduxServiceStateSnapshot(
 ): object {
   const ref = extractRef(serviceRefId, moduleId);
   return {
+    ...reduxStateSnapshot(`HAS_INITIALIZED_${ref.refId}`, moduleId, true),
     ...reduxStateSnapshot(`IS_LOADING_${ref.refId}`, moduleId, false),
     ...reduxStateSnapshot(
       `RESPONSE_${ref.refId}`,
@@ -451,6 +456,10 @@ const useServiceCreator: (
     }
   }
 
+  const [hasInitialized, setHasInitialized] = useStoreCreator(
+    modId,
+    ctx
+  )<boolean>(`HAS_INITIALIZED_${option.serviceId}`, null, !option.useRedux);
   const [isLoading, setLoading] = useStoreCreator(modId, ctx)<boolean>(
     `IS_LOADING_${option.serviceId}`,
     null,
@@ -464,20 +473,36 @@ const useServiceCreator: (
   >(`ERROR_${option.serviceId}`, null, !option.useRedux);
 
   return {
+    hasInitialized: hasInitialized || false,
     isLoading: isLoading || false,
     response,
     err,
-    invoke: (data?: any) => {
-      setLoading(true);
-      axios(Object.assign(option.ajax, { data }))
-        .then((response) => {
-          setResponse(response.data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          setError(err);
-          setLoading(false);
-        });
+    invoke: (data?, opts_?) => {
+      const opts: ServiceInvokeOptions = Object.assign<
+        ServiceInvokeOptions,
+        Partial<ServiceInvokeOptions>
+      >(
+        {
+          force: false,
+        },
+        opts_
+      );
+
+      if (hasInitialized !== true || opts.force === true) {
+        setLoading(true);
+        setError(null);
+        setResponse(null);
+        axios(Object.assign(option.ajax, { data }))
+          .then((response) => {
+            setHasInitialized(true);
+            setResponse(response.data);
+            setLoading(false);
+          })
+          .catch((err) => {
+            setError(err);
+            setLoading(false);
+          });
+      }
     },
   };
 };

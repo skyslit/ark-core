@@ -7,7 +7,12 @@ import {
   extractRef,
   ServiceResponse,
 } from '@skyslit/ark-core';
-import expressApp, { NextFunction, Request, Response } from 'express';
+import expressApp, {
+  CookieOptions,
+  NextFunction,
+  Request,
+  Response,
+} from 'express';
 import Joi from 'joi';
 import {
   SchemaDefinition,
@@ -27,6 +32,7 @@ import {
 import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
 import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
 
 type HttpVerbs =
   | 'all'
@@ -388,7 +394,16 @@ const createAuthMiddleware = (authOpts: AuthOptions) => async (
     return next();
   }
 
-  let token = req.headers['authorization'];
+  let token: string = null;
+
+  if (req.cookies.authorization) {
+    token = String(req.cookies.authorization);
+  }
+
+  if (req.headers['authorization']) {
+    token = req.headers['authorization'];
+  }
+
   if (token) {
     if (token.startsWith('Bearer ')) {
       token = token.replace('Bearer ', '');
@@ -521,6 +536,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           '/assets',
           expressApp.static(path.join(__dirname, '../assets'))
         );
+        instance.use(cookieParser());
         instance.use((req, res, next) => {
           req.user = null;
           req.isAuthenticated = false;
@@ -596,7 +612,10 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         useService(
           defineService('___context', (opts) => {
             opts.defineLogic((opts) => {
-              return opts.success({ message: 'Hello' });
+              return opts.success({
+                isAuthenticated: opts.args.isAuthenticated,
+                currentUser: opts.args.user,
+              });
             });
           })
         );
@@ -706,6 +725,8 @@ export type LogicDefinitionOptions = {
   args: ServiceInput;
   success: (meta: any, data?: any | Array<any>) => ServiceResponse<any, any>;
   error: (err: Error | any, httpCode?: number) => ServiceResponse<any, any>;
+  login: (token: string, opts?: CookieOptions) => void;
+  logout: (opts?: any) => void;
   security: SecurityPointers;
 };
 
@@ -1235,6 +1256,18 @@ export function runService(
                     }),
                     // eslint-disable-next-line new-cap
                     security: Security('default', null, opts.context),
+                    login: (token: string, opts?: CookieOptions) => {
+                      if (!args.res) {
+                        throw new Error(
+                          'login() needs res needs to be passed inside arguments'
+                        );
+                      }
+
+                      args.res.cookie('authorization', `Bearer ${token}`, opts);
+                    },
+                    logout: (opts?: any) => {
+                      args.res.clearCookie('authorization', opts);
+                    },
                   })
                 ).then((response) => {
                   stat.result = response;
