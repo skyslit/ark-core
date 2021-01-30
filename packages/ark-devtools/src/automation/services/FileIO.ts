@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import rimraf from 'rimraf';
 import { Automator } from '../core/Automator';
+import commentJson from 'comment-json';
 
 type ParsePreset = 'raw' | 'json' | 'ts|tsx' | 'custom';
 
@@ -18,13 +19,25 @@ const RawParser: Parser<string> = {
 };
 
 const JSONParser: Parser<any> = {
-  encode: (input) => JSON.stringify(input),
-  decode: (input) => JSON.parse(input),
+  encode: (input) => commentJson.stringify(input, null, 2),
+  decode: (input) => {
+    if (input) {
+      return commentJson.parse(input, undefined, false);
+    }
+    return JSON.parse(input);
+  },
 };
 
 const FileParser: ParserMap = {
   json: JSONParser,
   raw: RawParser,
+};
+
+export type ContextType = {
+  content: any;
+  raw: string;
+  saveFile: () => boolean;
+  automator: Automator;
 };
 
 export const useFileSystem = (automator: Automator) => ({
@@ -48,13 +61,20 @@ export const useFileSystem = (automator: Automator) => ({
   deleteDirectory: (p: string) => {
     return rimraf.sync(path.join(automator.cwd, p), {});
   },
+  existFile: (p: string) => {
+    return fs.existsSync(path.join(automator.cwd, p));
+  },
+  readFile: (p: string): string => {
+    return fs.readFileSync(path.join(automator.cwd, p), 'utf-8');
+  },
   useFile: (p: string) => {
     const filePath = path.join(automator.cwd, p);
     let data: any = null;
-    let parsedData: any = null;
     return {
       readFromDisk: () => {
-        data = fs.readFileSync(filePath, 'utf8');
+        if (fs.existsSync(filePath)) {
+          data = fs.readFileSync(filePath, 'utf8');
+        }
         return {
           parse: (preset: ParsePreset, custom?: Parser<any>) => {
             let parser = custom || null;
@@ -69,22 +89,20 @@ export const useFileSystem = (automator: Automator) => ({
               parser = RawParser;
             }
 
-            parsedData = parser.decode(data);
+            const context: ContextType = {
+              automator,
+              content: parser.decode(data),
+              raw: data,
+              saveFile() {
+                const dataToSave = parser.encode(context.content);
+                fs.writeFileSync(filePath, dataToSave);
+                return true;
+              },
+            };
 
             return {
-              act: (
-                activator: (
-                  data: any,
-                  raw: string,
-                  saveFile: () => boolean
-                ) => Generator
-              ) => {
-                return () =>
-                  activator(parsedData, data, () => {
-                    const dataToSave = parser.encode(parsedData);
-                    fs.writeFileSync(filePath, dataToSave);
-                    return true;
-                  });
+              act: (activator: (opts: ContextType) => Generator) => {
+                return () => activator(context);
               },
             };
           },

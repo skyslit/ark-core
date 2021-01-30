@@ -1,7 +1,13 @@
 import React from 'react';
 import { render, cleanup } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
-import { createReactApp, Frontend, createComponent, makeApp } from '../index';
+import {
+  createReactApp,
+  Frontend,
+  createComponent,
+  makeApp,
+  reduxServiceStateSnapshot,
+} from '../index';
 
 describe('functionality tests', () => {
   let ctx: ApplicationContext;
@@ -61,6 +67,71 @@ describe('functionality tests', () => {
       const { getByTestId } = render(<TestComp2 />);
       // Testing UI change
       expect(getByTestId('msgbox2').textContent).toBe('Welcome Dameem');
+    });
+
+    const testContext = createReactApp(({ useModule }) => {
+      useModule('module1', testModule);
+      useModule('module2', testModule2);
+    });
+
+    makeApp('csr', testContext, ctx)
+      .then(() => {
+        done();
+      })
+      .catch(done);
+  });
+
+  test('useStore(useReactState = true) should not work across multiple modules', (done) => {
+    const TestComponent = createComponent(({ use }) => {
+      const { useStore } = use(Frontend);
+      const [data, updateData] = useStore('testData', 'Welcome', true);
+      return (
+        <div>
+          <p data-testid="msgbox">{data}</p>
+          <button onClick={() => updateData('Welcome Dameem')}>
+            Say Hello
+          </button>
+        </div>
+      );
+    });
+
+    const testModule = createModule(({ use }) => {
+      const { useComponent } = use(Frontend);
+      const TestComp = useComponent('test-compo', TestComponent);
+      const { getByText, getByTestId } = render(<TestComp />);
+      // Testing UI change
+      expect(getByTestId('msgbox').textContent).toBe('Welcome');
+      getByText(/Say Hello/).click();
+      expect(getByTestId('msgbox').textContent).toBe('Welcome Dameem');
+      // Testing redux state
+      expect(
+        ctx.getData<any>('default', 'store').getState()['module1/testData']
+      ).toBe(undefined);
+    });
+
+    const TestComponentB = createComponent(({ use }) => {
+      const { useStore } = use(Frontend);
+      const [data, updateData] = useStore(
+        'module1/testData',
+        'Welcome 2',
+        true
+      );
+      return (
+        <div>
+          <p data-testid="msgbox2">{data}</p>
+          <button onClick={() => updateData('Welcome 2 Again')}>
+            Say Hola
+          </button>
+        </div>
+      );
+    });
+
+    const testModule2 = createModule(({ use }) => {
+      const { useComponent } = use(Frontend);
+      const TestComp2 = useComponent('test-compo', TestComponentB);
+      const { getByTestId } = render(<TestComp2 />);
+      // Testing UI change
+      expect(getByTestId('msgbox2').textContent).toBe('Welcome 2');
     });
 
     const testContext = createReactApp(({ useModule }) => {
@@ -137,7 +208,14 @@ describe('functionality tests', () => {
       useModule('modA', testModuleA);
     });
 
-    makeApp('csr', testContext, ctx)
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {},
+        }),
+      },
+    })
       .then((App) => {
         const { getByText } = render(<App />);
         expect(getByText(/View/i).textContent).toBe('View A modA');
@@ -173,9 +251,77 @@ describe('functionality tests', () => {
       useModule('modB', testModuleB);
     });
 
-    makeApp('csr', testContext, ctx)
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {},
+        }),
+      },
+    })
       .then((App) => {
         const { getByText } = render(<App />);
+        expect(getByText(/Comp/i).textContent).toBe('Component B');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('useRouteConfig() should work as expected', (done) => {
+    const TestComponentA = createComponent(() => {
+      return <h1>Component A</h1>;
+    });
+
+    const TestComponentB = createComponent(() => {
+      return <h1>Component B</h1>;
+    });
+
+    const Layout = createComponent((props) => {
+      return (
+        <div>
+          <h1>Layout D</h1>
+          {props.children}
+        </div>
+      );
+    });
+
+    const testModuleA = createModule(({ use }) => {
+      const { useComponent, useLayout } = use(Frontend);
+      useComponent('test-compo-a', TestComponentA);
+      useLayout('layout-a', Layout);
+    });
+
+    const testModuleB = createModule(({ use }) => {
+      const { useComponent } = use(Frontend);
+      useComponent('test-compo-b', TestComponentB);
+    });
+
+    const testContext = createReactApp(({ use, useModule, run }) => {
+      const { useRouteConfig, useComponent, useLayout } = use(Frontend);
+      useModule('modA', testModuleA);
+      useModule('modB', testModuleB);
+
+      useRouteConfig(() => [
+        {
+          path: '/',
+          component: useComponent('modB/test-compo-b'),
+          layout: useLayout('modA/layout-a'),
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {},
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
         expect(getByText(/Comp/i).textContent).toBe('Component B');
         done();
       })

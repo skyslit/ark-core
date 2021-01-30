@@ -2,9 +2,16 @@
 import path from 'path';
 import execa from 'execa';
 
+export type JobEvents = 'init' | 'started' | 'progress-update' | 'ended';
+
 export type PromptAnswerActivator = (answer?: any) => void;
 export interface IAutomatorInterface {
   onNewPrompt: (prompt: Prompt, answer: PromptAnswerActivator) => void;
+  onSnapshot?: (
+    events: JobEvents,
+    snapshot: JobSnapshot,
+    frameIndex: number
+  ) => void;
 }
 
 /**
@@ -42,34 +49,69 @@ export class TestMonitor implements IAutomatorInterface {
   }
 }
 
+export type ItemMeta = {
+  service?: any;
+  title?: string;
+  description?: string;
+};
+
+export type WorkerStatus =
+  | 'waiting'
+  | 'in-progress'
+  | 'completed'
+  | 'error'
+  | 'skipped';
+
 type QueueItem = {
   id: number;
   activator?: (...args: any[]) => Generator;
   service?: any;
   title?: string;
   description?: string;
+  status: WorkerStatus;
+  errors: Error[];
+  observers: {
+    [key: string]: WorkerStatus;
+  };
 };
 
-type StepSnapshot = {
+export type StepSnapshot = {
   title: string;
   description: string;
-  state: 'waiting' | 'in-progress' | 'completed' | 'error';
+  status: WorkerStatus;
+  errors: Error[];
+  observers: {
+    [key: string]: WorkerStatus;
+  };
 };
 
-type AutomationSnapshot = {
+export type AutomationSnapshot = {
   title: string;
   description: string;
   steps: StepSnapshot[];
-  completedSteps: number;
   totalSteps: number;
+  status: WorkerStatus;
+
+  pendingSteps: number;
+  successfulSteps: number;
+  failedSteps: number;
+  skippedSteps: number;
 };
 
-type JobSnapshot = {
-  title: string;
-  description: string;
+export type JobSnapshot = {
+  hasEnded: boolean;
   automations: AutomationSnapshot[];
-  completedAutomations: number;
-  completedSteps: number;
+
+  pendingAutomations: number;
+  successfulAutomations: number;
+  failedAutomations: number;
+  skippedAutomations: number;
+
+  pendingSteps: number;
+  successfulSteps: number;
+  failedSteps: number;
+  skippedSteps: number;
+
   totalAutomations: number;
   totalSteps: number;
 };
@@ -86,6 +128,7 @@ function* generator(startsWith: number = 0): Generator<number> {
 
 const id = generator();
 
+const STEP_ACTION = 'STEP';
 const GENERATOR_ACTION = 'GENERATOR';
 const PROMPT_ACTION = 'PROMPT';
 
@@ -140,18 +183,30 @@ export type Prompt = {
  * Manages automation and prompts
  */
 export class Automator {
+  public id: number;
   public steps: Array<QueueItem>;
   public isRunning: boolean;
   public currentRunningTaskIndex: number;
   public cwd: string;
+  public job: Job;
+  public title: string;
+  public description: string;
+  public status: WorkerStatus;
 
   /**
    * Creates new instance of automator
+   * @param {string=} title
+   * @param {string=} description
    */
-  constructor() {
+  constructor(title?: string, description?: string) {
+    this.id = -1;
     this.steps = [];
     this.isRunning = false;
     this.currentRunningTaskIndex = -1;
+    this.job = null;
+    this.title = title;
+    this.description = description;
+    this.status = 'waiting';
   }
 
   /**
@@ -197,18 +252,93 @@ export class Automator {
   }
 
   /**
+   * Creates and observes a process
+   * @param {string} label
+   * @param {WorkerStatus} status
+   * @return {any}
+   */
+  createObserver(label: string, status: WorkerStatus = 'in-progress') {
+    const step = this.steps[this.currentRunningTaskIndex];
+    if (!step) {
+      throw new Error('createObserver should be called only inside a step');
+    }
+
+    const updateStatus = (status: WorkerStatus) => {
+      step.observers[label] = status;
+      this.job.emitSnapshot('progress-update');
+    };
+
+    const remove = () => {
+      delete step.observers[label];
+      this.job.emitSnapshot('progress-update');
+    };
+
+    updateStatus(status);
+
+    return {
+      updateStatus,
+      remove,
+    };
+  }
+
+  /**
+   * @deprecated
    * Use Activity
    * @param {Function} runner
-   * @param {Partial<QueueItemMeta>=} opts
    */
   run(runner: () => Generator<any, any, any>) {
-    this.steps.push({
-      id: id.next().value,
-      activator: runner,
-      description: '',
-      service: '',
-      title: '',
-    });
+    this.step(runner);
+  }
+
+  /**
+   * Use Step
+   * @param {Function} runner
+   * @param {Partial<ItemMeta>=} meta
+   */
+  step(runner: () => Generator<any, any, any>, meta?: Partial<ItemMeta>) {
+    const stepId: number = id.next().value;
+    this.steps.push(
+      Object.assign<QueueItem, Partial<ItemMeta>>(
+        {
+          id: stepId,
+          activator: runner,
+          description: '',
+          service: '',
+          title: `Step ID: ${stepId}`,
+          status: 'waiting',
+          errors: [],
+          observers: {},
+        },
+        meta || {}
+      )
+    );
+  }
+
+  /**
+   * Set data to job context
+   * @param {string} key
+   * @param {T} val
+   * @return {T}
+   */
+  setData<T>(key: string, val: T): T {
+    this.ensureContext();
+    this.job.context[key] = val;
+    return val;
+  }
+
+  /**
+   * Get data from job context
+   * @param {string} key
+   * @param {T=} def
+   * @return {T}
+   */
+  getData<T>(key: string, def?: T): T {
+    this.ensureContext();
+    if (this.job.context[key] === undefined) {
+      return def;
+    }
+
+    return this.job.context[key];
   }
 
   /**
@@ -218,8 +348,18 @@ export class Automator {
    * @return {Promise}
    */
   start(job: Job = new Job()) {
-    job.automations.push(this);
+    this.job = job;
+    job.queueAutomator(this);
     return job.start();
+  }
+
+  /**
+   * Ensures that the job is started and running
+   */
+  private ensureContext() {
+    if (!this.job) {
+      throw new Error('Job context is not defined. May be it is not started?');
+    }
   }
 }
 
@@ -232,6 +372,10 @@ export class Job {
   public automations: Array<Automator>;
   public isRunning: boolean;
   public cwd: string;
+  public context: any;
+  private frameCount: number;
+  public errors: Error[];
+  public shouldSuppressError: boolean;
 
   /**
    * Creates a new instance of job
@@ -243,6 +387,10 @@ export class Job {
     this.cwd = cwd;
     this.automations = [];
     this.isRunning = false;
+    this.context = {};
+    this.frameCount = 0;
+    this.errors = [];
+    this.shouldSuppressError = true;
   }
 
   /**
@@ -258,16 +406,156 @@ export class Job {
    * @return {JobSnapshot}
    */
   getSnapshot(): JobSnapshot {
-    const snapshot: JobSnapshot = {
-      title: '',
-      description: '',
+    let snapshot: JobSnapshot = {
+      hasEnded: false,
       automations: [],
-      completedAutomations: 0,
-      completedSteps: 0,
+
+      pendingAutomations: 0,
+      successfulAutomations: 0,
+      failedAutomations: 0,
+      skippedAutomations: 0,
+
+      pendingSteps: 0,
+      successfulSteps: 0,
+      failedSteps: 0,
+      skippedSteps: 0,
+
       totalAutomations: 0,
       totalSteps: 0,
     };
 
+    snapshot.automations = this.automations.map<AutomationSnapshot>((item) => {
+      const stepSnapshots = item.steps.map<StepSnapshot>((stepItem) => ({
+        title: stepItem.title,
+        description: stepItem.description,
+        status: stepItem.status,
+        errors: stepItem.errors,
+        observers: stepItem.observers,
+      }));
+
+      const metaInfo: Partial<AutomationSnapshot> = stepSnapshots.reduce<
+        Partial<AutomationSnapshot>
+      >(
+        (acc, item) => {
+          switch (item.status) {
+            case 'waiting': {
+              acc.pendingSteps++;
+              break;
+            }
+            case 'completed': {
+              acc.successfulSteps++;
+              break;
+            }
+            case 'error': {
+              acc.failedSteps++;
+              break;
+            }
+            case 'skipped': {
+              acc.skippedSteps++;
+              break;
+            }
+          }
+          return acc;
+        },
+        {
+          pendingSteps: 0,
+          successfulSteps: 0,
+          failedSteps: 0,
+          skippedSteps: 0,
+        }
+      );
+
+      return Object.assign<AutomationSnapshot, Partial<AutomationSnapshot>>(
+        {
+          title: item.title,
+          description: item.description,
+          steps: stepSnapshots,
+          totalSteps: stepSnapshots.length,
+          status: item.status,
+
+          pendingSteps: 0,
+          successfulSteps: 0,
+          failedSteps: 0,
+          skippedSteps: 0,
+        },
+        metaInfo
+      );
+    });
+
+    const automatorMeta = snapshot.automations.reduce<Partial<JobSnapshot>>(
+      (acc, item) => {
+        switch (item.status) {
+          case 'in-progress':
+          case 'waiting': {
+            acc.pendingAutomations++;
+            break;
+          }
+          case 'completed': {
+            acc.successfulAutomations++;
+            break;
+          }
+          case 'error': {
+            acc.failedAutomations++;
+            break;
+          }
+          case 'skipped': {
+            acc.skippedAutomations++;
+            break;
+          }
+        }
+
+        const stepMeta = item.steps.reduce<Partial<JobSnapshot>>(
+          (acc, item) => {
+            switch (item.status) {
+              case 'in-progress':
+              case 'waiting': {
+                acc.pendingSteps++;
+                break;
+              }
+              case 'completed': {
+                acc.successfulSteps++;
+                break;
+              }
+              case 'error': {
+                acc.failedSteps++;
+                break;
+              }
+              case 'skipped': {
+                acc.skippedSteps++;
+                break;
+              }
+            }
+            return acc;
+          },
+          acc
+        );
+
+        acc.totalSteps += item.totalSteps;
+
+        return Object.assign(acc, stepMeta);
+      },
+      {
+        pendingAutomations: 0,
+        successfulAutomations: 0,
+        failedAutomations: 0,
+        skippedAutomations: 0,
+
+        pendingSteps: 0,
+        successfulSteps: 0,
+        failedSteps: 0,
+        skippedSteps: 0,
+
+        totalAutomations: snapshot.automations.length,
+        totalSteps: snapshot.totalSteps,
+      }
+    );
+
+    snapshot = Object.assign<JobSnapshot, Partial<JobSnapshot>>(
+      snapshot,
+      automatorMeta
+    );
+
+    snapshot.hasEnded = snapshot.pendingAutomations === 0;
     return snapshot;
   }
 
@@ -288,6 +576,28 @@ export class Job {
   }
 
   /**
+   * Creates automator
+   * @param {Automator} automator
+   */
+  queueAutomator(automator: Automator) {
+    const automatorId: number = id.next().value;
+    automator.job = this;
+    automator.id = automatorId;
+    if (!automator.title || automator.title === '') {
+      automator.title = `Job ID: ${automatorId}`;
+    }
+    this.automations.push(automator);
+  }
+
+  /**
+   * Returns if the job has error
+   * @return {boolean}
+   */
+  hasErrors(): boolean {
+    return this.errors.length > 0;
+  }
+
+  /**
    * Starts the job
    * @return {Promise}
    */
@@ -302,9 +612,8 @@ export class Job {
           } else if (typeof result.value === 'function') {
             const fnResult = await Promise.resolve(result.value());
             // Check if generator function
-            if (typeof fnResult.next === 'function') {
-              const innerGenerator = result.value();
-              await runGenerator(innerGenerator, depth + 1);
+            if (fnResult && typeof fnResult.next === 'function') {
+              await runGenerator(fnResult, depth + 1);
             } else {
               answer = fnResult;
             }
@@ -312,8 +621,46 @@ export class Job {
             // Check if generator object
             if (isActionType(result.value)) {
               switch (result.value.__type__) {
+                case STEP_ACTION:
                 case GENERATOR_ACTION: {
-                  await runGenerator(<any>result.value.payload, depth + 1);
+                  const isStep = result.value.__type__ === STEP_ACTION;
+
+                  let errorHandler: (e: Error) => void = null;
+                  if (isStep === true) {
+                    const stepRef = this.automations[
+                      this.currentRunningTaskIndex
+                    ].steps[
+                      this.automations[this.currentRunningTaskIndex]
+                        .currentRunningTaskIndex
+                    ];
+
+                    const skipStep = () => {
+                      if (stepRef) {
+                        stepRef.status = 'skipped';
+                        this.emitSnapshot('progress-update');
+                      }
+                    };
+
+                    errorHandler = (e: Error) => {
+                      if (stepRef) {
+                        stepRef.status = 'error';
+                        stepRef.errors.push(e);
+                      }
+                      this.emitSnapshot('progress-update');
+                    };
+
+                    if (this.hasErrors()) {
+                      skipStep();
+                      break;
+                    }
+                  }
+
+                  try {
+                    await runGenerator(<any>result.value.payload, depth + 1);
+                  } catch (e) {
+                    errorHandler && errorHandler(e);
+                    throw e;
+                  }
                   break;
                 }
                 case PROMPT_ACTION: {
@@ -330,7 +677,10 @@ export class Job {
             }
           }
         } catch (e) {
-          console.error(e);
+          this.errors.push(e);
+          if (this.shouldSuppressError === false) {
+            throw e;
+          }
         }
         result = generator.next(answer);
       }
@@ -345,37 +695,62 @@ export class Job {
   }
 
   /**
+   * Emits snapshot on progress update
+   * @param {JobEvents} event
+   */
+  emitSnapshot(event: JobEvents) {
+    this.frameCount++;
+    if (this.monitor) {
+      if (this.monitor.onSnapshot) {
+        this.monitor.onSnapshot(event, this.getSnapshot(), this.frameCount);
+      }
+    }
+  }
+
+  /**
    * Job Runner function
    * @return {boolean}
    */
   private *runNext() {
     const job = this;
     job.isRunning = true;
+    this.emitSnapshot('init');
     while (job.isRunning === true) {
       job.currentRunningTaskIndex++;
-      if (job.automations[job.currentRunningTaskIndex]) {
-        job.automations[job.currentRunningTaskIndex].cwd = this.cwd;
+      const automation = job.automations[job.currentRunningTaskIndex];
+      if (automation) {
+        automation.cwd = this.cwd;
         yield function* () {
           // Step runner
-          job.automations[job.currentRunningTaskIndex].isRunning = true;
-          while (
-            job.automations[job.currentRunningTaskIndex].isRunning === true
-          ) {
-            job.automations[job.currentRunningTaskIndex]
-              .currentRunningTaskIndex++;
-            const step =
-              job.automations[job.currentRunningTaskIndex].steps[
-                job.automations[job.currentRunningTaskIndex]
-                  .currentRunningTaskIndex
-              ];
+          automation.isRunning = true;
+          automation.status = 'in-progress';
+          job.emitSnapshot('progress-update');
+          while (automation.isRunning === true) {
+            automation.currentRunningTaskIndex++;
+            const step = automation.steps[automation.currentRunningTaskIndex];
             if (step) {
+              step.status = 'in-progress';
+              job.emitSnapshot('progress-update');
               // Call the actual step
-              yield createAction(
-                GENERATOR_ACTION,
-                step.activator(step.service)
-              );
+              yield createAction(STEP_ACTION, step.activator(step.service));
+              if (step.status === 'in-progress') {
+                step.status = 'completed';
+                job.emitSnapshot('progress-update');
+              } else if (step.status === 'error') {
+                automation.status = 'error';
+                job.emitSnapshot('progress-update');
+              }
             } else {
-              job.automations[job.currentRunningTaskIndex].isRunning = false;
+              automation.isRunning = false;
+              if (automation.status === 'in-progress') {
+                if (job.hasErrors()) {
+                  automation.status = 'skipped';
+                } else {
+                  automation.status = 'completed';
+                }
+              }
+
+              job.emitSnapshot('progress-update');
               break;
             }
           }

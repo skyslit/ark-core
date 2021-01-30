@@ -1,5 +1,4 @@
 /* eslint-disable require-jsdoc */
-import { Compilation } from 'webpack';
 import { SPABuilder } from '../builders/FrontendBuilder';
 import path from 'path';
 import * as fs from 'fs';
@@ -20,8 +19,14 @@ describe('SPA app builder (in WATCH MODE)', () => {
         'admin',
         path.join(__dirname, './test-project/src/admin.client.tsx')
       );
-      builderInstance.on('success', (compilation: Compilation) => {
+
+      builderInstance.attachMonitor((err, result) => {
         try {
+          if (err) throw err;
+
+          expect(result.compilation.errors).toHaveLength(0);
+          expect(result.compilation.warnings).toHaveLength(0);
+
           builderInstance
             .teardown()
             .then(() => {
@@ -32,13 +37,7 @@ describe('SPA app builder (in WATCH MODE)', () => {
           done(e);
         }
       });
-      builderInstance.on('warning', (warnings) => {
-        done(new Error('Warnings should not be thrown'));
-      });
-      builderInstance.on('error', (errors) => {
-        console.log(errors);
-        done(new Error('Error should not be thrown'));
-      });
+
       builderInstance.build(
         {
           mode: 'development',

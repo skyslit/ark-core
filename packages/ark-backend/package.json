@@ -26,14 +26,18 @@
     "@babel/preset-typescript": "^7.12.1",
     "@skyslit/ark-core": "^2.0.13",
     "@skyslit/ark-frontend": "^2.0.13",
+    "@types/cookie-parser": "^1.4.2",
     "@types/express": "^4.17.9",
     "@types/jest": "^26.0.15",
+    "@types/jsonwebtoken": "^8.5.0",
     "@types/mongoose": "^5.10.0",
+    "@types/morgan": "^1.9.2",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/react-router-dom": "^5.1.6",
     "@types/supertest": "^2.0.10",
     "express": "^4.17.1",
+    "joi": "17.3.0",
     "mongodb-memory-server": "^6.9.2",
     "mongoose": "^5.10.15",
     "react": "17.0.1",
@@ -46,6 +50,7 @@
     "@skyslit/ark-core": "2.0.0",
     "@skyslit/ark-frontend": "2.0.0",
     "express": "^4.17.1",
+    "joi": "17.3.0",
     "mongoose": "^5.10.15",
     "react": "17.0.1",
     "react-dom": "17.0.1",
@@ -53,7 +58,11 @@
     "react-router-dom": "5.2.0"
   },
   "dependencies": {
-    "node-html-parser": "^2.0.0"
+    "cookie-parser": "^1.4.5",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.10.0",
+    "node-html-parser": "^2.0.0",
+    "path-to-regexp": "^6.2.0"
   },
   "publishConfig": {
     "access": "public"

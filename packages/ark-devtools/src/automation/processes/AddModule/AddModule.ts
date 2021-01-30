@@ -5,7 +5,6 @@ import { ManifestManager, ManifestUtils } from '../../../utils/ManifestManager';
 export default () =>
   createProcess((automator) => {
     const { useFile } = useFileSystem(automator);
-    let packageName: any = null;
 
     // Initialise npm package
     automator.step(function* () {
@@ -15,7 +14,7 @@ export default () =>
         .readFromDisk()
         .parse('json')
         .act(function* (opts) {
-          packageName = yield automator.prompt({
+          const packageName = yield automator.prompt({
             key: 'package-name',
             question: 'Project name',
             type: 'text-input',
@@ -30,7 +29,7 @@ export default () =>
     automator.step(function* () {
       const manager: ManifestManager = new ManifestManager(
         automator.cwd,
-        ManifestUtils.createManifest({ name: packageName })
+        ManifestUtils.createManifest({})
       );
 
       yield manager.write();

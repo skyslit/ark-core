@@ -6,7 +6,7 @@ import _package from './<%= relativeAppFilePath %>';
 
 makeApp('csr', _package)
     .then((App) => {
-      ReactDOM.render(<App />,
+      ReactDOM.hydrate(<App />,
           document.getElementById('root'));
     })
     .catch((err) => {

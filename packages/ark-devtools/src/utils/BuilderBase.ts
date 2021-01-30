@@ -7,6 +7,8 @@ import { GhostFileActions } from './ghostFile';
 import memfs from 'memfs';
 import { ufs } from 'unionfs';
 
+export type BuilderMonitor = (err?: Error, result?: Stats) => void;
+
 type Mode = 'development' | 'production';
 export type ConfigurationOptions = {
   mode: Mode;
@@ -19,6 +21,7 @@ export type ConfigurationOptions = {
 export class BuilderBase extends EventEmitter {
   private compiler: webpack.Compiler;
   private watching: any;
+  private monitor: BuilderMonitor;
   /**
    * Creates a new builder base instance
    * @param {EventEmitterOptions} options
@@ -78,6 +81,15 @@ export class BuilderBase extends EventEmitter {
       this.compiler.inputFileSystem = _ufs;
     }
 
+    this.compiler.hooks.invalid.tap('invalid', () => {
+      console.clear();
+      console.log('Compiling...');
+    });
+
+    // this.compiler.hooks.done.tap('done', async stats => {
+    //   console.log('dz');
+    // })
+
     if (opts.watchMode === true) {
       this.watching = this.compiler.watch({}, this.handler.bind(this));
     } else {
@@ -109,6 +121,14 @@ export class BuilderBase extends EventEmitter {
   }
 
   /**
+   * Attaches a monitor that can be used to listen to events
+   * @param {BuilderMonitor} mon
+   */
+  attachMonitor(mon: BuilderMonitor) {
+    this.monitor = mon;
+  }
+
+  /**
    * Gets input ghost files
    * @param {ConfigurationOptions} opts
    * @return {GhostFileActions[]}
@@ -132,6 +152,25 @@ export class BuilderBase extends EventEmitter {
    */
   getConfiguration(opts: ConfigurationOptions): Configuration {
     return null;
+  }
+
+  /**
+   * Gets stylesheet test expression
+   * @return {RegExp}
+   */
+  getStyleTestExp(): RegExp {
+    return /\.(scss|css|sass|less)$/i;
+  }
+
+  /**
+   * Get static assets rule configuration
+   * @return {any}
+   */
+  getAssetRule(): any {
+    return {
+      test: /\.(png|svg|jpg|jpeg|gif)$/i,
+      type: 'asset/resource',
+    };
   }
 
   /**
@@ -192,35 +231,20 @@ export class BuilderBase extends EventEmitter {
   }
 
   /**
+   * Invokes monitor if one's attached
+   * @param {Error} err
+   * @param {Stats} result
+   */
+  private invokeMonitor(err?: Error, result?: Stats) {
+    this.monitor && this.monitor(err, result);
+  }
+
+  /**
    * Handler
    * @param {Error} err
    * @param {Stats} result
    */
   private handler(err?: Error, result?: Stats): void {
-    if (err) {
-      this.emit('error', [
-        {
-          message: err.message,
-        },
-      ]);
-    } else {
-      if (result.hasErrors()) {
-        this.emit(
-          'error',
-          result.compilation.errors,
-          result.compilation,
-          result
-        );
-      } else if (result.hasWarnings()) {
-        this.emit(
-          'warning',
-          result.compilation.warnings,
-          result.compilation,
-          result
-        );
-      } else {
-        this.emit('success', result.compilation, result);
-      }
-    }
+    this.invokeMonitor(err, result);
   }
 }

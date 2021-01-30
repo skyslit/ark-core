@@ -3,6 +3,7 @@ import { BuilderBase, ConfigurationOptions } from '../utils/BuilderBase';
 import path from 'path';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
 import { GhostFileActions, createGhostFile } from '../utils/ghostFile';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 
 /**
  * SPA Builder
@@ -32,7 +33,7 @@ export class SPABuilder extends BuilderBase {
   getGhostFiles(opts: ConfigurationOptions): GhostFileActions[] {
     return [
       createGhostFile(
-        path.join(__dirname, './assets/Frontend/root.tsx.ejs'),
+        path.join(__dirname, '../../assets/Frontend/root.tsx.ejs'),
         'src/index.tsx',
         {
           relativeAppFilePath: path.relative(
@@ -52,6 +53,7 @@ export class SPABuilder extends BuilderBase {
       context: cwd,
       mode,
       resolve: {
+        modules: ['scripts', 'node_modules'],
         extensions: ['.json', '.ts', '.tsx', '.js', '.jsx'],
         alias: {
           ...this.mapPeerDependencies(
@@ -63,6 +65,7 @@ export class SPABuilder extends BuilderBase {
       },
       entry: path.join(cwd, 'src', 'index.tsx'),
       output: {
+        publicPath: '/',
         filename: `_browser/${this.appId}.js`,
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',
@@ -70,29 +73,76 @@ export class SPABuilder extends BuilderBase {
       plugins: [
         new HTMLWebpackPlugin({
           filename: `${this.appId}.html`,
-          template: path.resolve(__dirname, './assets/index.template.html'),
+          template: path.resolve(__dirname, '../../assets/index.template.html'),
+        }),
+        new MiniCssExtractPlugin({
+          filename: `./assets/[name].css`,
         }),
       ],
+      stats: {
+        loggingTrace: false,
+        errorStack: false,
+      },
       module: {
         rules: [
           {
             test: /\.(ts|tsx|js|jsx)$/,
+            exclude: /node_modules/,
             use: [
               {
-                loader: path.resolve(
-                  __dirname,
-                  '../../node_modules',
-                  'babel-loader'
-                ),
+                loader: require.resolve('babel-loader'),
                 options: {
                   compact: false,
+                  presets: [
+                    [
+                      require.resolve('@babel/preset-env'),
+                      {
+                        targets: { browsers: ['last 2 versions'] },
+                        modules: false,
+                      },
+                    ],
+                    [
+                      require.resolve('@babel/preset-typescript'),
+                      { allowNamespaces: true },
+                    ],
+                    [require.resolve('@babel/preset-react')],
+                  ],
+                  cacheDirectory: true,
+                  plugins: [
+                    [
+                      require.resolve('babel-plugin-import'),
+                      { libraryName: 'antd', style: true },
+                    ],
+                    require.resolve('@babel/plugin-proposal-class-properties'),
+                    require.resolve('@babel/plugin-syntax-dynamic-import'),
+                  ],
                 },
               },
             ],
           },
+          this.getAssetRule(),
           {
-            test: /\.(png|svg|jpg|jpeg|gif)$/i,
-            type: 'asset/resource',
+            test: this.getStyleTestExp(),
+            use: [
+              // {
+              //   loader: require.resolve('style-loader'),
+              //   options: {
+              //     injectType: 'linkTag'
+              //   }
+              // },
+              {
+                loader: MiniCssExtractPlugin.loader,
+              },
+              {
+                loader: require.resolve('css-loader'),
+              },
+              {
+                loader: require.resolve('sass-loader'),
+              },
+              {
+                loader: require.resolve('less-loader'),
+              },
+            ],
           },
         ],
       },

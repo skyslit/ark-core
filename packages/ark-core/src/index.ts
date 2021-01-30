@@ -1,6 +1,25 @@
 export type Activator = () => any | Promise<any>;
 export type ContextScope<T> = (props: Partial<Ark.Pointers>) => T | Promise<T>;
 
+export type Capabilities = {
+  serviceId: string;
+  params?: any;
+};
+
+export type ServiceResponseData<T = {}> = T & {
+  capabilities: Array<Capabilities>;
+};
+
+export type ServiceResponse<M, D> = {
+  type: 'success' | 'error';
+  meta?: M;
+  data?: Array<D> | D;
+  capabilities?: Array<Capabilities>;
+  errCode?: number;
+  err?: Error | any;
+  [key: string]: any;
+};
+
 interface PointerBase {
   init: () => void | Promise<any>;
 }

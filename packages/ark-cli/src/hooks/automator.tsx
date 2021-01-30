@@ -1,6 +1,9 @@
 import React, { useCallback } from 'react';
 import { Job, Automator } from '@skyslit/ark-devtools';
-import { Prompt } from '@skyslit/ark-devtools/build/automation/core/Automator';
+import {
+  Prompt,
+  JobSnapshot,
+} from '@skyslit/ark-devtools/build/automation/core/Automator';
 
 type PromptEnvelop = {
   prompt: Prompt;
@@ -9,32 +12,36 @@ type PromptEnvelop = {
 
 let job: Job;
 
-export const useAutomator = () => {
+type AutomatorOption = {
+  cwd: string;
+};
+
+export const useAutomator = (opts: AutomatorOption) => {
   const [isActive, setIsActive] = React.useState(false);
+  const [snapshot, updateSnapshot] = React.useState<JobSnapshot>(null);
   const [
     activePromptEnvelop,
     setActivePromptEnvelop,
   ] = React.useState<PromptEnvelop>(null);
 
-  const run = useCallback((automationProcess: Automator) => {
-    job = new Job({
-      onNewPrompt: (prompt, returnAnswer) => {
-        setActivePromptEnvelop({
-          prompt,
-          returnAnswer,
-        });
+  const run = useCallback((automationProcessCreator: () => Automator) => {
+    job = new Job(
+      {
+        onSnapshot: (e, snapshot) => {
+          updateSnapshot(snapshot);
+        },
+        onNewPrompt: (prompt, returnAnswer) => {
+          setActivePromptEnvelop({
+            prompt,
+            returnAnswer,
+          });
+        },
       },
-    });
+      opts.cwd
+    );
+    updateSnapshot(null);
     setIsActive(true);
-    automationProcess
-      .start(job)
-      .then(() => {
-        setIsActive(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setIsActive(false);
-      });
+    return automationProcessCreator().start(job);
   }, []);
 
   const returnPromptResponse = useCallback(
@@ -50,8 +57,11 @@ export const useAutomator = () => {
 
   return {
     isActive,
+    jobSnapshot: snapshot,
     activePrompt: activePromptEnvelop ? activePromptEnvelop.prompt : null,
     hasPrompt: activePromptEnvelop ? true : false,
+    hideJobPanel: () => setIsActive(false),
+    showJobPanel: () => setIsActive(true),
     returnPromptResponse,
     run,
   };

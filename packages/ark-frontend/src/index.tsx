@@ -6,17 +6,78 @@ import {
   ControllerContext,
   createPointer,
   extractRef,
+  ServiceResponse,
 } from '@skyslit/ark-core';
+import axios, { AxiosRequestConfig } from 'axios';
 import { HelmetProvider } from 'react-helmet-async';
-import { BrowserRouter, Switch, Route, RouteProps } from 'react-router-dom';
+import {
+  BrowserRouter,
+  StaticRouter,
+  Switch,
+  Route,
+  RouteProps,
+  Redirect,
+} from 'react-router-dom';
+import ReactDOMServer from 'react-dom/server';
 
 export type RenderMode = 'ssr' | 'csr';
+
+axios.defaults.withCredentials = true;
 
 export type ComponentPropType = {
   use: <T extends (...args: any) => any>(creators: T) => ReturnType<T>;
   currentModuleId: string;
   children?: any;
+} & { [key: string]: any };
+
+type StoreHook = <T>(
+  refId: string,
+  defaultVal?: T,
+  useReactState?: boolean
+) => [T, (val: T) => void];
+type ServiceHookOptions = {
+  serviceId: string;
+  useRedux: boolean;
+  ajax: AxiosRequestConfig;
 };
+type ServiceInvokeOptions = {
+  force: boolean;
+};
+type ServiceHook<
+  T = ServiceResponse<any, any>,
+  E = ServiceResponse<any, any>
+> = (
+  serviceId: string | Partial<ServiceHookOptions>
+) => {
+  hasInitialized: boolean;
+  isLoading: boolean;
+  response: T;
+  err: E;
+  invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
+};
+
+type ContextHook<
+  T = ServiceResponse<any, any>,
+  E = ServiceResponse<any, any>
+> = () => {
+  hasInitialized: boolean;
+  isLoading: boolean;
+  response: T;
+  err: E;
+  invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
+};
+
+type MapRoute = (
+  path: string,
+  component: React.ComponentClass | React.FunctionComponent,
+  layoutRefId?: string,
+  opts?: RouteProps
+) => void;
+
+type RouteConfigItem = {
+  layout?: any;
+  Route?: 'public' | 'auth' | 'protected' | React.FunctionComponent<{}>;
+} & RouteProps;
 
 export type ArkReactComponent<T> = (
   props: ComponentPropType & T
@@ -29,21 +90,19 @@ declare global {
     namespace MERN {
       // eslint-disable-next-line no-unused-vars
       interface React {
-        useStore: <T>(refId: string, defaultVal?: T) => [T, (val: T) => void];
+        useStore: StoreHook;
         useComponent: <T>(
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
+        useService: ServiceHook;
+        useContext: ContextHook;
         useLayout: <T>(
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
-        mapRoute: (
-          path: string,
-          component: React.ComponentClass | React.FunctionComponent,
-          layoutRefId?: string,
-          opts?: RouteProps
-        ) => void;
+        mapRoute: MapRoute;
+        useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
       }
     }
   }
@@ -70,42 +129,51 @@ const createReducer = (initialState = {}) => (
  * Initializes pure routed app
  * that can be used to render both in browser and node js
  * @param {ContextScope<any>} scope
- * @param {ApplicationContext} ctx
+ * @param {ApplicationContext=} ctx
+ * @param {object=} initialState
  * @return {Promise<React.FunctionComponent>}
  */
 export function initReactRouterApp(
   scope: ContextScope<any>,
-  ctx: ApplicationContext = new ApplicationContext()
+  ctx: ApplicationContext = new ApplicationContext(),
+  initialState: { [key: string]: any } = {}
 ) {
-  ctx.setData('default', 'store', createStore(createReducer()));
+  let reduxDevtoolEnhancer: any = undefined;
+  try {
+    reduxDevtoolEnhancer =
+      (global.window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
+      (global.window as any).__REDUX_DEVTOOLS_EXTENSION__();
+  } catch (e) {
+    /** Do nothing */
+  }
+  ctx.setData(
+    'default',
+    'store',
+    createStore(createReducer(initialState), reduxDevtoolEnhancer)
+  );
 
   return ctx.activate(scope).then(() => {
-    // Extracts all routes from every module
-    const routes: any[] = Object.keys(ctx.data).reduce(
-      (accumulator, moduleKey) => {
-        if (ctx.data[moduleKey]['routes']) {
-          return [
-            ...accumulator,
-            ...Object.keys(ctx.data[moduleKey]['routes']).reduce(
-              (accumulator, pathKey) => {
-                if (ctx.data[moduleKey]['routes'][pathKey]) {
-                  return [
-                    ...accumulator,
-                    ctx.data[moduleKey]['routes'][pathKey],
-                  ];
-                }
-                return accumulator;
-              },
-              []
-            ),
-          ];
-        }
-        return accumulator;
-      },
+    const routes = ctx.getData<RouteConfigItem[]>(
+      'default',
+      'routeConfigs',
       []
     );
     return Promise.resolve(routes);
   });
+}
+
+type MakeAppOptions = { url: string; initialState?: any };
+
+// eslint-disable-next-line camelcase
+declare const ___hydrated_redux___: any;
+
+/**
+ * Render react to string
+ * @param {any} Component
+ * @return {string}
+ */
+export function renderToString(Component: any) {
+  return ReactDOMServer.renderToString(<Component />);
 }
 
 /**
@@ -113,26 +181,110 @@ export function initReactRouterApp(
  * @param {RenderMode} mode
  * @param {ContextScope<any>} scope
  * @param {ApplicationContext} ctx
+ * @param {object=} opts_
  * @return {Promise<React.FunctionComponent>}
  */
 export function makeApp(
   mode: RenderMode,
   scope: ContextScope<any>,
-  ctx: ApplicationContext = new ApplicationContext()
+  ctx: ApplicationContext = new ApplicationContext(),
+  opts_: Partial<MakeAppOptions> = null
 ): Promise<React.FunctionComponent> {
-  return initReactRouterApp(scope, ctx).then((PureAppConfig) => {
-    return Promise.resolve(() => (
-      <HelmetProvider>
-        <BrowserRouter>
-          <Switch>
-            {PureAppConfig.map((route) => (
-              <Route key={route.path} {...route} />
-            ))}
-          </Switch>
-        </BrowserRouter>
-      </HelmetProvider>
-    ));
-  });
+  const opts: MakeAppOptions = Object.assign<
+    MakeAppOptions,
+    Partial<MakeAppOptions>
+  >(
+    {
+      url: undefined,
+      initialState: {},
+    },
+    opts_
+  );
+
+  if (mode === 'csr') {
+    if (!opts.initialState) {
+      opts.initialState = {};
+    }
+
+    try {
+      opts.initialState = Object.assign(
+        {},
+        ___hydrated_redux___,
+        opts.initialState
+      );
+    } catch (e) {
+      /** Do nothing */
+    }
+  }
+
+  return initReactRouterApp(scope, ctx, opts.initialState).then(
+    (PureAppConfig) => {
+      return Promise.resolve(() => {
+        const main = useContextCreator(ctx)();
+        const context: any = {};
+
+        React.useEffect(() => {
+          main.invoke();
+        }, []);
+
+        if (!main.response) {
+          return <div>Application booting up...</div>;
+        }
+
+        let Router: any = BrowserRouter;
+        let routerProps: any = {};
+
+        if (mode === 'ssr') {
+          Router = StaticRouter;
+          routerProps = {
+            location: opts ? opts.url : '',
+            context,
+          };
+        }
+
+        return (
+          <HelmetProvider>
+            <Router {...routerProps}>
+              <Switch>
+                {PureAppConfig.map((config) => {
+                  let RouteComponent: any;
+
+                  if (!config.Route) {
+                    config.Route = 'public';
+                  }
+
+                  if (config.Route === 'auth') {
+                    RouteComponent = (props: any) => (
+                      <Routers.AuthRoute
+                        {...props}
+                        redirectUrl={'/'}
+                        isAuthenticated={main.response.meta.isAuthenticated}
+                      />
+                    );
+                  } else if (config.Route === 'protected') {
+                    RouteComponent = (props: any) => (
+                      <Routers.ProtectedRoute
+                        {...props}
+                        loginUrl={'/auth/login'}
+                        isAuthenticated={main.response.meta.isAuthenticated}
+                      />
+                    );
+                  } else if (config.Route === 'public') {
+                    RouteComponent = Route;
+                  } else {
+                    RouteComponent = config.Route;
+                  }
+
+                  const _props = config;
+                  return <RouteComponent key={config.path} {..._props} />;
+                })}
+              </Switch>
+            </Router>
+          </HelmetProvider>
+        );
+      });
+    }
+  );
 }
 
 /**
@@ -185,41 +337,323 @@ export function createReactApp(fn: ContextScope<any>): ContextScope<any> {
   return fn;
 }
 
+/**
+ * Creates a fully qualified ref id
+ * @param {string} refId
+ * @param {string} moduleId
+ * @return {string}
+ */
+export function getFullyQualifiedReduxRefId(
+  refId: string,
+  moduleId: string
+): string {
+  return `${moduleId}/${refId}`;
+}
+
+/**
+ * Creates a redux snapshot object
+ * @param {string} refId
+ * @param {string} moduleId
+ * @param {any} val
+ * @return {object}
+ */
+export function reduxStateSnapshot(
+  refId: string,
+  moduleId: string,
+  val: any
+): object {
+  const ref = extractRef(refId, moduleId);
+  return {
+    [getFullyQualifiedReduxRefId(ref.refId, ref.moduleName)]: val,
+  };
+}
+
+/**
+ * Creates service state from backend
+ * @param {string} serviceRefId
+ * @param {string} moduleId
+ * @param {any} stat
+ * @return {object}
+ */
+export function reduxServiceStateSnapshot(
+  serviceRefId: string,
+  moduleId: string,
+  stat: any
+): object {
+  const ref = extractRef(serviceRefId, moduleId);
+  return {
+    ...reduxStateSnapshot(`HAS_INITIALIZED_${ref.refId}`, moduleId, true),
+    ...reduxStateSnapshot(`IS_LOADING_${ref.refId}`, moduleId, false),
+    ...reduxStateSnapshot(
+      `RESPONSE_${ref.refId}`,
+      moduleId,
+      stat.responseCode === 200 ? stat.response : null
+    ),
+    ...reduxStateSnapshot(
+      `ERROR_${ref.refId}`,
+      moduleId,
+      stat.responseCode !== 200 ? stat.response : null
+    ),
+  };
+}
+
+const useStoreCreator: (
+  moduleId: string,
+  ctx: ApplicationContext
+) => StoreHook = (moduleId, ctx) => (
+  refId,
+  defaultVal = null,
+  useReactState: boolean = false
+) => {
+  if (useReactState === false) {
+    const ref = extractRef(refId, moduleId);
+    const fullyQualifiedRefId = getFullyQualifiedReduxRefId(
+      ref.refId,
+      ref.moduleName
+    );
+    const store = ctx.getData<Store>('default', 'store');
+    const [localStateVal, updateLocalStateVal] = React.useState(
+      store.getState()[fullyQualifiedRefId] || defaultVal
+    );
+
+    React.useEffect(() => {
+      const unsubscribe = store.subscribe(() => {
+        const updatedVal = store.getState()[fullyQualifiedRefId];
+        if (localStateVal !== updatedVal) {
+          updateLocalStateVal(updatedVal);
+        }
+      });
+
+      return unsubscribe;
+    }, [fullyQualifiedRefId]);
+
+    return [
+      localStateVal,
+      (value) => {
+        store.dispatch({
+          type: 'SET_ITEM',
+          payload: {
+            value,
+            key: fullyQualifiedRefId,
+          },
+        });
+      },
+    ];
+  } else {
+    return React.useState(defaultVal);
+  }
+};
+
+const getServiceUrl = (modId: string, service: string) =>
+  `/___service/${modId}/${service}`;
+
+const useServiceCreator: (
+  modId: string,
+  ctx: ApplicationContext
+) => ServiceHook = (modId, ctx) => (service) => {
+  const option: ServiceHookOptions = Object.assign<
+    ServiceHookOptions,
+    Partial<ServiceHookOptions>
+  >(
+    {
+      useRedux: false,
+      serviceId: typeof service === 'string' ? service : undefined,
+      ajax: {
+        method: 'post',
+      },
+    },
+    typeof service === 'string' ? {} : service
+  );
+
+  if (typeof service === 'string') {
+    option.ajax.url = getServiceUrl(modId, service);
+    option.ajax.method = 'post';
+  } else {
+    try {
+      option.ajax.url = getServiceUrl(modId, service.serviceId);
+      if (service.ajax) {
+        option.ajax = { ...option.ajax, ...service.ajax };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const [hasInitialized, setHasInitialized] = useStoreCreator(
+    modId,
+    ctx
+  )<boolean>(`HAS_INITIALIZED_${option.serviceId}`, null, !option.useRedux);
+  const [isLoading, setLoading] = useStoreCreator(modId, ctx)<boolean>(
+    `IS_LOADING_${option.serviceId}`,
+    null,
+    !option.useRedux
+  );
+  const [response, setResponse] = useStoreCreator(modId, ctx)<
+    ServiceResponse<any, any>
+  >(`RESPONSE_${option.serviceId}`, null, !option.useRedux);
+  const [err, setError] = useStoreCreator(modId, ctx)<
+    ServiceResponse<any, any>
+  >(`ERROR_${option.serviceId}`, null, !option.useRedux);
+
+  return {
+    hasInitialized: hasInitialized || false,
+    isLoading: isLoading || false,
+    response,
+    err,
+    invoke: (data?, opts_?) => {
+      return new Promise((resolve, reject) => {
+        const opts: ServiceInvokeOptions = Object.assign<
+          ServiceInvokeOptions,
+          Partial<ServiceInvokeOptions>
+        >(
+          {
+            force: false,
+          },
+          opts_
+        );
+
+        if (hasInitialized !== true || opts.force === true) {
+          setLoading(true);
+          setError(null);
+          setResponse(null);
+          axios(Object.assign(option.ajax, { data }))
+            .then((response) => {
+              setHasInitialized(true);
+              setResponse(response.data);
+              setLoading(false);
+              resolve(response.data);
+            })
+            .catch((err) => {
+              setError(err);
+              setLoading(false);
+              reject(err);
+            });
+        } else {
+          resolve(false);
+        }
+      });
+    },
+  };
+};
+
+const useContextCreator: (context: ApplicationContext) => ContextHook = (
+  context: ApplicationContext
+) => () => {
+  return useServiceCreator(
+    'default',
+    context
+  )({
+    serviceId: '___context',
+    useRedux: true,
+  });
+};
+
+const mapRouteCreator = (
+  moduleId: string,
+  context: ApplicationContext
+): MapRoute => (path, Component, layoutRefId = null, opts = {}) => {
+  let Layout: any = null;
+  if (layoutRefId) {
+    Layout = context.take(moduleId, layoutRefId, 'layouts');
+  }
+
+  const routeConfigs = context.getData<RouteConfigItem[]>(
+    'default',
+    'routeConfigs',
+    []
+  );
+  routeConfigs.push({
+    path,
+    component: Layout
+      ? (props: any) => (
+          <Layout {...props}>
+            <Component {...props} />
+          </Layout>
+        )
+      : Component,
+    ...opts,
+  });
+};
+
+export const Routers = {
+  ProtectedRoute: createComponent(
+    ({ component, use, currentModuleId, children, ...rest }) => {
+      const { useContext } = use(Frontend);
+      const { hasInitialized, isLoading, response } = useContext();
+      let isAuthenticated: boolean = false;
+      try {
+        if (hasInitialized === true && isLoading === false) {
+          if (response) {
+            isAuthenticated = response.meta.isAuthenticated;
+          }
+        }
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      const Component: any = component;
+      return (
+        <Route
+          {...rest}
+          render={({ location }) =>
+            isAuthenticated ? (
+              <Component {...rest} />
+            ) : (
+              <Redirect
+                to={{
+                  pathname: '/auth/login',
+                  state: { from: location },
+                }}
+              />
+            )
+          }
+        />
+      );
+    }
+  ),
+  AuthRoute: createComponent(
+    ({ component, use, currentModuleId, children, ...rest }) => {
+      const { useContext } = use(Frontend);
+      const { hasInitialized, isLoading, response } = useContext();
+      let isAuthenticated: boolean = false;
+      try {
+        if (hasInitialized === true && isLoading === false) {
+          if (response) {
+            isAuthenticated = response.meta.isAuthenticated;
+          }
+        }
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      const Component: any = component;
+      return (
+        <Route
+          {...rest}
+          render={({ location }) =>
+            !isAuthenticated ? (
+              <Component {...rest} />
+            ) : (
+              <Redirect
+                to={{
+                  pathname: '/',
+                  state: { from: location },
+                }}
+              />
+            )
+          }
+        />
+      );
+    }
+  ),
+};
+
 export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
-    useStore: (refId, defaultVal = null) => {
-      const ref = extractRef(refId, moduleId);
-      const fullyQualifiedRefId = `${ref.moduleName}/${ref.refId}`;
-      const store = context.getData<Store>('default', 'store');
-      const [localStateVal, updateLocalStateVal] = React.useState(
-        store.getState()[fullyQualifiedRefId] || defaultVal
-      );
-
-      React.useEffect(() => {
-        const unsubscribe = store.subscribe(() => {
-          const updatedVal = store.getState()[fullyQualifiedRefId];
-          if (localStateVal !== updatedVal) {
-            updateLocalStateVal(updatedVal);
-          }
-        });
-
-        return () => unsubscribe();
-      }, [fullyQualifiedRefId]);
-
-      return [
-        localStateVal,
-        (value) => {
-          store.dispatch({
-            type: 'SET_ITEM',
-            payload: {
-              value,
-              key: fullyQualifiedRefId,
-            },
-          });
-        },
-      ];
-    },
+    useService: useServiceCreator(moduleId, context),
+    useStore: useStoreCreator(moduleId, context),
+    useContext: useContextCreator(context),
     useComponent: (refId, componentCreator = null) => {
       return context.useDataFromContext(
         moduleId,
@@ -236,12 +670,6 @@ export const Frontend = createPointer<Ark.MERN.React>(
         false,
         'components'
       );
-      // findResourceByRef(
-      //     'Component',
-      //     refId,
-      //     moduleId,
-      //     context,
-      // );
     },
     useLayout: (refId, componentCreator = null) => {
       return context.useDataFromContext(
@@ -259,40 +687,30 @@ export const Frontend = createPointer<Ark.MERN.React>(
         false,
         'layouts'
       );
-      //   findResourceByRef(
-      //     'Layout',
-      //     refId,
-      //     moduleId,
-      //     context,
-      //     componentCreator ? arkToReactComponent(
-      //         componentCreator,
-      //         refId,
-      //         moduleId,
-      //         controller,
-      //         context
-      //     ) : null
-      // )
     },
-    mapRoute: (path, Component, layoutRefId = null, opts = {}) => {
-      let Layout: any = null;
-      if (layoutRefId) {
-        Layout = context.take(moduleId, layoutRefId, 'layouts');
-      }
-
-      const routes: any = context.getData(moduleId, 'routes', {});
-      routes[path] = Object.assign<Partial<RouteProps>, RouteProps>(
-        {
-          component: Layout
-            ? (props: any) => (
-                <Layout {...props}>
-                  <Component {...props} />
-                </Layout>
-              )
-            : Component,
-          path,
-        },
-        opts
-      );
+    mapRoute: mapRouteCreator(moduleId, context),
+    useRouteConfig: (configCreator) => {
+      controller.ensureInitializing();
+      controller.run(() => {
+        const routeConfigs = context.getData<RouteConfigItem[]>(
+          'default',
+          'routeConfigs',
+          []
+        );
+        routeConfigs.push(
+          ...configCreator().map((item) => {
+            const RawComponent = item.component;
+            item.component = item.layout
+              ? (props: any) => (
+                  <item.layout {...props}>
+                    <RawComponent {...props} />
+                  </item.layout>
+                )
+              : item.component;
+            return item;
+          })
+        );
+      });
     },
   })
 );
