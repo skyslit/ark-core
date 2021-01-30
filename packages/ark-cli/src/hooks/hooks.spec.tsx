@@ -18,20 +18,25 @@ describe('master', () => {
     fs.mkdirSync(testDirectory, { recursive: true });
   });
 
-  test('should land in automator', async () => {
-    const { result } = renderHook(() =>
-      useApp({
-        cwd: testDirectory,
-      })
-    );
+  test(
+    'should land in automator',
+    async () => {
+      const { result } = renderHook(() =>
+        useApp({
+          cwd: testDirectory,
+        })
+      );
 
-    await act(async () => {
-      await result.current.boot();
-    });
+      await act(async () => {
+        result.current.boot();
+        await new Promise((r) => setTimeout(r, 3000));
+      });
 
-    expect(result.current.screen).toStrictEqual('automator');
-    expect(result.current.isJobActive).toStrictEqual(true);
-  });
+      expect(result.current.screen).toStrictEqual('automator');
+      expect(result.current.isJobActive).toStrictEqual(true);
+    },
+    10 * 1000
+  );
 
   test('should land in panel', async () => {
     const manager = new ManifestManager(testDirectory);
