@@ -126,6 +126,7 @@ describe('ServiceController', () => {
     alias: 'service',
     method: 'post',
     path: `/__services/${CreateProject.name}`,
+    policyExtractorRefs: [],
   });
 
   controller.register({
@@ -133,6 +134,7 @@ describe('ServiceController', () => {
     alias: 'service',
     method: 'post',
     path: `/__services/${GetAllProjects.name}`,
+    policyExtractorRefs: [],
   });
 
   controller.register({
@@ -140,6 +142,7 @@ describe('ServiceController', () => {
     alias: 'service',
     method: 'post',
     path: `/__services/${GetProject.name}`,
+    policyExtractorRefs: [],
   });
 
   controller.register({
@@ -147,6 +150,7 @@ describe('ServiceController', () => {
     alias: 'service',
     method: 'post',
     path: `/__services/${UpdateProjectOwner.name}/:projectId`,
+    policyExtractorRefs: [],
   });
 
   controller.register({
@@ -154,6 +158,7 @@ describe('ServiceController', () => {
     alias: 'service',
     method: 'post',
     path: `/__services/${UpdateProjectById.name}/:projectId`,
+    policyExtractorRefs: [],
   });
 
   controller.register({
@@ -161,6 +166,7 @@ describe('ServiceController', () => {
     alias: 'service',
     method: 'post',
     path: `/__services/${DeleteProject.name}`,
+    policyExtractorRefs: [],
   });
 
   test('user without delete policy should not see delete link', async () => {
@@ -625,5 +631,27 @@ describe('error handling', () => {
 
     expect(output.responseCode).toStrictEqual(500);
     expect(output.response.message).toStrictEqual('Intentional error');
+  });
+});
+
+describe('use()', () => {
+  test('use() should be truthy', async () => {
+    let useFn = null;
+    const TestService = defineService('TestService', (options) => {
+      useFn = options.use;
+      options.defineLogic((opts) => {
+        return opts.success({
+          message: 'Test',
+        });
+      });
+    });
+
+    const output = await runService(TestService);
+
+    expect(output.result.type).toStrictEqual('success');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Test');
+    expect(useFn).toBeTruthy();
   });
 });
