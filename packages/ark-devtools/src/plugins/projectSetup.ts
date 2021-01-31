@@ -79,7 +79,7 @@ export default {
          * Install deps
          */
         opts.registerAction('INSTALL_DEP', function* (opts) {
-          // yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
+          yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
         });
 
         /**
@@ -463,34 +463,23 @@ export default {
               }
             });
 
-          let gitTestMode: boolean = false;
-          try {
-            gitTestMode = process.env.git_testmode === 'true';
-          } catch (e) {
-            /** Do nothing */
-          }
-
-          if (gitTestMode === false) {
-            // Add git setup to the queue
-            yield () =>
-              new Promise((resolve) => {
-                git
-                  .status()
-                  .then((stat) => {
-                    resolve(stat);
-                  })
-                  .catch((err) => {
-                    if (/not a git/.test(err.message)) {
-                      opts.task.push('SETUP_GIT', null, {
-                        title: 'setting up a repository',
-                      });
-                    }
-                    resolve(false);
-                  });
-              });
-          } else {
-            console.log('skipping git operation on test mode');
-          }
+          // Add git setup to the queue
+          yield () =>
+            new Promise((resolve) => {
+              git
+                .status()
+                .then((stat) => {
+                  resolve(stat);
+                })
+                .catch((err) => {
+                  if (/not a git/.test(err.message)) {
+                    opts.task.push('SETUP_GIT', null, {
+                      title: 'setting up a repository',
+                    });
+                  }
+                  resolve(false);
+                });
+            });
         });
       },
       true
