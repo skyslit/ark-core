@@ -79,7 +79,7 @@ export default {
          * Install deps
          */
         opts.registerAction('INSTALL_DEP', function* (opts) {
-          yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
+          // yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
         });
 
         /**
@@ -105,8 +105,20 @@ export default {
         opts.registerAction('SETUP_GIT', function* (opts) {
           const git: SimpleGit = gitP(opts.automator.cwd);
 
+          let gitTestMode: boolean = false;
+          try {
+            gitTestMode = process.env.git_testmode === 'true';
+          } catch (e) {
+            /** Do nothing */
+          }
+
           // Setup git
           yield git.init();
+
+          if (gitTestMode === true) {
+            yield git.addConfig('user.name', 'Test User');
+            yield git.addConfig('user.email', 'auto-tester@skyslit.com');
+          }
 
           // Git add
           yield git.add('./*');
