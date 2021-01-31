@@ -4,7 +4,7 @@ import rimraf from 'rimraf';
 import { Automator } from '../core/Automator';
 import commentJson from 'comment-json';
 
-type ParsePreset = 'raw' | 'json' | 'ts|tsx' | 'custom';
+type ParsePreset = 'raw' | 'raw-lines' | 'json' | 'ts|tsx' | 'custom';
 
 type Parser<O> = {
   encode: (input: O) => string;
@@ -18,22 +18,34 @@ const RawParser: Parser<string> = {
   decode: (input) => input,
 };
 
+const RawLineParser: Parser<string[]> = {
+  encode: (input) => input.join('\n'),
+  decode: (input) => {
+    if (input) {
+      return input.split('\n');
+    }
+    return [];
+  },
+};
+
 const JSONParser: Parser<any> = {
   encode: (input) => commentJson.stringify(input, null, 2),
   decode: (input) => {
     if (input) {
       return commentJson.parse(input, undefined, false);
     }
-    return JSON.parse(input);
+    return {};
   },
 };
 
 const FileParser: ParserMap = {
   json: JSONParser,
   raw: RawParser,
+  'raw-lines': RawLineParser,
 };
 
 export type ContextType = {
+  exists: boolean;
   content: any;
   raw: string;
   saveFile: () => boolean;
@@ -70,10 +82,14 @@ export const useFileSystem = (automator: Automator) => ({
   useFile: (p: string) => {
     const filePath = path.join(automator.cwd, p);
     let data: any = null;
+    let exists: boolean = false;
     return {
       readFromDisk: () => {
         if (fs.existsSync(filePath)) {
           data = fs.readFileSync(filePath, 'utf8');
+          exists = true;
+        } else {
+          data = '';
         }
         return {
           parse: (preset: ParsePreset, custom?: Parser<any>) => {
@@ -90,6 +106,7 @@ export const useFileSystem = (automator: Automator) => ({
             }
 
             const context: ContextType = {
+              exists,
               automator,
               content: parser.decode(data),
               raw: data,

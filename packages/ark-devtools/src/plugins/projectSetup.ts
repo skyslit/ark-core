@@ -1,7 +1,7 @@
 import { createPlugin } from '../utils/ManifestManager';
 import { useFileSystem } from '../automation/services/FileIO';
 import { openPackageJson } from '../automation/helpers/package_json';
-// import platformVersionManager from '../utils/PlatformVersionManager';
+import gitP, { SimpleGit } from 'simple-git/promise';
 
 export default {
   setup: () =>
@@ -34,7 +34,18 @@ export default {
          * Install typescript
          */
         opts.registerAction('INSTALL_TYPESCRIPT', function* (opts) {
-          yield opts.automator.runOnCli('npm', ['install', 'typescript']);
+          yield opts.automator.runOnCli('npm', [
+            'install',
+            'typescript',
+            '--save-dev',
+          ]);
+        });
+
+        /**
+         * Install deps
+         */
+        opts.registerAction('INSTALL_DEP', function* (opts) {
+          yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
         });
 
         /**
@@ -56,8 +67,20 @@ export default {
             });
         });
 
+        opts.registerAction('SETUP_GIT', function* (opts) {
+          const git: SimpleGit = gitP(opts.automator.cwd);
+
+          // Initialise repository
+          yield git.init();
+        });
+
+        // Evaluation
         opts.evaluate(function* (opts) {
+          const git: SimpleGit = gitP(opts.automator.cwd);
+
           const { existFile, useFile } = useFileSystem(opts.automator);
+
+          // Initialize npm package
           if (!existFile('package.json')) {
             opts.task.push(
               'NPM_INIT',
@@ -75,6 +98,7 @@ export default {
             );
           }
 
+          // Install dependencies
           yield useFile('package.json')
             .readFromDisk()
             .parse('json')
@@ -87,11 +111,280 @@ export default {
               }
             });
 
+          // Configure dependencies
           if (!existFile('tsconfig.json')) {
             opts.task.push('INIT_TYPESCRIPT', null, {
               title: 'configuring typescript',
             });
           }
+
+          // Touch .gitignore
+          yield useFile('.gitignore')
+            .readFromDisk()
+            .parse('raw-lines')
+            .act(function* (fileOpts) {
+              const content: string[] = fileOpts.content;
+
+              const addEntry = (entry: string) => {
+                const exists =
+                  content.filter(
+                    (e) => e.toLowerCase().indexOf(entry.toLowerCase()) > -1
+                  ).length > 0;
+
+                if (exists === false) {
+                  content.push(entry);
+                }
+              };
+
+              // Dependencies
+              addEntry('node_modules');
+
+              // Test
+              addEntry('coverage');
+
+              // Logs
+              addEntry('logs');
+              addEntry('*.log');
+              addEntry('npm-debug.log*');
+              addEntry('yarn-debug.log*');
+              addEntry('yarn-error.log*');
+              addEntry('lerna-debug.log*');
+
+              // Cache
+              addEntry('.npm');
+              addEntry('.eslintcache');
+
+              // Build
+              addEntry('build');
+
+              // Utils
+              addEntry('.DS_Store');
+
+              fileOpts.saveFile();
+            });
+
+          // Check linter
+          yield useFile('.eslintrc.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              if (!fileOpts.exists) {
+                fileOpts.content.root = true;
+                fileOpts.content.parser = '@typescript-eslint/parser';
+                fileOpts.content.plugins = ['@typescript-eslint'];
+                fileOpts.content.extends = [
+                  'google',
+                  'prettier',
+                  'prettier/@typescript-eslint',
+                  'prettier/react',
+                ];
+
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: [
+                      '@typescript-eslint/eslint-plugin@^4.8.2',
+                      '@typescript-eslint/parser@^4.8.2',
+                      'eslint@7.14.0',
+                      'eslint-config-google@^0.14.0',
+                      'eslint-config-prettier@^7.1.0',
+                      '--save-dev',
+                    ],
+                  },
+                  {
+                    title: 'installing eslint, plugins and presets...',
+                  }
+                );
+
+                fileOpts.saveFile();
+              }
+            });
+
+          yield useFile('.eslintignore')
+            .readFromDisk()
+            .parse('raw-lines')
+            .act(function* (fileOpts) {
+              const content: string[] = fileOpts.content;
+
+              const addEntry = (entry: string) => {
+                const exists =
+                  content.filter(
+                    (e) => e.toLowerCase().indexOf(entry.toLowerCase()) > -1
+                  ).length > 0;
+
+                if (exists === false) {
+                  content.push(entry);
+                }
+              };
+
+              addEntry('build');
+              addEntry('node_modules');
+              addEntry('coverage');
+
+              fileOpts.saveFile();
+            });
+
+          // Add prettier
+          yield useFile('.prettierignore')
+            .readFromDisk()
+            .parse('raw-lines')
+            .act(function* (fileOpts) {
+              const content: string[] = fileOpts.content;
+
+              const addEntry = (entry: string) => {
+                const exists =
+                  content.filter(
+                    (e) => e.toLowerCase().indexOf(entry.toLowerCase()) > -1
+                  ).length > 0;
+
+                if (exists === false) {
+                  content.push(entry);
+                }
+              };
+
+              addEntry('build');
+              addEntry('node_modules');
+              addEntry('coverage');
+
+              fileOpts.saveFile();
+            });
+
+          // Install prettier
+          yield useFile('.prettierrc.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              if (!fileOpts.exists) {
+                fileOpts.content.singleQuote = true;
+
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: ['prettier', '--save-dev', '--save-exact'],
+                  },
+                  {
+                    title: 'installing prettier',
+                  }
+                );
+
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: ['pretty-quick', 'husky', '--save-dev'],
+                  },
+                  {
+                    title: 'installing husky',
+                  }
+                );
+
+                fileOpts.saveFile();
+              }
+            });
+
+          // Configure prettier hook
+          yield useFile('package.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              const content: any = fileOpts.content;
+              if (content) {
+                if (!content.husky) {
+                  content.husky = {};
+                }
+
+                if (!content.husky.hooks) {
+                  content.husky.hooks = {};
+                }
+
+                if (!content.husky.hooks['pre-commit']) {
+                  content.husky.hooks['pre-commit'] = 'pretty-quick --staged';
+                  fileOpts.saveFile();
+                }
+              }
+            });
+
+          // // Install core peer dependencies
+          // yield useFile('package.json')
+          //   .readFromDisk()
+          //   .parse('json')
+          //   .act(function* (fileOpts) {
+          //     const editor = openPackageJson(fileOpts);
+          //     const args: string[] = [];
+
+          //     if (!editor.hasDependency('@babel/core@^7.0.0')) {
+          //       args.push('@babel/core@^7.0.0');
+          //     }
+
+          //     if (!editor.hasDependency('@babel/core@^7.0.0')) {
+          //       args.push('@babel/core@^7.0.0');
+          //     }
+
+          //     if (args.length > 0) {
+          //       opts.task.push('INSTALL_DEP', {
+          //         deps: [
+          //           ...args,
+          //           '--save-dev'
+          //         ]
+          //       }, {
+          //         title: 'installing core dependencies'
+          //       });
+          //     }
+          //   });
+
+          // Install Ark
+          yield useFile('package.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              const editor = openPackageJson(fileOpts);
+              const args: string[] = [];
+
+              if (!editor.hasDependency('@skyslit/ark-core')) {
+                args.push('@skyslit/ark-core');
+              }
+
+              if (!editor.hasDependency('@skyslit/ark-backend')) {
+                args.push('@skyslit/ark-backend');
+              }
+
+              if (!editor.hasDependency('@skyslit/ark-frontend')) {
+                args.push('@skyslit/ark-frontend');
+              }
+
+              if (!editor.hasDependency('fpz')) {
+                args.push('fpz');
+              }
+
+              if (args.length > 0) {
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: [...args],
+                  },
+                  {
+                    title: 'installing ark',
+                  }
+                );
+              }
+            });
+
+          // Add git setup to the queue
+          yield () =>
+            new Promise((resolve) => {
+              git
+                .status()
+                .then((stat) => {
+                  resolve(stat);
+                })
+                .catch((err) => {
+                  if (/not a git/.test(err.message)) {
+                    opts.task.push('SETUP_GIT', null, {
+                      title: 'setting up a repository',
+                    });
+                  }
+                  resolve(false);
+                });
+            });
         });
       },
       true

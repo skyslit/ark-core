@@ -10,7 +10,7 @@ import path from 'path';
 
 const testDir = path.join(
   __dirname,
-  '../../../__test__/test-artifacts/setup-project-2'
+  '../../../__test__/test-artifacts/sync-project-test'
 );
 
 // jest.mock('fs', () => {

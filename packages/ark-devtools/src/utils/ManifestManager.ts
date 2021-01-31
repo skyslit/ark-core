@@ -45,11 +45,9 @@ export type RNApp = {
 };
 
 export interface Manifest {
-  name?: string;
-  Roles?: Array<Role>;
-  ServiceEndpoints?: Array<ServiceEndpoint>;
-  WebApps?: Array<WebApp>;
-  RNApps?: Array<RNApp>;
+  name: string;
+  enableCodeFormatting?: boolean;
+  [key: string]: any;
 }
 
 export interface IManifestAutomationControllerPlugin {
@@ -292,7 +290,7 @@ export function createPlugin(
 export class ManifestManager {
   public manifestType: ManifestType;
   public cwd: string;
-  public configuration: Manifest;
+  private configuration: Manifest;
   public isLoaded: boolean;
   /**
    * Constructor
@@ -309,6 +307,25 @@ export class ManifestManager {
       this.configuration = null;
       this.isLoaded = false;
     }
+  }
+
+  /**
+   * Get effective configuration
+   * @return {Manifest}
+   */
+  getEffectiveConfiguration() {
+    const config: Manifest = JSON.parse(
+      JSON.stringify(
+        Object.assign<Manifest, Manifest>(
+          ManifestUtils.createManifest({}),
+          this.configuration
+        )
+      )
+    );
+
+    config.enableCodeFormatting = true;
+
+    return config;
   }
 
   /**
@@ -400,9 +417,10 @@ export class ManifestManager {
    * @return {Generator}
    */
   *sync(automator: Automator, controller?: ManifestController): Generator {
+    const config = this.getEffectiveConfiguration();
     const manifestType = this.manifestType;
     controller = controller || useManifestController();
-    const traverseResult = traverse(this.configuration);
+    const traverseResult = traverse(config);
     const paths = traverseResult.paths().filter((p) => p.length > 0);
 
     let i = 0;
@@ -412,11 +430,7 @@ export class ManifestManager {
       let j = 0;
       for (j = 0; j < plugins.length; j++) {
         yield () =>
-          plugins[j].run(
-            automator,
-            traverseResult.get(paths[i]),
-            this.configuration
-          );
+          plugins[j].run(automator, traverseResult.get(paths[i]), config);
       }
     }
 
@@ -431,8 +445,7 @@ export const ManifestUtils = {
   ) => {
     return Object.assign<Manifest, Partial<Manifest>, Partial<Manifest>>(
       {
-        Roles: [],
-        ServiceEndpoints: [],
+        name: '',
       },
       defaultOpts || {},
       opts

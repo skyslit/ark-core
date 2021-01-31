@@ -66,6 +66,7 @@
     "rimraf": "^3.0.2",
     "sass": "^1.32.5",
     "sass-loader": "^10.1.1",
+    "simple-git": "^2.31.0",
     "style-loader": "^2.0.0",
     "tiny-glob": "^0.2.8",
     "traverse": "^0.6.6",
