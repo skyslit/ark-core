@@ -13,6 +13,8 @@ const testDir = path.join(
   '../../../../../__ark_automated_test_artifacts__/plugin-e2e'
 );
 
+process.env.git_testmode = 'true';
+
 beforeEach(() => {
   rimraf.sync(testDir);
   fs.mkdirSync(testDir, { recursive: true });
