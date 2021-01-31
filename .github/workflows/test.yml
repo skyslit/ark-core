@@ -20,6 +20,11 @@ jobs:
         with:
           node-version: '12.x'
 
+      - name: Git Identity
+        run: |
+          git config --global user.name 'CI'
+          git config --global user.email 'ci@bots.skyslit.com'
+
       - name: Install Dependencies
         run: |
           npm install

@@ -79,7 +79,7 @@ export default {
          * Install deps
          */
         opts.registerAction('INSTALL_DEP', function* (opts) {
-          yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
+          // yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
         });
 
         /**
@@ -87,10 +87,7 @@ export default {
          */
         opts.registerAction('INIT_TYPESCRIPT', function* (opts) {
           const { useFile } = useFileSystem(opts.automator);
-          yield opts.automator.runOnCli('node', [
-            './node_modules/.bin/tsc',
-            '--init',
-          ]);
+          yield opts.automator.runLocalPackage('tsc', ['--init']);
 
           yield useFile('tsconfig.json')
             .readFromDisk()
