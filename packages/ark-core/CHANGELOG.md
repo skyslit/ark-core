@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.2.0](https://github.com/skyslit/ark/compare/v2.1.0...v2.2.0) (2021-01-31)
+
+
+### Features
+
+* added support for use() in service definition ([7e607ef](https://github.com/skyslit/ark/commit/7e607efff057813de0afd58429547ae8adba1848))
+
+
+
+
+
 # [2.1.0](https://github.com/skyslit/ark/compare/v2.0.13...v2.1.0) (2021-01-30)
 
 

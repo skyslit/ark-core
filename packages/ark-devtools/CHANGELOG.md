@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.2.0](https://github.com/skyslit/ark/compare/v2.1.0...v2.2.0) (2021-01-31)
+
+
+### Bug Fixes
+
+* added semver lock to ark packages ([be9237c](https://github.com/skyslit/ark/commit/be9237c1a0a884f0765764f486745f663588b451))
+* downgraded react from 17.x to 16.x ([aa62937](https://github.com/skyslit/ark/commit/aa629374373280f7f8b4787aabc5e2f535889bce))
+
+
+### Features
+
+* added prettier and eslint support ([c11a529](https://github.com/skyslit/ark/commit/c11a52957d27869f2d317b4429a4a3d4d7432c6e))
+* added setupMainService automator ([5966358](https://github.com/skyslit/ark/commit/5966358a694def2d57bb14f5623c6c14c78f3d6a))
+
+
+
+
+
 # [2.1.0](https://github.com/skyslit/ark/compare/v2.0.13...v2.1.0) (2021-01-30)
 
 
