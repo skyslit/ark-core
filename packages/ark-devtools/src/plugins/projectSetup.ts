@@ -13,6 +13,8 @@ export default {
       /^serviceId$/,
       (opts) => {
         opts.evaluate(function* (opts) {
+          opts.automator.title = 'checking server...';
+
           const { useFile } = useFileSystem(opts.automator);
           yield useFile(`src/server/${opts.data}.server.ts`)
             .readFromDisk()
@@ -68,7 +70,7 @@ export default {
         opts.registerAction('INSTALL_TYPESCRIPT', function* (opts) {
           yield opts.automator.runOnCli('npm', [
             'install',
-            'typescript',
+            'typescript@3.9.7',
             '--save-dev',
           ]);
         });
@@ -95,6 +97,7 @@ export default {
             .parse('json')
             .act(function* (fileOpts) {
               fileOpts.content.compilerOptions.jsx = 'react';
+              fileOpts.content.compilerOptions.strict = false;
               fileOpts.saveFile();
             });
         });
@@ -102,12 +105,19 @@ export default {
         opts.registerAction('SETUP_GIT', function* (opts) {
           const git: SimpleGit = gitP(opts.automator.cwd);
 
-          // Initialise repository
+          // Setup git
           yield git.init();
+
+          // Git add
+          yield git.add('./*');
+
+          // Git commit
+          yield git.commit('chore: initial commit');
         });
 
         // Evaluation
         opts.evaluate(function* (opts) {
+          opts.automator.title = 'checking project structure...';
           const git: SimpleGit = gitP(opts.automator.cwd);
 
           const { existFile, useFile } = useFileSystem(opts.automator);
@@ -341,7 +351,8 @@ export default {
             .parse('json')
             .act(function* (fileOpts) {
               const editor = openPackageJson(fileOpts);
-              const args: string[] = [];
+              const depArgs: string[] = [];
+              const typeDepArgs: string[] = [];
 
               const depMap: { [key: string]: string } = {
                 // Backend
@@ -357,20 +368,47 @@ export default {
                 axios: '^0.21.1',
               };
 
+              const typesDepMap: { [key: string]: string } = {
+                '@types/cookie-parser': '^1.4.2',
+                '@types/express': '^4.17.9',
+                '@types/mongoose': '^5.10.0',
+                '@types/react': '^16.0.1',
+                '@types/react-dom': '^16.0.1',
+                '@types/react-router-dom': '^5.1.6',
+              };
+
               Object.keys(depMap).forEach((key) => {
                 if (!editor.hasDependency(key)) {
-                  args.push(`${key}@${depMap[key]}`);
+                  depArgs.push(`${key}@${depMap[key]}`);
                 }
               });
 
-              if (args.length > 0) {
+              Object.keys(typesDepMap).forEach((key) => {
+                if (!editor.hasDependency(key)) {
+                  typeDepArgs.push(`${key}@${typesDepMap[key]}`);
+                }
+              });
+
+              if (depArgs.length > 0) {
                 opts.task.push(
                   'INSTALL_DEP',
                   {
-                    deps: [...args],
+                    deps: [...depArgs],
                   },
                   {
                     title: 'installing core dependencies',
+                  }
+                );
+              }
+
+              if (typeDepArgs.length > 0) {
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: [...typeDepArgs, '--save-dev'],
+                  },
+                  {
+                    title: 'installing @types',
                   }
                 );
               }
