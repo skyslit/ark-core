@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import path from 'path';
 import execa from 'execa';
+import isWindows from 'is-windows';
 
 export type JobEvents = 'init' | 'started' | 'progress-update' | 'ended';
 
@@ -207,6 +208,25 @@ export class Automator {
     this.title = title;
     this.description = description;
     this.status = 'waiting';
+  }
+
+  /**
+   * Run package locally
+   * @param {string} name
+   * @param {string[]} args
+   * @param {execa.Options<string>} options
+   */
+  async runLocalPackage(
+    name: string,
+    args?: readonly string[],
+    options?: execa.Options<string>
+  ) {
+    const path: string = `./node_modules/.bin/${name}`;
+    if (isWindows()) {
+      return this.runOnCli(path, args, options);
+    }
+
+    return this.runOnCli('node', [path, ...args], options);
   }
 
   /**
