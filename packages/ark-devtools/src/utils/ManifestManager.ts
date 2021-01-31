@@ -45,8 +45,9 @@ export type RNApp = {
 };
 
 export interface Manifest {
-  name: string;
+  name?: string;
   enableCodeFormatting?: boolean;
+  serviceId?: string;
   [key: string]: any;
 }
 
@@ -317,7 +318,9 @@ export class ManifestManager {
     const config: Manifest = JSON.parse(
       JSON.stringify(
         Object.assign<Manifest, Manifest>(
-          ManifestUtils.createManifest({}),
+          ManifestUtils.createManifest({
+            serviceId: 'main',
+          }),
           this.configuration
         )
       )
@@ -444,9 +447,7 @@ export const ManifestUtils = {
     defaultOpts?: Partial<Manifest>
   ) => {
     return Object.assign<Manifest, Partial<Manifest>, Partial<Manifest>>(
-      {
-        name: '',
-      },
+      {},
       defaultOpts || {},
       opts
     );

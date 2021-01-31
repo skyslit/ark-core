@@ -48,12 +48,12 @@
   },
   "peerDependencies": {
     "express": "^4.17.1",
-    "joi": "17.3.0",
+    "joi": "^17.3.0",
     "mongoose": "^5.10.15",
     "react": "^16.0.1",
     "react-dom": "^16.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "5.2.0"
+    "react-router-dom": "^5.2.0"
   },
   "dependencies": {
     "cookie-parser": "^1.4.5",

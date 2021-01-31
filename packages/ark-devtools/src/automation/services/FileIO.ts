@@ -111,6 +111,10 @@ export const useFileSystem = (automator: Automator) => ({
               content: parser.decode(data),
               raw: data,
               saveFile() {
+                const dirname = path.dirname(filePath);
+                if (!fs.existsSync(dirname)) {
+                  fs.mkdirSync(dirname, { recursive: true });
+                }
                 const dataToSave = parser.encode(context.content);
                 fs.writeFileSync(filePath, dataToSave);
                 return true;

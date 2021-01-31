@@ -2,8 +2,40 @@ import { createPlugin } from '../utils/ManifestManager';
 import { useFileSystem } from '../automation/services/FileIO';
 import { openPackageJson } from '../automation/helpers/package_json';
 import gitP, { SimpleGit } from 'simple-git/promise';
+import ejs from 'ejs';
+import path from 'path';
+import fs from 'fs';
 
 export default {
+  setupMainService: () =>
+    createPlugin(
+      'package',
+      /^serviceId$/,
+      (opts) => {
+        opts.evaluate(function* (opts) {
+          const { useFile } = useFileSystem(opts.automator);
+          yield useFile(`src/server/${opts.data}.server.ts`)
+            .readFromDisk()
+            .parse('raw')
+            .act(function* (fileOpts) {
+              if (!fileOpts.exists) {
+                fileOpts.content = ejs.render(
+                  fs.readFileSync(
+                    path.join(
+                      __dirname,
+                      '../../assets/Backend/entry.template.ejs'
+                    ),
+                    'utf-8'
+                  ),
+                  {}
+                );
+                fileOpts.saveFile();
+              }
+            });
+        });
+      },
+      true
+    ),
   setup: () =>
     createPlugin(
       'package',
@@ -303,33 +335,47 @@ export default {
               }
             });
 
-          // // Install core peer dependencies
-          // yield useFile('package.json')
-          //   .readFromDisk()
-          //   .parse('json')
-          //   .act(function* (fileOpts) {
-          //     const editor = openPackageJson(fileOpts);
-          //     const args: string[] = [];
+          // Install core peer dependencies
+          yield useFile('package.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              const editor = openPackageJson(fileOpts);
+              const args: string[] = [];
 
-          //     if (!editor.hasDependency('@babel/core@^7.0.0')) {
-          //       args.push('@babel/core@^7.0.0');
-          //     }
+              const depMap: { [key: string]: string } = {
+                // Backend
+                express: '^4.17.1',
+                joi: '17.3.0',
+                mongoose: '^5.10.15',
+                react: '^16.0.1',
+                'react-dom': '^16.0.1',
+                'react-helmet-async': '^1.0.7',
+                'react-router-dom': '5.2.0',
 
-          //     if (!editor.hasDependency('@babel/core@^7.0.0')) {
-          //       args.push('@babel/core@^7.0.0');
-          //     }
+                // Frontend
+                axios: '^0.21.1',
+              };
 
-          //     if (args.length > 0) {
-          //       opts.task.push('INSTALL_DEP', {
-          //         deps: [
-          //           ...args,
-          //           '--save-dev'
-          //         ]
-          //       }, {
-          //         title: 'installing core dependencies'
-          //       });
-          //     }
-          //   });
+              Object.keys(depMap).forEach((key) => {
+                const depId = `${key}@${depMap[key]}`;
+                if (!editor.hasDependency(depId)) {
+                  args.push(depId);
+                }
+              });
+
+              if (args.length > 0) {
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: [...args],
+                  },
+                  {
+                    title: 'installing core dependencies',
+                  }
+                );
+              }
+            });
 
           // Install Ark
           yield useFile('package.json')
@@ -365,6 +411,21 @@ export default {
                     title: 'installing ark',
                   }
                 );
+              }
+            });
+
+          // Add npm scripts
+          yield useFile('package.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              if (!fileOpts.content.scripts) {
+                fileOpts.content.scripts = {};
+              }
+
+              if (!fileOpts.content.scripts.start) {
+                fileOpts.content.scripts.start = 'ark start';
+                fileOpts.saveFile();
               }
             });
 
