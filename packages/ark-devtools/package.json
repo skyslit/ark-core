@@ -28,7 +28,7 @@
     "@types/jest": "^26.0.15",
     "@types/mini-css-extract-plugin": "^1.2.2",
     "@types/postcss-normalize": "^9.0.0",
-    "@types/react": "^17.0.0",
+    "@types/react": "^16.0.1",
     "@types/react-dom": "^17.0.0",
     "@types/react-router-dom": "^5.1.6",
     "@types/rimraf": "^3.0.0",
@@ -39,12 +39,11 @@
     "express": "^4.17.1",
     "memfs": "^3.2.0",
     "mongoose": "^5.10.15",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
+    "react": "^16.0.1",
+    "react-dom": "^16.0.1",
     "react-helmet-async": "^1.0.7",
     "react-router-dom": "5.2.0",
-    "supertest": "^6.0.1",
-    "unionfs": "^4.4.0"
+    "supertest": "^6.0.1"
   },
   "dependencies": {
     "@babel/core": "^7.12.3",
@@ -72,7 +71,8 @@
     "traverse": "^0.6.6",
     "webpack": "^5.15.0",
     "webpack-node-externals": "^2.5.2",
-    "yaml": "^1.10.0"
+    "yaml": "^1.10.0",
+    "unionfs": "^4.4.0"
   },
   "publishConfig": {
     "access": "public"

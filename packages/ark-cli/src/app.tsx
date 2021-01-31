@@ -15,6 +15,7 @@ export type AppPropType = {
   mode: Mode;
   keepAlive?: boolean;
   options?: commandLineArgs.CommandLineOptions;
+  isManagedRuntime?: boolean;
 };
 
 export default (props: AppPropType) => {
@@ -41,9 +42,14 @@ export default (props: AppPropType) => {
     options,
   });
 
-  let isManagedRuntime: boolean = false;
+  let _isManagedRuntime: boolean = false;
+
+  if (props.isManagedRuntime !== undefined) {
+    _isManagedRuntime = props.isManagedRuntime;
+  }
+
   if (mode === 'command') {
-    isManagedRuntime = true;
+    _isManagedRuntime = true;
     if (['sync'].indexOf(options.process) > -1) {
       // Processes
       useEffect(() => {
@@ -60,9 +66,11 @@ export default (props: AppPropType) => {
       boot();
     }, []);
 
-    useEffect(() => {
-      process.stdin.resume();
-    }, [isJobActive]);
+    if (_isManagedRuntime === false) {
+      useEffect(() => {
+        process.stdin.resume();
+      }, [isJobActive]);
+    }
   }
 
   switch (screen) {
@@ -74,7 +82,7 @@ export default (props: AppPropType) => {
         <Automator
           hasPrompt={hasPrompt}
           activePrompt={activePrompt}
-          isManagedRuntime={isManagedRuntime}
+          isManagedRuntime={_isManagedRuntime}
           returnPromptResponse={returnPromptResponse}
           snapshot={jobSnapshot}
           hideJobPanel={hideJobPanel}

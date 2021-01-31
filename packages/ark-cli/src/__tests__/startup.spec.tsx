@@ -19,29 +19,37 @@ beforeEach(() => {
   fs.mkdirSync(testDirectory, { recursive: true });
 });
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const delay = (ms: number) => new Promise((r) => setTimeout(() => r(true), ms));
 
 describe('startup', () => {
-  test('empty directory', async () => {
-    const { lastFrame, stdin } = render(
-      <App cwd={testDirectory} mode="normal" />
-    );
+  test(
+    'empty directory',
+    async () => {
+      const { lastFrame, stdin, unmount, cleanup } = render(
+        <App cwd={testDirectory} mode="normal" isManagedRuntime={true} />
+      );
 
-    expect(lastFrame()).toContain('CLI Booting up');
+      expect(lastFrame()).toContain('CLI Booting up');
 
-    await delay(500);
+      await delay(500);
 
-    expect(lastFrame()).toContain('Project name');
+      expect(lastFrame()).toContain('Project name');
 
-    stdin.write('renamed-project');
-    await delay(100);
-    stdin.write(ENTER);
+      stdin.write('renamed-project');
+      await delay(100);
+      stdin.write(ENTER);
 
-    await delay(1000);
+      await delay(1000);
 
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(testDirectory, 'package.json'), 'utf-8')
-    );
-    expect(packageJson.name).toBe('renamed-project');
-  });
+      const yamlFileContent = fs.readFileSync(
+        path.join(testDirectory, 'package.manifest.yml'),
+        'utf-8'
+      );
+      expect(yamlFileContent).toContain('name: renamed-project');
+
+      unmount();
+      cleanup();
+    },
+    10 * 1000
+  );
 });
