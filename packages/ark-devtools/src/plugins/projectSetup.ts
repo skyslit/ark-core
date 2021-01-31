@@ -79,7 +79,7 @@ export default {
          * Install deps
          */
         opts.registerAction('INSTALL_DEP', function* (opts) {
-          yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
+          // yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
         });
 
         /**
