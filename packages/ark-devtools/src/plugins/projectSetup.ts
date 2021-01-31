@@ -358,9 +358,8 @@ export default {
               };
 
               Object.keys(depMap).forEach((key) => {
-                const depId = `${key}@${depMap[key]}`;
-                if (!editor.hasDependency(depId)) {
-                  args.push(depId);
+                if (!editor.hasDependency(key)) {
+                  args.push(`${key}@${depMap[key]}`);
                 }
               });
 
@@ -386,19 +385,19 @@ export default {
               const args: string[] = [];
 
               if (!editor.hasDependency('@skyslit/ark-core')) {
-                args.push('@skyslit/ark-core');
+                args.push('@skyslit/ark-core@^2.0.0');
               }
 
               if (!editor.hasDependency('@skyslit/ark-backend')) {
-                args.push('@skyslit/ark-backend');
+                args.push('@skyslit/ark-backend@^2.0.0');
               }
 
               if (!editor.hasDependency('@skyslit/ark-frontend')) {
-                args.push('@skyslit/ark-frontend');
+                args.push('@skyslit/ark-frontend@^2.0.0');
               }
 
               if (!editor.hasDependency('fpz')) {
-                args.push('fpz');
+                args.push('fpz@^2.0.0');
               }
 
               if (args.length > 0) {
