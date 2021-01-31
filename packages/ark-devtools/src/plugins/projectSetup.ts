@@ -79,7 +79,7 @@ export default {
          * Install deps
          */
         opts.registerAction('INSTALL_DEP', function* (opts) {
-          // yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
+          yield opts.automator.runOnCli('npm', ['install', ...opts.args.deps]);
         });
 
         /**
@@ -115,16 +115,13 @@ export default {
           // Setup git
           yield git.init();
 
-          if (gitTestMode === true) {
-            yield git.addConfig('user.name', 'Test User');
-            yield git.addConfig('user.email', 'auto-tester@skyslit.com');
+          if (gitTestMode === false) {
+            // Git add
+            yield git.add('./*');
+
+            // Git commit
+            yield git.commit('chore: initial commit');
           }
-
-          // Git add
-          yield git.add('./*');
-
-          // Git commit
-          yield git.commit('chore: initial commit');
         });
 
         // Evaluation
