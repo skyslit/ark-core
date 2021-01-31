@@ -105,23 +105,14 @@ export default {
         opts.registerAction('SETUP_GIT', function* (opts) {
           const git: SimpleGit = gitP(opts.automator.cwd);
 
-          let gitTestMode: boolean = false;
-          try {
-            gitTestMode = process.env.git_testmode === 'true';
-          } catch (e) {
-            /** Do nothing */
-          }
-
           // Setup git
           yield git.init();
 
-          if (gitTestMode === false) {
-            // Git add
-            yield git.add('./*');
+          // Git add
+          yield git.add('./*');
 
-            // Git commit
-            yield git.commit('chore: initial commit');
-          }
+          // Git commit
+          yield git.commit('chore: initial commit');
         });
 
         // Evaluation
@@ -475,23 +466,34 @@ export default {
               }
             });
 
-          // Add git setup to the queue
-          yield () =>
-            new Promise((resolve) => {
-              git
-                .status()
-                .then((stat) => {
-                  resolve(stat);
-                })
-                .catch((err) => {
-                  if (/not a git/.test(err.message)) {
-                    opts.task.push('SETUP_GIT', null, {
-                      title: 'setting up a repository',
-                    });
-                  }
-                  resolve(false);
-                });
-            });
+          let gitTestMode: boolean = false;
+          try {
+            gitTestMode = process.env.git_testmode === 'true';
+          } catch (e) {
+            /** Do nothing */
+          }
+
+          if (gitTestMode === false) {
+            // Add git setup to the queue
+            yield () =>
+              new Promise((resolve) => {
+                git
+                  .status()
+                  .then((stat) => {
+                    resolve(stat);
+                  })
+                  .catch((err) => {
+                    if (/not a git/.test(err.message)) {
+                      opts.task.push('SETUP_GIT', null, {
+                        title: 'setting up a repository',
+                      });
+                    }
+                    resolve(false);
+                  });
+              });
+          } else {
+            console.log('skipping git operation on test mode');
+          }
         });
       },
       true
