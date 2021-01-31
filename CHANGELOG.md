@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.2.2](https://github.com/skyslit/ark/compare/v2.2.1...v2.2.2) (2021-01-31)
+
+### Bug Fixes
+
+- added windows compatibility ([#11](https://github.com/skyslit/ark/issues/11)) ([04378f3](https://github.com/skyslit/ark/commit/04378f30b9a08dca67b78cfea6e41f51b3ab0293))
+
 ## [2.2.1](https://github.com/skyslit/ark/compare/v2.2.0...v2.2.1) (2021-01-31)
 
 **Note:** Version bump only for package root
