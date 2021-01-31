@@ -47,8 +47,6 @@
     "supertest": "^6.0.1"
   },
   "peerDependencies": {
-    "@skyslit/ark-core": "2.0.0",
-    "@skyslit/ark-frontend": "2.0.0",
     "express": "^4.17.1",
     "joi": "17.3.0",
     "mongoose": "^5.10.15",

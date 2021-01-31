@@ -23,12 +23,6 @@
     "ark": "build/index.js"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.3",
-    "@babel/plugin-proposal-class-properties": "^7.12.1",
-    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
-    "@babel/preset-env": "^7.12.1",
-    "@babel/preset-react": "^7.12.7",
-    "@babel/preset-typescript": "^7.12.1",
     "@testing-library/react-hooks": "^3.7.0",
     "@types/command-line-args": "^5.0.0",
     "@types/command-line-usage": "^5.0.1",
@@ -41,6 +35,12 @@
     "rimraf": "^3.0.2"
   },
   "dependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-react": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.1",
     "@skyslit/ark-devtools": "^2.1.0",
     "chalk": "^4.1.0",
     "command-line-args": "^5.1.1",
