@@ -1,4 +1,5 @@
 # Ark - Build Modular Web / Mobile Apps
+
 [![codecov](https://codecov.io/gh/skyslit/ark/branch/master/graph/badge.svg?token=DPCMWSIMYQ)](https://codecov.io/gh/skyslit/ark)
 ![Test](https://github.com/skyslit/ark/workflows/Test/badge.svg)
 ![Release to NPM](https://github.com/skyslit/ark/workflows/Release%20to%20NPM/badge.svg)
@@ -7,4 +8,4 @@
 
 Ark is an open source Javascript framework that let's you build modular business applications, licensed under the Apache License, Version 2.0 (the "License");
 
-(Work-in-progress)
+(Documentation Work-in-progress)

@@ -3,6 +3,7 @@ import fs from 'fs';
 import {
   ApplicationContext,
   ContextScope,
+  ControllerContext,
   createPointer,
   extractRef,
   ServiceResponse,
@@ -185,12 +186,16 @@ export function createReq(item: ServiceReq) {
  * @param {ContextScope<any>} scope
  * @param {string} htmlFileName
  * @param {string} moduleId
+ * @param {ControllerContext<any>} controller
+ * @param {ApplicationContext} context
  * @return {WebAppRenderer}
  */
 function createWebAppRenderer(
   scope: ContextScope<any>,
   htmlFileName: string,
-  moduleId: string
+  moduleId: string,
+  controller: ControllerContext<any>,
+  context: ApplicationContext
 ): WebAppRenderer {
   return {
     render: (initialState, reqs_: Array<ServiceReq> = []) => {
@@ -218,17 +223,27 @@ function createWebAppRenderer(
                     )
                   );
                 }
-                runService(registryItem.def, {
-                  input: Object.assign(req.input, item.input),
-                  isAuthenticated: req.isAuthenticated,
-                  user: req.user,
-                  policies: req.policies,
-                  body: req.body,
-                  params: req.params,
-                  query: req.query,
-                  req,
-                  res,
-                })
+                runService(
+                  registryItem.def,
+                  {
+                    input: Object.assign(req.input, item.input),
+                    isAuthenticated: req.isAuthenticated,
+                    user: req.user,
+                    policies: req.policies,
+                    body: req.body,
+                    params: req.params,
+                    query: req.query,
+                    req,
+                    res,
+                  },
+                  {
+                    moduleId,
+                    context,
+                    controllerContext: controller,
+                    aliasMode: registryItem.alias,
+                    policyExtractorRefs: registryItem.policyExtractorRefs,
+                  }
+                )
                   .then((val) => {
                     serviceState = {
                       ...serviceState,
@@ -463,6 +478,7 @@ export const useServiceCreator: (
       moduleId,
       alias: opts.alias,
       method: opts.method,
+      policyExtractorRefs: opts.policyExtractorRefs,
     });
   }
 
@@ -495,18 +511,7 @@ export const useServiceCreator: (
               controller: opts.controller,
               aliasMode: opts.alias,
               context: context,
-              policyExtractors: opts.policyExtractorRefs.reduce<
-                PolicyExtractor[]
-              >((acc, item) => {
-                acc.push(
-                  context.take<PolicyExtractor>(
-                    moduleId,
-                    item,
-                    'policy_extractor'
-                  )
-                );
-                return acc;
-              }, []),
+              policyExtractorRefs: opts.policyExtractorRefs,
             }
           );
         } catch (e) {
@@ -646,7 +651,15 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
       return context.useDataFromContext(
         moduleId,
         appId,
-        ctx ? createWebAppRenderer(ctx, htmlFileName, moduleId) : undefined,
+        ctx
+          ? createWebAppRenderer(
+              ctx,
+              htmlFileName,
+              moduleId,
+              controller,
+              context
+            )
+          : undefined,
         false,
         'pwa'
       );
@@ -662,6 +675,7 @@ type ControllerRegistryItem = {
   alias: 'service' | 'rest';
   method: HttpVerbs;
   path: string;
+  policyExtractorRefs: string[];
 };
 
 /**
@@ -799,6 +813,7 @@ export type ServiceDefinitionOptions = {
   defineRule: (def: RuleDefinition) => void;
   defineLogic: (def: LogicDefinition) => void;
   defineCapabilities: (def: CapabilitiesDefinition) => void;
+  use: <T extends (...args: any) => any>(creators: T) => ReturnType<T>;
 };
 
 export type ServiceDefinition = (options: ServiceDefinitionOptions) => void;
@@ -832,9 +847,11 @@ export type ServiceRunnerOptions = {
   disableCapabilities: boolean;
   disableResponseFromatter: boolean;
   controller: ServiceController;
+  controllerContext: ControllerContext<any>;
   aliasMode: ServiceAlias;
   context: ApplicationContext;
   policyExtractors: Array<PolicyExtractor>;
+  policyExtractorRefs: Array<string>;
   moduleId: string;
 };
 
@@ -1066,12 +1083,30 @@ export function runService(
       disableCapabilities: false,
       disableResponseFromatter: false,
       controller: ServiceController.getInstance(),
+      controllerContext: new ControllerContext(
+        ApplicationContext.getInstance()
+      ),
       aliasMode: 'rest',
       context: ApplicationContext.getInstance(),
       policyExtractors: [],
+      policyExtractorRefs: [],
       moduleId: 'default',
     },
     opts_ || {}
+  );
+
+  opts.policyExtractors = opts.policyExtractorRefs.reduce<PolicyExtractor[]>(
+    (acc, item) => {
+      acc.push(
+        opts.context.take<PolicyExtractor>(
+          opts.moduleId,
+          item,
+          'policy_extractor'
+        )
+      );
+      return acc;
+    },
+    []
   );
 
   return new Promise<RunnerStat>((resolve, reject) => {
@@ -1183,6 +1218,21 @@ export function runService(
     const _init = () =>
       Promise.resolve(
         service.def({
+          use: <T extends (...args: any) => any>(
+            creators: T
+          ): ReturnType<T> => {
+            if (!opts.controllerContext || !opts.context) {
+              throw new Error(
+                'You must provide ApplicationContext and ControllerContext while starting the application'
+              );
+            }
+            return opts.context.generatePointer(
+              opts.moduleId,
+              opts.controllerContext,
+              opts.context,
+              creators
+            );
+          },
           defineValidator: (schema) =>
             (ctx.validationRunner = () => {
               stat.isValid = false;

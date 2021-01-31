@@ -56,76 +56,88 @@ describe('backend builder', () => {
     outputFileSystem = fs;
   });
 
-  test('successfull build', (done) => {
-    const builderInstance = new BackendBuilder(
-      path.join(__dirname, './test-project/src/services/mock.server.tsx')
-    );
+  test(
+    'successfull build',
+    (done) => {
+      const builderInstance = new BackendBuilder(
+        path.join(__dirname, './test-project/src/services/mock.server.tsx')
+      );
 
-    builderInstance.attachMonitor((err, result) => {
-      try {
-        if (err) throw err;
-        expect(result.compilation.errors).toHaveLength(0);
-        expect(result.compilation.warnings).toHaveLength(0);
-        done();
-      } catch (e) {
-        done(e);
-      }
-    });
-
-    builderInstance.build(
-      {
-        mode: 'production',
-        cwd: testProjectDir,
-      },
-      fs,
-      outputFileSystem
-    );
-  });
-
-  test('artifacts should run without error', (done) => {
-    const testProcess = execa('node', [
-      path.join(testProjectDir, 'build', 'server', 'main.js'),
-    ]);
-
-    testProcess.catch((e) => done(e));
-
-    setTimeout(() => {
-      const request = createRequest('http://localhost:3001/test');
-      request
-        .get('/')
-        .then((res) => {
-          testProcess.kill();
-          expect(res.status).toBe(200);
+      builderInstance.attachMonitor((err, result) => {
+        try {
+          if (err) throw err;
+          expect(result.compilation.errors).toHaveLength(0);
+          expect(result.compilation.warnings).toHaveLength(0);
           done();
-        })
-        .catch((err) => {
-          testProcess.kill();
-          done(err);
-        });
-    }, 1000);
-  });
+        } catch (e) {
+          done(e);
+        }
+      });
 
-  test('server side rendering should work', (done) => {
-    const testProcess = execa('node', [
-      path.join(testProjectDir, 'build', 'server', 'main.js'),
-    ]);
+      builderInstance.build(
+        {
+          mode: 'production',
+          cwd: testProjectDir,
+        },
+        fs,
+        outputFileSystem
+      );
+    },
+    120 * 1000
+  );
 
-    testProcess.catch((e) => done(e));
+  test(
+    'artifacts should run without error',
+    (done) => {
+      const testProcess = execa('node', [
+        path.join(testProjectDir, 'build', 'server', 'main.js'),
+      ]);
 
-    setTimeout(() => {
-      const request = createRequest('http://localhost:3001');
-      request
-        .get('/')
-        .then((res) => {
-          testProcess.kill();
-          expect(res.text).toContain('Page 1 SSR Test');
-          expect(res.status).toBe(200);
-          done();
-        })
-        .catch((err) => {
-          testProcess.kill();
-          done(err);
-        });
-    }, 1000);
-  });
+      testProcess.catch((e) => done(e));
+
+      setTimeout(() => {
+        const request = createRequest('http://localhost:3001/test');
+        request
+          .get('/')
+          .then((res) => {
+            testProcess.kill();
+            expect(res.status).toBe(200);
+            done();
+          })
+          .catch((err) => {
+            testProcess.kill();
+            done(err);
+          });
+      }, 1000);
+    },
+    120 * 1000
+  );
+
+  test(
+    'server side rendering should work',
+    (done) => {
+      const testProcess = execa('node', [
+        path.join(testProjectDir, 'build', 'server', 'main.js'),
+      ]);
+
+      testProcess.catch((e) => done(e));
+
+      setTimeout(() => {
+        const request = createRequest('http://localhost:3001');
+        request
+          .get('/')
+          .then((res) => {
+            testProcess.kill();
+            expect(res.text).toContain('Page 1 SSR Test');
+            expect(res.status).toBe(200);
+            done();
+          })
+          .catch((err) => {
+            testProcess.kill();
+            done(err);
+          });
+      }, 10 * 1000);
+    },
+    30 * 1000
+  );
 });

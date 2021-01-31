@@ -1,4 +1,4 @@
-import plugins from './projectSetup';
+import projectSetup from './projectSetup';
 import { ManifestController, ManifestManager } from '../utils/ManifestManager';
 import { Job } from '../automation/core/Automator';
 import createSyncProcess from '../automation/processes/Sync/SyncProject';
@@ -8,7 +8,7 @@ import path from 'path';
 
 const testDir = path.join(
   __dirname,
-  '../../../../../__ark_automated_test_artifacts__/project-setup-plugin'
+  '../../../../../__ark_automated_test_artifacts__/main-server-setup-plugin'
 );
 
 beforeEach(() => {
@@ -16,11 +16,11 @@ beforeEach(() => {
   fs.mkdirSync(testDir, { recursive: true });
 });
 
-test('accessor matches', () => {
-  expect(plugins.setup().isTypeMatching('package')).toStrictEqual(true);
-  expect(plugins.setup().isMatching('name')).toStrictEqual(true);
-  expect(plugins.setup().isMatching('name.')).toStrictEqual(false);
-  expect(plugins.setup().isMatching('.name')).toStrictEqual(false);
+test('package accessor matches', () => {
+  expect(projectSetup.setup().isTypeMatching('package')).toStrictEqual(true);
+  expect(projectSetup.setup().isMatching('name')).toStrictEqual(true);
+  expect(projectSetup.setup().isMatching('name.')).toStrictEqual(false);
+  expect(projectSetup.setup().isMatching('.name')).toStrictEqual(false);
 });
 
 describe('project setup', () => {
@@ -29,7 +29,7 @@ describe('project setup', () => {
     async () => {
       // Write a dummy manifest file
       const manager = new ManifestManager(testDir, {
-        name: 'fairytale',
+        serviceId: 'main',
       });
       manager.write();
 
@@ -37,18 +37,15 @@ describe('project setup', () => {
       const job = new Job(null, testDir);
 
       // Prepare the controller
-      const controller = new ManifestController([plugins.setup()]);
+      const controller = new ManifestController([
+        projectSetup.setupMainService(),
+      ]);
       await createSyncProcess(controller).start(job);
 
       if (job.errors.length > 0) {
         throw job.errors[0];
       }
-
-      const packageJsonContent = JSON.parse(
-        fs.readFileSync(path.join(testDir, 'package.json'), 'utf-8')
-      );
-      expect(packageJsonContent.name).toStrictEqual('fairytale');
     },
-    120 * 1000
+    180 * 1000
   );
 });

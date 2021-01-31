@@ -27,22 +27,21 @@
     "@skyslit/ark-core": "^2.1.0",
     "@testing-library/react": "^11.2.2",
     "@types/jest": "^26.0.15",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
+    "@types/react": "^16.0.1",
+    "@types/react-dom": "^16.0.1",
     "@types/react-router-dom": "^5.1.6",
     "axios": "0.21.1",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
+    "react": "^16.0.1",
+    "react-dom": "^16.0.1",
     "react-helmet-async": "^1.0.7",
     "react-router-dom": "5.2.0"
   },
   "peerDependencies": {
-    "@skyslit/ark-core": "2.0.0",
-    "axios": "0.21.1",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
+    "axios": "^0.21.1",
+    "react": "^16.0.1",
+    "react-dom": "^16.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "5.2.0"
+    "react-router-dom": "^5.2.0"
   },
   "dependencies": {
     "redux": "^4.0.5"

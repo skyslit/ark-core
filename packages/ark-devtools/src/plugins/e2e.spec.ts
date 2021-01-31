@@ -1,22 +1,17 @@
 import {
   ManifestManager,
   useManifestController,
-} from '../../../utils/ManifestManager';
-import { Job } from '../../core/Automator';
-import createSyncProcess from './SyncProject';
+} from '../utils/ManifestManager';
+import { Job } from '../automation/core/Automator';
+import createSyncProcess from '../automation/processes/Sync/SyncProject';
 import rimraf from 'rimraf';
 import fs from 'fs';
 import path from 'path';
 
 const testDir = path.join(
   __dirname,
-  '../../../__test__/test-artifacts/setup-project-2'
+  '../../../../../__ark_automated_test_artifacts__/plugin-e2e'
 );
-
-// jest.mock('fs', () => {
-//   const memfs = require('memfs');
-//   return memfs.createFsFromVolume(memfs.Volume.fromJSON({}, '/test-dir'));
-// });
 
 beforeEach(() => {
   rimraf.sync(testDir);
@@ -25,12 +20,13 @@ beforeEach(() => {
 
 describe('project setup', () => {
   test(
-    'should setup npm package, prettier etc...',
+    'should setup npm package, git, prettier etc...',
     async () => {
       // Write a dummy manifest file
       const manager = new ManifestManager(testDir, {
         name: 'fairytale',
       });
+
       manager.write();
 
       // Prepare the job

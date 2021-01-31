@@ -1,5 +1,4 @@
-import SetupProject from './automation/processes/SetupProject/SetupProject';
-import AddModule from './automation/processes/AddModule/AddModule';
+import writePackageManifest from './automation/processes/manifest/writePackageManifest';
 import LongTestProcess from './automation/processes/LongTestProcess/TestProcess';
 import SyncProcess from './automation/processes/Sync/SyncProject';
 import { createProcess } from './automation/core/Automator';
@@ -20,8 +19,7 @@ export { SPABuilder } from './builders/FrontendBuilder';
 
 export const Automations = {
   processes: {
-    SetupProject,
-    AddModule,
+    writePackageManifest,
     LongTestProcess,
     SyncProcess,
   },

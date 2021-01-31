@@ -605,7 +605,7 @@ there is no pointer registered with provided id: ${pid}`);
    * @param {function} pointer
    * @return {Ark.Pointers} Module Pointers
    */
-  private generatePointer(
+  generatePointer(
     id: string,
     controller: ControllerContext<any>,
     context: ApplicationContext,

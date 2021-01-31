@@ -251,6 +251,7 @@ describe('manifest syncing', () => {
     // Arrange
     const controller = new ManifestController();
     const manager = new ManifestManager(cwd, {
+      name: '',
       ServiceEndpoints: [
         {
           title: 'MS 1',
