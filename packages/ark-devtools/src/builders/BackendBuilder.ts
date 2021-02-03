@@ -21,6 +21,7 @@ export class BackendBuilder extends BuilderBase {
    * @return {Configuration}
    */
   getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
+    console.log('ddd');
     return {
       context: cwd,
       mode,
@@ -37,9 +38,10 @@ export class BackendBuilder extends BuilderBase {
       },
       entry: this.entryFilePath,
       output: {
+        publicPath: '/',
         filename: 'main.js',
         path: path.resolve(cwd, 'build', 'server'),
-        assetModuleFilename: '../assets/[hash][ext][query]',
+        assetModuleFilename: './assets/[hash][ext][query]',
       },
       target: 'node',
       externals: [
@@ -86,9 +88,25 @@ export class BackendBuilder extends BuilderBase {
               },
             ],
           },
-          this.getAssetRule(),
+          {
+            test: /\.(png|svg|jpg|jpeg|gif)$/i,
+            use: [
+              {
+                loader: require.resolve('file-loader'),
+                options: {
+                  name: '[contenthash].[ext]',
+                  outputPath: 'assets',
+                  emitFile: false,
+                },
+              },
+            ],
+          },
           {
             test: this.getStyleTestExp(),
+            loader: require.resolve('ignore-loader'),
+          },
+          {
+            test: this.getLESSStyleTestExp(),
             loader: require.resolve('ignore-loader'),
           },
         ],

@@ -22,6 +22,7 @@ export class BuilderBase extends EventEmitter {
   private compiler: webpack.Compiler;
   private watching: any;
   private monitor: BuilderMonitor;
+  private options: ConfigurationOptions;
   /**
    * Creates a new builder base instance
    * @param {EventEmitterOptions} options
@@ -38,16 +39,18 @@ export class BuilderBase extends EventEmitter {
    * @param {any=} wfs Watch filesystem
    */
   build(opts: ConfigurationOptions, ifs?: any, ofs?: any, wfs?: any) {
-    const buildConfiguration = this.getConfiguration(
-      Object.assign<ConfigurationOptions, Partial<ConfigurationOptions>>(
-        {
-          mode: 'production',
-          cwd: null,
-          watchMode: false,
-        },
-        opts
-      )
+    this.options = Object.assign<
+      ConfigurationOptions,
+      Partial<ConfigurationOptions>
+    >(
+      {
+        mode: 'production',
+        cwd: null,
+        watchMode: false,
+      },
+      opts
     );
+    const buildConfiguration = this.getConfiguration(this.options);
     if (!buildConfiguration) {
       throw new Error('webpack configuration should not be null');
     }
@@ -159,18 +162,15 @@ export class BuilderBase extends EventEmitter {
    * @return {RegExp}
    */
   getStyleTestExp(): RegExp {
-    return /\.(scss|css|sass|less)$/i;
+    return /\.(scss|css|sass)$/i;
   }
 
   /**
-   * Get static assets rule configuration
-   * @return {any}
+   * Gets LESS stylesheet test expression
+   * @return {RegExp}
    */
-  getAssetRule(): any {
-    return {
-      test: /\.(png|svg|jpg|jpeg|gif)$/i,
-      type: 'asset/resource',
-    };
+  getLESSStyleTestExp(): RegExp {
+    return /\.less$/i;
   }
 
   /**
