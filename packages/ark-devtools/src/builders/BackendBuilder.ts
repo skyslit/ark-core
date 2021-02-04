@@ -21,7 +21,6 @@ export class BackendBuilder extends BuilderBase {
    * @return {Configuration}
    */
   getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
-    console.log('ddd');
     return {
       context: cwd,
       mode,
