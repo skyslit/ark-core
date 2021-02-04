@@ -43,7 +43,7 @@ describe('SPA app builder', () => {
         outputFileSystem
       );
     },
-    60 * 1000
+    120 * 1000
   );
 });
 
