@@ -744,7 +744,7 @@ describe('Data services', () => {
               type: String,
             },
           });
-          run(() => {
+          run(async () => {
             const { useModel } = use(Data);
             const StudentSchema = useModel('StudentSchema');
             const newStudent = new StudentSchema({
