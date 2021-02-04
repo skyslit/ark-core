@@ -149,6 +149,29 @@ describe('Backend services', () => {
       });
   });
 
+  test('body should be attached to the req', (done) => {
+    const appContext = new ApplicationContext();
+    appContext
+      .activate(({ use, run }) => {
+        const { useRoute } = use(Backend);
+        run(() => {
+          useRoute('post', '/test-post', (req, res, next) => {
+            expect(req.body.sampleKey).toStrictEqual('testVal');
+            res.send('hello');
+          });
+        });
+      })
+      .finally(() => {
+        supertest(appContext.getData('default', 'express'))
+          .post('/test-post')
+          .send({ sampleKey: 'testVal' })
+          .then((res) => {
+            expect(res.status).toBe(200);
+            done();
+          });
+      });
+  });
+
   describe('useService() fn', () => {
     test('response structure should be appropriate', (done) => {
       const testService = defineService('TEST_SERVICE', (opts) => {

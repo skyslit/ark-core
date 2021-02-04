@@ -34,6 +34,7 @@ import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+import bodyParser from 'body-parser';
 import morgan from 'morgan';
 
 type HttpVerbs =
@@ -548,6 +549,14 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           instance.use(morgan('dev'));
         }
 
+        instance.use(cookieParser());
+
+        // parse application/json
+        instance.use(bodyParser.json());
+
+        // parse application/x-www-form-urlencoded
+        instance.use(bodyParser.urlencoded({ extended: false }));
+
         instance.use(
           '/_browser',
           expressApp.static(path.join(__dirname, '../_browser'))
@@ -556,7 +565,6 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           '/assets',
           expressApp.static(path.join(__dirname, '../assets'))
         );
-        instance.use(cookieParser());
         instance.use((req, res, next) => {
           req.user = null;
           req.isAuthenticated = false;
