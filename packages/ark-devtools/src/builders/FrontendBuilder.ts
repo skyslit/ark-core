@@ -120,16 +120,21 @@ export class SPABuilder extends BuilderBase {
               },
             ],
           },
-          this.getAssetRule(),
+          {
+            test: /\.(png|svg|jpg|jpeg|gif)$/i,
+            use: [
+              {
+                loader: require.resolve('file-loader'),
+                options: {
+                  name: '[contenthash].[ext]',
+                  outputPath: 'assets',
+                },
+              },
+            ],
+          },
           {
             test: this.getStyleTestExp(),
             use: [
-              // {
-              //   loader: require.resolve('style-loader'),
-              //   options: {
-              //     injectType: 'linkTag'
-              //   }
-              // },
               {
                 loader: MiniCssExtractPlugin.loader,
               },
@@ -138,6 +143,17 @@ export class SPABuilder extends BuilderBase {
               },
               {
                 loader: require.resolve('sass-loader'),
+              },
+            ],
+          },
+          {
+            test: this.getLESSStyleTestExp(),
+            use: [
+              {
+                loader: MiniCssExtractPlugin.loader,
+              },
+              {
+                loader: require.resolve('css-loader'),
               },
               {
                 loader: require.resolve('less-loader'),

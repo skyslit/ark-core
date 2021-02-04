@@ -1,4 +1,5 @@
 import React from 'react';
+// @ts-ignore
 import pngImage from './assets/cover-art.png';
 import './mock_style.scss';
 

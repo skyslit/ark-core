@@ -34,6 +34,7 @@ import * as HTMLParser from 'node-html-parser';
 import * as pathToRegexp from 'path-to-regexp';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+import bodyParser from 'body-parser';
 import morgan from 'morgan';
 
 type HttpVerbs =
@@ -352,15 +353,13 @@ export const Data = createPointer<Partial<Ark.Data>>(
       );
     },
     useModel: <T extends unknown>(
-      name: string,
+      refId: string,
       schema?: SchemaDefinition | (() => Schema),
       dbName: keyof Ark.PackageDatabases = 'default'
     ) => {
-      const modelName = getModelName(moduleId, name);
-      let registeredModel: Model<T & Document> = null;
+      const modelName = getModelName(moduleId, refId);
+      let registeredModel: Model<T & Document> = undefined;
 
-      const modelRegistrationKey: string = `models/${moduleId}`;
-      const modelExist = context.existData(moduleId, modelRegistrationKey);
       const mongooseConnection: Connection = context.getData(
         'default',
         `db/${dbName}`,
@@ -368,12 +367,6 @@ export const Data = createPointer<Partial<Ark.Data>>(
       );
 
       if (schema) {
-        // TODO: Check if already registered
-        if (modelExist === true) {
-          throw new Error(
-            `Model '${name}' already exist on module '${moduleId}'`
-          );
-        }
         if (typeof schema === 'function') {
           registeredModel = mongooseConnection.model<T & Document>(
             modelName,
@@ -385,18 +378,15 @@ export const Data = createPointer<Partial<Ark.Data>>(
             new Schema(schema)
           );
         }
-
-        context.setData(moduleId, modelRegistrationKey, registeredModel);
-      } else {
-        if (modelExist === false) {
-          throw new Error(
-            `Model '${name}' not registered in module '${moduleId}'`
-          );
-        } else {
-          registeredModel = context.getData(moduleId, modelRegistrationKey);
-        }
       }
-      return registeredModel;
+
+      return context.useDataFromContext(
+        moduleId,
+        refId,
+        registeredModel,
+        false,
+        'model'
+      );
     },
   })
 );
@@ -512,6 +502,7 @@ export const useServiceCreator: (
               aliasMode: opts.alias,
               context: context,
               policyExtractorRefs: opts.policyExtractorRefs,
+              moduleId,
             }
           );
         } catch (e) {
@@ -548,6 +539,14 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           instance.use(morgan('dev'));
         }
 
+        instance.use(cookieParser());
+
+        // parse application/json
+        instance.use(bodyParser.json());
+
+        // parse application/x-www-form-urlencoded
+        instance.use(bodyParser.urlencoded({ extended: false }));
+
         instance.use(
           '/_browser',
           expressApp.static(path.join(__dirname, '../_browser'))
@@ -556,7 +555,6 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           '/assets',
           expressApp.static(path.join(__dirname, '../assets'))
         );
-        instance.use(cookieParser());
         instance.use((req, res, next) => {
           req.user = null;
           req.isAuthenticated = false;

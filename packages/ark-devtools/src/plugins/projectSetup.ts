@@ -83,6 +83,22 @@ export default {
         });
 
         /**
+         * Update Ark
+         */
+        opts.registerAction('UPDATE_ARK', function* (opts) {
+          yield opts.automator.runOnCli('npm', ['update', '@skyslit/ark-core']);
+          yield opts.automator.runOnCli('npm', [
+            'update',
+            '@skyslit/ark-backend',
+          ]);
+          yield opts.automator.runOnCli('npm', [
+            'update',
+            '@skyslit/ark-frontend',
+          ]);
+          yield opts.automator.runOnCli('npm', ['update', 'fpz']);
+        });
+
+        /**
          * configure typescript
          */
         opts.registerAction('INIT_TYPESCRIPT', function* (opts) {
@@ -112,8 +128,25 @@ export default {
           yield git.commit('chore: initial commit');
         });
 
+        opts.registerAction('PERFORM_COMMIT', function* (opts) {
+          const git: SimpleGit = gitP(opts.automator.cwd);
+          let message: string = 'chore: implemented husky';
+
+          if (opts.args.message) {
+            message = opts.args.message;
+          }
+
+          // Git add
+          yield git.add('./*');
+
+          // Git commit
+          yield git.commit(message);
+        });
+
         // Evaluation
         opts.evaluate(function* (opts) {
+          let arkUpdateRequired: boolean = false;
+
           opts.automator.title = 'checking project structure...';
           const git: SimpleGit = gitP(opts.automator.cwd);
 
@@ -263,85 +296,6 @@ export default {
               fileOpts.saveFile();
             });
 
-          // Add prettier
-          yield useFile('.prettierignore')
-            .readFromDisk()
-            .parse('raw-lines')
-            .act(function* (fileOpts) {
-              const content: string[] = fileOpts.content;
-
-              const addEntry = (entry: string) => {
-                const exists =
-                  content.filter(
-                    (e) => e.toLowerCase().indexOf(entry.toLowerCase()) > -1
-                  ).length > 0;
-
-                if (exists === false) {
-                  content.push(entry);
-                }
-              };
-
-              addEntry('build');
-              addEntry('node_modules');
-              addEntry('coverage');
-
-              fileOpts.saveFile();
-            });
-
-          // Install prettier
-          yield useFile('.prettierrc.json')
-            .readFromDisk()
-            .parse('json')
-            .act(function* (fileOpts) {
-              if (!fileOpts.exists) {
-                fileOpts.content.singleQuote = true;
-
-                opts.task.push(
-                  'INSTALL_DEP',
-                  {
-                    deps: ['prettier', '--save-dev', '--save-exact'],
-                  },
-                  {
-                    title: 'installing prettier',
-                  }
-                );
-
-                opts.task.push(
-                  'INSTALL_DEP',
-                  {
-                    deps: ['pretty-quick', 'husky', '--save-dev'],
-                  },
-                  {
-                    title: 'installing husky',
-                  }
-                );
-
-                fileOpts.saveFile();
-              }
-            });
-
-          // Configure prettier hook
-          yield useFile('package.json')
-            .readFromDisk()
-            .parse('json')
-            .act(function* (fileOpts) {
-              const content: any = fileOpts.content;
-              if (content) {
-                if (!content.husky) {
-                  content.husky = {};
-                }
-
-                if (!content.husky.hooks) {
-                  content.husky.hooks = {};
-                }
-
-                if (!content.husky.hooks['pre-commit']) {
-                  content.husky.hooks['pre-commit'] = 'pretty-quick --staged';
-                  fileOpts.saveFile();
-                }
-              }
-            });
-
           // Install core peer dependencies
           yield useFile('package.json')
             .readFromDisk()
@@ -421,18 +375,26 @@ export default {
 
               if (!editor.hasDependency('@skyslit/ark-core')) {
                 args.push('@skyslit/ark-core@^2.0.0');
+              } else {
+                arkUpdateRequired = true;
               }
 
               if (!editor.hasDependency('@skyslit/ark-backend')) {
                 args.push('@skyslit/ark-backend@^2.0.0');
+              } else {
+                arkUpdateRequired = true;
               }
 
               if (!editor.hasDependency('@skyslit/ark-frontend')) {
                 args.push('@skyslit/ark-frontend@^2.0.0');
+              } else {
+                arkUpdateRequired = true;
               }
 
               if (!editor.hasDependency('fpz')) {
                 args.push('fpz@^2.0.0');
+              } else {
+                arkUpdateRequired = true;
               }
 
               if (args.length > 0) {
@@ -480,6 +442,135 @@ export default {
                   resolve(false);
                 });
             });
+
+          // Add prettier
+          yield useFile('.prettierignore')
+            .readFromDisk()
+            .parse('raw-lines')
+            .act(function* (fileOpts) {
+              const content: string[] = fileOpts.content;
+
+              const addEntry = (entry: string) => {
+                const exists =
+                  content.filter(
+                    (e) => e.toLowerCase().indexOf(entry.toLowerCase()) > -1
+                  ).length > 0;
+
+                if (exists === false) {
+                  content.push(entry);
+                }
+              };
+
+              addEntry('build');
+              addEntry('node_modules');
+              addEntry('coverage');
+
+              fileOpts.saveFile();
+            });
+
+          // Install prettier
+          yield useFile('.prettierrc.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              if (!fileOpts.exists) {
+                fileOpts.content.singleQuote = true;
+
+                opts.task.push(
+                  'INSTALL_DEP',
+                  {
+                    deps: ['prettier', '--save-dev', '--save-exact'],
+                  },
+                  {
+                    title: 'installing prettier',
+                  }
+                );
+
+                fileOpts.saveFile();
+
+                opts.task.push(
+                  'PERFORM_COMMIT',
+                  {
+                    message: 'chore: installed prettier',
+                  },
+                  {
+                    title: 'git commit',
+                  }
+                );
+              }
+            });
+
+          // Configure prettier hook
+          yield useFile('package.json')
+            .readFromDisk()
+            .parse('json')
+            .act(function* (fileOpts) {
+              const content: any = fileOpts.content;
+              if (content) {
+                if (!content.husky) {
+                  content.husky = {};
+                }
+
+                if (!content.husky.hooks) {
+                  content.husky.hooks = {};
+                }
+
+                if (!content.husky.hooks['pre-commit']) {
+                  content.husky.hooks['pre-commit'] = 'pretty-quick --staged';
+
+                  opts.task.push(
+                    'INSTALL_DEP',
+                    {
+                      deps: ['pretty-quick', 'husky', '--save-dev'],
+                    },
+                    {
+                      title: 'installing husky',
+                    }
+                  );
+
+                  fileOpts.saveFile();
+
+                  opts.task.push(
+                    'PERFORM_COMMIT',
+                    {
+                      message: 'chore: installed pretty quick and husky',
+                    },
+                    {
+                      title: 'git commit',
+                    }
+                  );
+                }
+              }
+            });
+
+          // Create type reference
+          yield useFile('src/ark-env.d.ts')
+            .readFromDisk()
+            .parse('raw-lines')
+            .act(function* (fileOpts) {
+              const content: string[] = fileOpts.content;
+              if (
+                !content.find(
+                  (c) => c === '/// <reference types="fpz/typings" />'
+                )
+              ) {
+                fileOpts.content = [
+                  '/* eslint-disable-next-line */',
+                  '/// <reference types="fpz/typings" />',
+                  ...fileOpts.content,
+                ];
+
+                fileOpts.saveFile();
+              }
+            });
+
+          // @ts-ignore
+          if (arkUpdateRequired === true) {
+            // Update ark packages
+            opts.task.push('UPDATE_ARK', null, {
+              title: 'updating ark',
+            });
+          }
         });
       },
       true

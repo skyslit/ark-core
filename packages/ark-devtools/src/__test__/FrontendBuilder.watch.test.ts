@@ -48,6 +48,6 @@ describe('SPA app builder (in WATCH MODE)', () => {
         outputFileSystem
       );
     },
-    10 * 1000
+    120 * 1000
   );
 });

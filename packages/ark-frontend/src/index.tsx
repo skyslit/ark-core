@@ -91,7 +91,7 @@ declare global {
       // eslint-disable-next-line no-unused-vars
       interface React {
         useStore: StoreHook;
-        useComponent: <T>(
+        useComponent: <T = any>(
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
