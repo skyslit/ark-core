@@ -105,6 +105,10 @@ export class BackendBuilder extends BuilderBase {
             test: this.getStyleTestExp(),
             loader: require.resolve('ignore-loader'),
           },
+          {
+            test: this.getLESSStyleTestExp(),
+            loader: require.resolve('ignore-loader'),
+          },
         ],
       },
     };
