@@ -632,6 +632,20 @@ describe('error handling', () => {
     expect(output.responseCode).toStrictEqual(500);
     expect(output.response.message).toStrictEqual('Intentional error');
   });
+
+  test('error on evaluator', async () => {
+    const TestService = defineService('TestService', (options) => {
+      throw new Error('Intentional error 2');
+    });
+
+    const output = await runService(TestService);
+
+    expect(output.result.type).toStrictEqual('error');
+    expect(output.result.errCode).toStrictEqual(500);
+
+    expect(output.responseCode).toStrictEqual(500);
+    expect(output.response.message).toStrictEqual('Intentional error 2');
+  });
 });
 
 describe('use()', () => {

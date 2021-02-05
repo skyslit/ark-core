@@ -108,7 +108,7 @@ describe('backend builder', () => {
             testProcess.kill();
             done(err);
           });
-      }, 1000);
+      }, 10 * 1000);
     },
     120 * 1000
   );
@@ -138,6 +138,6 @@ describe('backend builder', () => {
           });
       }, 10 * 1000);
     },
-    30 * 1000
+    120 * 1000
   );
 });

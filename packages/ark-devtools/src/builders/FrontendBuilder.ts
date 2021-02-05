@@ -109,10 +109,6 @@ export class SPABuilder extends BuilderBase {
                   ],
                   cacheDirectory: true,
                   plugins: [
-                    [
-                      require.resolve('babel-plugin-import'),
-                      { libraryName: 'antd', style: true },
-                    ],
                     require.resolve('@babel/plugin-proposal-class-properties'),
                     require.resolve('@babel/plugin-syntax-dynamic-import'),
                   ],
@@ -143,20 +139,6 @@ export class SPABuilder extends BuilderBase {
               },
               {
                 loader: require.resolve('sass-loader'),
-              },
-            ],
-          },
-          {
-            test: this.getLESSStyleTestExp(),
-            use: [
-              {
-                loader: MiniCssExtractPlugin.loader,
-              },
-              {
-                loader: require.resolve('css-loader'),
-              },
-              {
-                loader: require.resolve('less-loader'),
               },
             ],
           },

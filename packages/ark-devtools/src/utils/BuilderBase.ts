@@ -80,7 +80,7 @@ export class BuilderBase extends EventEmitter {
             memfs.Volume.fromJSON(volume, opts.cwd)
           ) as any
         )
-        .use(this.compiler.inputFileSystem as any);
+        .use(fs);
       this.compiler.inputFileSystem = _ufs;
     }
 
