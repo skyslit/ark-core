@@ -792,7 +792,11 @@ describe('Data services', () => {
           );
           run(() => {
             const { useModel } = use(Data);
-            const ProfileSchema = useModel('ProfileSchema');
+            const ProfileSchema = useModel(
+              'ProfileSchema',
+              undefined,
+              'testDb'
+            );
             const newStudent = new ProfileSchema({
               name: 'John Doe',
               age: 21,
@@ -803,7 +807,11 @@ describe('Data services', () => {
         useModule('testModule2', ({ runOn }) => {
           runOn('testModule', async ({ use }) => {
             const { useModel } = use(Data);
-            const ProfileSchema = useModel('ProfileSchema');
+            const ProfileSchema = useModel(
+              'ProfileSchema',
+              undefined,
+              'testDb'
+            );
             const students = await ProfileSchema.find({}).exec();
             expect(students.length).toEqual(1);
             expect((students[0] as any).name).toEqual('John Doe');
