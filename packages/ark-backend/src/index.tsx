@@ -323,6 +323,8 @@ export const Data = createPointer<Partial<Ark.Data>>(
               return;
             }
 
+            console.log(`Connecting to '${name}' database...`);
+
             const connection = createConnection(
               connectionString,
               Object.assign<ConnectionOptions, ConnectionOptions>(
@@ -343,6 +345,8 @@ export const Data = createPointer<Partial<Ark.Data>>(
 
             connection.on('open', () => {
               resolve(null);
+              console.log(`'${name}' database connected`);
+              console.log('');
             });
 
             connection.on('error', (err) => {
@@ -365,6 +369,12 @@ export const Data = createPointer<Partial<Ark.Data>>(
         `db/${dbName}`,
         null
       );
+
+      if (!mongooseConnection) {
+        throw new Error(
+          "Looks like you're trying to useModel before the database is available, or have you actually configured the database connection?"
+        );
+      }
 
       if (schema) {
         if (typeof schema === 'function') {
@@ -1453,17 +1463,23 @@ export function runService(
             return Promise.resolve(v || false);
           });
         },
-        _init().then((v) => {
-          if (!ctx.logicRunner) {
-            return reject(
-              new Error(
-                `You likely forgot to define logic for service ${service.name}`
-              )
-            );
-          }
+        (() => {
+          try {
+            return _init().then((v) => {
+              if (!ctx.logicRunner) {
+                return reject(
+                  new Error(
+                    `You likely forgot to define logic for service ${service.name}`
+                  )
+                );
+              }
 
-          return v;
-        })
+              return v;
+            });
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        })()
       )
       .then(() => {
         resolve(stat);

@@ -45,7 +45,12 @@ export class BackendBuilder extends BuilderBase {
       target: 'node',
       externals: [
         nodeExternals({
-          allowlist: ['@skyslit/ark-backend', '@skyslit/ark-frontend'],
+          allowlist: [
+            '@skyslit/ark-backend',
+            '@skyslit/ark-frontend',
+            // Allow the stylesheet to be handled by ignore-loader
+            this.getStyleTestExp(),
+          ],
         }),
       ],
       stats: {
@@ -76,10 +81,6 @@ export class BackendBuilder extends BuilderBase {
                   ],
                   cacheDirectory: true,
                   plugins: [
-                    [
-                      require.resolve('babel-plugin-import'),
-                      { libraryName: 'antd' },
-                    ],
                     require.resolve('@babel/plugin-proposal-class-properties'),
                     require.resolve('@babel/plugin-syntax-dynamic-import'),
                   ],
@@ -102,10 +103,6 @@ export class BackendBuilder extends BuilderBase {
           },
           {
             test: this.getStyleTestExp(),
-            loader: require.resolve('ignore-loader'),
-          },
-          {
-            test: this.getLESSStyleTestExp(),
             loader: require.resolve('ignore-loader'),
           },
         ],

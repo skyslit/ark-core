@@ -5,6 +5,7 @@ import stripIndent from 'strip-indent';
 import chalk from 'chalk';
 import { BackendBuilder, SPABuilder } from '@skyslit/ark-devtools';
 import { spawn, ChildProcess } from 'child_process';
+import fs from 'fs';
 
 const clear = require('console-clear');
 const isInteractive: boolean = true;
@@ -109,6 +110,11 @@ export const useBuilder = (opts: Options) => {
         appProcess.kill('SIGTERM');
       }
       const appPath: string = path.join(opts.cwd, 'build', 'server', 'main.js');
+      if (!fs.existsSync(appPath)) {
+        console.log('');
+        console.log(chalk.yellow('Waiting for output...'));
+        return false;
+      }
       appProcess = spawn('node', [appPath], {
         stdio: 'inherit',
       });
