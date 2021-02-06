@@ -7,6 +7,7 @@ import { BackendBuilder, SPABuilder } from '@skyslit/ark-devtools';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import rimraf from 'rimraf';
+import { BuilderMonitor } from '@skyslit/ark-devtools/build/utils/BuilderBase';
 
 const clear = require('console-clear');
 
@@ -225,19 +226,84 @@ export const useBuilder = (opts: Options) => {
     clearConsole();
     if (mode === 'development') {
       console.log(chalk.blueBright('Starting compilation...'));
-    } else {
-      console.log('Creating production build...');
-    }
-    cleanBuildDir();
-    if (serverEntries.length > 0) {
-      if (clientEntries.length > 0) {
-        buildFrontend(clientEntries, serverEntries);
+      cleanBuildDir();
+      if (serverEntries.length > 0) {
+        if (clientEntries.length > 0) {
+          buildFrontend(clientEntries, serverEntries);
+        } else {
+          buildBackend(serverEntries);
+        }
       } else {
-        buildBackend(serverEntries);
+        console.log('0 server build target(s) found');
+        process.exit(0);
       }
     } else {
-      console.log('0 server build target(s) found');
-      process.exit(0);
+      console.log('Creating production build...');
+      cleanBuildDir();
+      [
+        ...serverEntries.map((e) => ({
+          path: e,
+          type: 'server',
+        })),
+        ...clientEntries.map((e) => ({
+          path: e,
+          type: 'client',
+        })),
+      ]
+        .reduce((acc, item) => {
+          return acc.then(() => {
+            return new Promise<any>((resolve, reject) => {
+              const monitor: BuilderMonitor = (err, result) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  if (result.hasErrors() === true) {
+                    reject(result.compilation.errors[0]);
+                  } else {
+                    console.log({
+                      errors: result.compilation.errors,
+                      warnings: result.compilation.warnings,
+                    });
+                    resolve(true);
+                  }
+                }
+              };
+
+              if (item.type === 'server') {
+                const builder = new BackendBuilder(
+                  path.join(opts.cwd, item.path)
+                );
+                builder.attachMonitor(monitor);
+                builder.build({
+                  cwd: opts.cwd,
+                  mode: 'production',
+                  watchMode: false,
+                });
+              } else if (item.type === 'client') {
+                const builder = new SPABuilder(
+                  path.basename(item.path).split('.')[0],
+                  path.join(opts.cwd, item.path)
+                );
+                builder.attachMonitor(monitor);
+                builder.build({
+                  cwd: opts.cwd,
+                  mode: 'production',
+                  watchMode: false,
+                });
+              } else {
+                reject(new Error(`Unknown type: ${item.type}`));
+              }
+            });
+          });
+        }, Promise.resolve())
+        .then(() => {
+          console.log('success');
+          process.exit(0);
+        })
+        .catch((err) => {
+          console.error(err);
+          process.exit(1);
+        });
     }
   }, []);
 

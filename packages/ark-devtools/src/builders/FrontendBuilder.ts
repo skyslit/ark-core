@@ -64,20 +64,23 @@ export class SPABuilder extends BuilderBase {
         },
         symlinks: true,
       },
-      entry: path.join(cwd, 'src', `${this.appId}.tsx`),
+      entry: {
+        [this.appId]: path.join(cwd, 'src', `${this.appId}.tsx`),
+      },
       output: {
         publicPath: '/',
-        filename: `_browser/${this.appId}.js`,
+        filename: `_browser/[name].js`,
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',
+        chunkFilename: '[name].[contenthash].js',
       },
       plugins: [
         new HTMLWebpackPlugin({
-          filename: `${this.appId}.html`,
+          filename: '[name].html',
           template: path.resolve(__dirname, '../../assets/index.template.html'),
         }),
         new MiniCssExtractPlugin({
-          filename: `./assets/[name]-${this.appId}.css`,
+          filename: './assets/[name].css',
         }),
       ],
       stats: {
@@ -153,6 +156,37 @@ export class SPABuilder extends BuilderBase {
             ],
           },
         ],
+      },
+      performance: {
+        maxEntrypointSize: 5242880,
+        maxAssetSize: 5242880,
+      },
+      optimization: {
+        splitChunks: {
+          chunks: 'async',
+          minSize: 20000,
+          minRemainingSize: 0,
+          maxSize: 31232,
+          minChunks: 1,
+          maxAsyncRequests: 30,
+          maxInitialRequests: 30,
+          enforceSizeThreshold: 50000,
+          cacheGroups: {
+            defaultVendors: {
+              test: /[\\/]node_modules[\\/]/,
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+            default: {
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+        runtimeChunk: {
+          name: (entrypoint: any) => `runtime-${entrypoint.name}`,
+        },
       },
     };
   }
