@@ -331,6 +331,7 @@ export const Data = createPointer<Partial<Ark.Data>>(
                 {
                   useNewUrlParser: true,
                   useUnifiedTopology: true,
+                  useCreateIndex: true,
                 },
                 opts
               )

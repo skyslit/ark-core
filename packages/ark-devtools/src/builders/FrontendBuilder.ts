@@ -34,7 +34,7 @@ export class SPABuilder extends BuilderBase {
     return [
       createGhostFile(
         path.join(__dirname, '../../assets/Frontend/root.tsx.ejs'),
-        'src/index.tsx',
+        `src/${this.appId}.tsx`,
         {
           relativeAppFilePath: path.relative(
             path.join(opts.cwd, 'src'),
@@ -63,7 +63,7 @@ export class SPABuilder extends BuilderBase {
         },
         symlinks: true,
       },
-      entry: path.join(cwd, 'src', 'index.tsx'),
+      entry: path.join(cwd, 'src', `${this.appId}.tsx`),
       output: {
         publicPath: '/',
         filename: `_browser/${this.appId}.js`,
@@ -76,7 +76,7 @@ export class SPABuilder extends BuilderBase {
           template: path.resolve(__dirname, '../../assets/index.template.html'),
         }),
         new MiniCssExtractPlugin({
-          filename: `./assets/[name].css`,
+          filename: `./assets/[name]-${this.appId}.css`,
         }),
       ],
       stats: {

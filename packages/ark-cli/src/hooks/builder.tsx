@@ -78,12 +78,25 @@ export const useBuilder = (opts: Options) => {
         }
       });
 
+      const renderTargets = () => {
+        console.log(
+          chalk.gray(
+            `Targets: ${[
+              ...serverEntries.map((e) => `${path.basename(e)} (express)`),
+              ...clientEntries.map((e) => `${path.basename(e)} (client)`),
+            ].join(', ')}`
+          )
+        );
+      };
+
       if (hasErrors) {
         console.log(
           stripIndent(`
           ${chalk.red('Failed to compile.')}
         `).trim()
         );
+        console.log('');
+        renderTargets();
         console.log('');
         console.log(error);
       } else if (hasWarnings) {
@@ -93,6 +106,8 @@ export const useBuilder = (opts: Options) => {
         `).trim()
         );
         console.log('');
+        renderTargets();
+        console.log('');
         console.log(warnings.join('\n'));
       } else {
         console.log(
@@ -100,6 +115,8 @@ export const useBuilder = (opts: Options) => {
           ${chalk.green('Compiled successfully')}
         `).trim()
         );
+        console.log('');
+        renderTargets();
       }
     };
 
@@ -158,7 +175,7 @@ export const useBuilder = (opts: Options) => {
       frontendRunning = true;
       clientEntryFilePaths.forEach((entryFilePath, index) => {
         const builder = new SPABuilder(
-          'admin',
+          path.basename(entryFilePath).split('.')[0],
           path.join(opts.cwd, entryFilePath)
         );
         builder.attachMonitor((err, result) => {
