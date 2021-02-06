@@ -31,8 +31,7 @@
     "@types/rimraf": "^3.0.0",
     "ink-testing-library": "^2.1.0",
     "memfs": "^3.2.0",
-    "react-test-renderer": "^16.0.1",
-    "rimraf": "^3.0.2"
+    "react-test-renderer": "^16.0.1"
   },
   "dependencies": {
     "@babel/core": "^7.12.3",
@@ -55,7 +54,8 @@
     "ink-text-input": "^4.0.1",
     "react": "^16.0.1",
     "strip-indent": "^3.0.0",
-    "tiny-glob": "^0.2.8"
+    "tiny-glob": "^0.2.8",
+    "rimraf": "^3.0.2"
   },
   "publishConfig": {
     "access": "public"

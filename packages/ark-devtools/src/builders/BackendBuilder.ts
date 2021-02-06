@@ -22,6 +22,7 @@ export class BackendBuilder extends BuilderBase {
    */
   getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
     return {
+      devtool: mode === 'development' ? 'source-map' : false,
       context: cwd,
       mode,
       resolve: {
@@ -61,17 +62,29 @@ export class BackendBuilder extends BuilderBase {
       module: {
         rules: [
           {
-            test: /\.(ts|tsx|js|jsx)$/,
+            test: /\.js$/,
+            enforce: 'pre',
+            use: [require.resolve('source-map-loader')],
+          },
+          {
+            test: /\.(js|mjs|jsx|ts|tsx)$/,
             exclude: /node_modules/,
             use: [
               {
                 loader: require.resolve('babel-loader'),
                 options: {
-                  compact: false,
+                  // Should not take any babelrc file located in the project root
+                  babelrc: false,
+                  inputSourceMap: mode === 'development',
+                  sourceMaps: mode === 'development' ? 'both' : false,
+                  compact: mode === 'production',
                   presets: [
                     [
                       require.resolve('@babel/preset-env'),
-                      { targets: { node: 'current' }, modules: false },
+                      {
+                        targets: { browsers: ['last 2 versions'] },
+                        modules: false,
+                      },
                     ],
                     [
                       require.resolve('@babel/preset-typescript'),
@@ -80,6 +93,7 @@ export class BackendBuilder extends BuilderBase {
                     [require.resolve('@babel/preset-react')],
                   ],
                   cacheDirectory: true,
+                  cacheCompression: false,
                   plugins: [
                     require.resolve('@babel/plugin-proposal-class-properties'),
                     require.resolve('@babel/plugin-syntax-dynamic-import'),

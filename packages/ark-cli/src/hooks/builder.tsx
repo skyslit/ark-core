@@ -6,18 +6,9 @@ import chalk from 'chalk';
 import { BackendBuilder, SPABuilder } from '@skyslit/ark-devtools';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
+import rimraf from 'rimraf';
 
 const clear = require('console-clear');
-const isInteractive: boolean = true;
-
-/**
- * Clears console
- */
-function clearConsole() {
-  if (isInteractive === true) {
-    clear();
-  }
-}
 
 type Options = {
   cwd: string;
@@ -48,6 +39,17 @@ export const useBuilder = (opts: Options) => {
 
     const updateSnapshot = (key: string, item: BuilderSnapshotItem) => {
       state[key] = item;
+    };
+
+    const isInteractive: boolean = mode === 'development';
+
+    /**
+     * Clears console
+     */
+    const clearConsole = () => {
+      if (isInteractive === true) {
+        clear();
+      }
     };
 
     const renderSnapshot = () => {
@@ -122,19 +124,33 @@ export const useBuilder = (opts: Options) => {
 
     let appProcess: ChildProcess = null;
 
+    const targetBuildDir = path.join(opts.cwd, 'build');
+    const cleanBuildDir = () => {
+      if (fs.existsSync(targetBuildDir)) {
+        rimraf.sync(targetBuildDir);
+      }
+    };
+
     const runApp = () => {
-      if (appProcess) {
-        appProcess.kill('SIGTERM');
+      if (mode === 'development') {
+        if (appProcess) {
+          appProcess.kill('SIGTERM');
+        }
+        const appPath: string = path.join(
+          opts.cwd,
+          'build',
+          'server',
+          'main.js'
+        );
+        if (!fs.existsSync(appPath)) {
+          console.log('');
+          console.log(chalk.yellow('Waiting for output...'));
+          return false;
+        }
+        appProcess = spawn('node', [appPath], {
+          stdio: 'inherit',
+        });
       }
-      const appPath: string = path.join(opts.cwd, 'build', 'server', 'main.js');
-      if (!fs.existsSync(appPath)) {
-        console.log('');
-        console.log(chalk.yellow('Waiting for output...'));
-        return false;
-      }
-      appProcess = spawn('node', [appPath], {
-        stdio: 'inherit',
-      });
     };
 
     const buildBackend = (entryFilePaths: string[]) => {
@@ -207,7 +223,12 @@ export const useBuilder = (opts: Options) => {
     });
 
     clearConsole();
-    console.log(chalk.blueBright('Starting compilation...'));
+    if (mode === 'development') {
+      console.log(chalk.blueBright('Starting compilation...'));
+    } else {
+      console.log('Creating production build...');
+    }
+    cleanBuildDir();
     if (serverEntries.length > 0) {
       if (clientEntries.length > 0) {
         buildFrontend(clientEntries, serverEntries);
