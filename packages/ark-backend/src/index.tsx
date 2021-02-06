@@ -67,7 +67,10 @@ type ServiceConsumerOptions = {
 };
 
 type WebAppRenderer = {
-  render: (initialState?: any) => expressApp.RequestHandler;
+  render: (
+    initialState?: any,
+    reqs_?: Array<ServiceReq>
+  ) => expressApp.RequestHandler;
 };
 
 type UseServicePointer = (
