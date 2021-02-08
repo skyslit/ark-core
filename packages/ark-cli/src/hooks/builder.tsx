@@ -53,6 +53,17 @@ export const useBuilder = (opts: Options) => {
       }
     };
 
+    const renderTargets = () => {
+      console.log(
+        chalk.gray(
+          `Targets: ${[
+            ...serverEntries.map((e) => `${path.basename(e)} (express)`),
+            ...clientEntries.map((e) => `${path.basename(e)} (client)`),
+          ].join(', ')}`
+        )
+      );
+    };
+
     const renderSnapshot = () => {
       clearConsole();
       let hasErrors: boolean = false;
@@ -80,17 +91,6 @@ export const useBuilder = (opts: Options) => {
           warnings = state[k].warnings;
         }
       });
-
-      const renderTargets = () => {
-        console.log(
-          chalk.gray(
-            `Targets: ${[
-              ...serverEntries.map((e) => `${path.basename(e)} (express)`),
-              ...clientEntries.map((e) => `${path.basename(e)} (client)`),
-            ].join(', ')}`
-          )
-        );
-      };
 
       if (hasErrors) {
         console.log(
@@ -239,6 +239,9 @@ export const useBuilder = (opts: Options) => {
       }
     } else {
       console.log('Creating production build...');
+      console.log(' ');
+      renderTargets();
+      console.log(' ');
       cleanBuildDir();
       [
         ...serverEntries.map((e) => ({
@@ -254,19 +257,29 @@ export const useBuilder = (opts: Options) => {
           return acc.then(() => {
             return new Promise<any>((resolve, reject) => {
               const monitor: BuilderMonitor = (err, result) => {
+                console.log(' ');
                 if (err) {
                   reject(err);
                 } else {
                   if (result.hasErrors() === true) {
+                    console.log(chalk.red(`${item.path} compiled with errors`));
                     reject(result.compilation.errors[0]);
+                  } else if (result.hasWarnings() === true) {
+                    console.log(
+                      chalk.yellow(`${item.path} compiled with warnings`)
+                    );
+                    console.warn(result.compilation.warnings[0]);
+                    resolve(true);
                   } else {
-                    console.log({
-                      errors: result.compilation.errors,
-                      warnings: result.compilation.warnings,
-                    });
+                    console.log(chalk.gray(result.toString()));
+                    console.log(' ');
+                    console.log(
+                      chalk.green(`${item.path} compiled successfully`)
+                    );
                     resolve(true);
                   }
                 }
+                console.log(' ');
               };
 
               if (item.type === 'server') {
@@ -274,6 +287,13 @@ export const useBuilder = (opts: Options) => {
                   path.join(opts.cwd, item.path)
                 );
                 builder.attachMonitor(monitor);
+                console.log(
+                  chalk.blueBright(
+                    `Compilation started for server app: ${path.basename(
+                      item.path
+                    )}...`
+                  )
+                );
                 builder.build({
                   cwd: opts.cwd,
                   mode: 'production',
@@ -285,6 +305,13 @@ export const useBuilder = (opts: Options) => {
                   path.join(opts.cwd, item.path)
                 );
                 builder.attachMonitor(monitor);
+                console.log(
+                  chalk.blueBright(
+                    `Compilation started for client app: ${path.basename(
+                      item.path
+                    )}...`
+                  )
+                );
                 builder.build({
                   cwd: opts.cwd,
                   mode: 'production',
@@ -297,7 +324,7 @@ export const useBuilder = (opts: Options) => {
           });
         }, Promise.resolve())
         .then(() => {
-          console.log('success');
+          console.log(chalk.greenBright('All process completed successfully'));
           process.exit(0);
         })
         .catch((err) => {

@@ -4,6 +4,7 @@ import path from 'path';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
 import { GhostFileActions, createGhostFile } from '../utils/ghostFile';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
 
 /**
  * SPA Builder
@@ -81,6 +82,7 @@ export class SPABuilder extends BuilderBase {
         }),
         new MiniCssExtractPlugin({
           filename: './assets/[name].css',
+          chunkFilename: './assets/[name].[contenthash:8].chunk.css',
         }),
       ],
       stats: {
@@ -162,6 +164,8 @@ export class SPABuilder extends BuilderBase {
         maxAssetSize: 5242880,
       },
       optimization: {
+        minimize: mode === 'production',
+        minimizer: [new TerserPlugin()],
         splitChunks: {
           chunks: 'async',
           minSize: 20000,
