@@ -46,12 +46,10 @@ type ServiceHookOptions = {
 type ServiceInvokeOptions = {
   force: boolean;
 };
-type ServiceHook<
-  T = ServiceResponse<any, any>,
-  E = ServiceResponse<any, any>
-> = (
+type ServiceHook<T = ServiceResponse<any, any>, E = Error> = (
   serviceId: string | Partial<ServiceHookOptions>
 ) => {
+  statusCode: number;
   hasInitialized: boolean;
   isLoading: boolean;
   response: T;
@@ -59,10 +57,8 @@ type ServiceHook<
   invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
 };
 
-type ContextHook<
-  T = ServiceResponse<any, any>,
-  E = ServiceResponse<any, any>
-> = () => {
+type ContextHook<T = ServiceResponse<any, any>, E = Error> = () => {
+  statusCode: number;
   hasInitialized: boolean;
   isLoading: boolean;
   response: T;
@@ -515,15 +511,23 @@ const useServiceCreator: (
   const [response, setResponse] = useStoreCreator(modId, ctx)<
     ServiceResponse<any, any>
   >(`RESPONSE_${option.serviceId}`, null, !option.useRedux);
-  const [err, setError] = useStoreCreator(modId, ctx)<
-    ServiceResponse<any, any>
-  >(`ERROR_${option.serviceId}`, null, !option.useRedux);
+  const [err, setError] = useStoreCreator(modId, ctx)<Error>(
+    `ERROR_${option.serviceId}`,
+    null,
+    !option.useRedux
+  );
+  const [statusCode, setStatusCode] = useStoreCreator(modId, ctx)<number>(
+    `STATUS_CODE_${option.serviceId}`,
+    null,
+    !option.useRedux
+  );
 
   return {
     hasInitialized: hasInitialized || false,
     isLoading: isLoading || false,
     response,
     err,
+    statusCode,
     invoke: (data?, opts_?) => {
       return new Promise((resolve, reject) => {
         const opts: ServiceInvokeOptions = Object.assign<
@@ -537,20 +541,34 @@ const useServiceCreator: (
         );
 
         if (hasInitialized !== true || opts.force === true) {
+          setStatusCode(-1);
           setLoading(true);
           setError(null);
           setResponse(null);
           axios(Object.assign(option.ajax, { data }))
             .then((response) => {
+              setStatusCode(response.status);
               setHasInitialized(true);
               setResponse(response.data);
               setLoading(false);
               resolve(response.data);
             })
             .catch((err) => {
-              setError(err);
+              let statusCodeVal = 500;
+              let errObj = err;
+              // Fix: API error is not visible in redux state
+              try {
+                if (err.response) {
+                  statusCodeVal = err.response.status;
+                  errObj = err.response.data;
+                }
+              } catch (e) {
+                // Do nothing
+              }
+              setError(errObj);
+              setStatusCode(statusCodeVal);
               setLoading(false);
-              reject(err);
+              reject(errObj);
             });
         } else {
           resolve(false);
