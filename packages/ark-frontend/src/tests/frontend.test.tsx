@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, act } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
 import {
   createReactApp,
@@ -326,5 +326,261 @@ describe('functionality tests', () => {
         done();
       })
       .catch(done);
+  });
+
+  describe('useContent', () => {
+    test('useContent', (done) => {
+      const createCMSComponent = createComponent(({ use }) => {
+        const { useContent } = use(Frontend);
+        const {
+          isAvailable,
+          content,
+          setContent,
+          updateKey,
+          pushItem,
+          unshiftItem,
+          insertItem,
+          hasChanged,
+          markAsSaved,
+          reset,
+        } = useContent<any>('test-content');
+        return (
+          <div>
+            <div>Hello</div>
+            <button
+              onClick={() => {
+                reset();
+              }}
+            >
+              Reset
+            </button>
+            <button
+              onClick={() => {
+                markAsSaved();
+              }}
+            >
+              Save Changes
+            </button>
+            <button
+              onClick={() => {
+                updateKey('title', 'Sample Updated Title');
+              }}
+            >
+              Update Title
+            </button>
+            <button
+              onClick={() => {
+                pushItem('items', 4);
+              }}
+            >
+              Push to Items Array
+            </button>
+            <button
+              onClick={() => {
+                unshiftItem('items', 0);
+              }}
+            >
+              Unshift Items Array
+            </button>
+            <button
+              onClick={() => {
+                insertItem('items', 3, 2.5);
+              }}
+            >
+              Insert val to items at index 3
+            </button>
+            <button
+              onClick={() => {
+                updateKey(
+                  'innerObj.collection.0.subTitle',
+                  'Collection Sub Title (changed)'
+                );
+              }}
+            >
+              Update content inside
+            </button>
+            <button
+              onClick={() =>
+                setContent({
+                  title: 'Sample',
+                  items: [1, 2, 3],
+                  innerObj: {
+                    collection: [
+                      {
+                        subTitle: 'Collection Sub Title',
+                      },
+                    ],
+                  },
+                })
+              }
+            >
+              Set Content
+            </button>
+            <div data-testid="changed-field">{String(Boolean(hasChanged))}</div>
+            <div data-testid="output">
+              {isAvailable === true ? (
+                <code>{JSON.stringify(content)}</code>
+              ) : null}
+            </div>
+          </div>
+        );
+      });
+
+      const testContext = createReactApp(({ use }) => {
+        const { useComponent, useRouteConfig } = use(Frontend);
+        const CMS = useComponent('cms', createCMSComponent);
+
+        useRouteConfig(() => [
+          {
+            path: '/',
+            component: CMS,
+          },
+        ]);
+      });
+
+      makeApp('csr', testContext, ctx, {
+        initialState: {
+          ...reduxServiceStateSnapshot('___context', 'default', {
+            responseCode: 200,
+            response: {},
+          }),
+        },
+      })
+        .then(async (App) => {
+          const { getByText, getByTestId } = render(<App />);
+
+          expect(getByTestId('output').innerHTML).toBe('');
+
+          // Has changed field
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          act(() => {
+            // Sets content
+            getByText('Set Content').click();
+          });
+
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          // Assert title
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).title
+          ).toEqual('Sample');
+
+          act(() => {
+            // Click update title
+            getByText('Update Title').click();
+          });
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('true');
+
+          // Mark as save
+          act(() => {
+            getByText('Save Changes').click();
+          });
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          // Check if title has been changed
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).title
+          ).toEqual('Sample Updated Title');
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          act(() => {
+            // Click Push to Items Array
+            getByText('Push to Items Array').click();
+          });
+
+          // Check if items has been changed
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).items
+          ).toEqual([1, 2, 3, 4]);
+
+          act(() => {
+            // Click unshift button
+            getByText('Unshift Items Array').click();
+          });
+
+          // Check if items has been changed
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).items
+          ).toEqual([0, 1, 2, 3, 4]);
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('true');
+
+          // Mark as save
+          act(() => {
+            getByText('Save Changes').click();
+          });
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          act(() => {
+            // Click `Insert val to items at index 3` button
+            getByText('Insert val to items at index 3').click();
+          });
+
+          // Check if items has been changed
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).items
+          ).toEqual([0, 1, 2, 2.5, 3, 4]);
+
+          // Mark as save
+          act(() => {
+            getByText('Save Changes').click();
+          });
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          act(() => {
+            // Click `Update content inside` button
+            getByText('Update content inside').click();
+          });
+
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).innerObj.collection[0].subTitle
+          ).toEqual('Collection Sub Title (changed)');
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('true');
+
+          act(() => {
+            getByText('Reset').click();
+          });
+
+          // Content has changed
+          expect(getByTestId('changed-field').textContent).toEqual('false');
+
+          // Try again after clicking reset
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).innerObj.collection[0].subTitle
+          ).toEqual('Collection Sub Title');
+        })
+        .then(() => {
+          done();
+        })
+        .catch(done);
+    });
   });
 });

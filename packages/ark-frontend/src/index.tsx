@@ -19,6 +19,9 @@ import {
   Redirect,
 } from 'react-router-dom';
 import ReactDOMServer from 'react-dom/server';
+import traverse from 'traverse';
+import cloneDeep from 'lodash/cloneDeep';
+import isEqual from 'lodash/isEqual';
 
 export type RenderMode = 'ssr' | 'csr';
 
@@ -67,6 +70,26 @@ type ContextHook<
   invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
 };
 
+type ContentHookOptions<T> = {
+  serviceId: string;
+  defaultContent: T;
+  useReduxStore: boolean;
+};
+type ContentHook = <T>(
+  serviceId: string | ContentHookOptions<T>
+) => {
+  isAvailable: boolean;
+  hasChanged: boolean;
+  content: T;
+  markAsSaved: () => void;
+  setContent: (content: T) => void;
+  updateKey: (key: string, val: T) => void;
+  pushItem: (key: string, val: any) => void;
+  unshiftItem: (key: string, val: any) => void;
+  insertItem: (key: string, indexToInsert: number, val: any) => void;
+  reset: () => void;
+};
+
 type MapRoute = (
   path: string,
   component: React.ComponentClass | React.FunctionComponent,
@@ -101,6 +124,7 @@ declare global {
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
+        useContent: ContentHook;
         mapRoute: MapRoute;
         useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
       }
@@ -711,6 +735,113 @@ export const Frontend = createPointer<Ark.MERN.React>(
           })
         );
       });
+    },
+    useContent: (opts_) => {
+      const opts: ContentHookOptions<any> = Object.assign<
+        ContentHookOptions<any>,
+        ContentHookOptions<any>
+      >(
+        {
+          serviceId: typeof opts_ === 'string' ? opts_ : undefined,
+          defaultContent: undefined,
+          useReduxStore: false,
+        },
+        typeof opts_ === 'object' ? opts_ : undefined
+      );
+      const useStore = useStoreCreator(moduleId, context);
+      const [baseContent, setBaseContent] = useStore<any>(
+        `_cmsHook/_base_${opts.serviceId}`,
+        opts.defaultContent,
+        opts.useReduxStore === false
+      );
+      const [content, setContentToState] = useStore<any>(
+        `_cmsHook/${opts.serviceId}`,
+        opts.defaultContent,
+        opts.useReduxStore === false
+      );
+      const [hasChanged, setHasChanged] = useStore<boolean>(
+        `_cmsHook/_changed_${opts.serviceId}`,
+        false,
+        opts.useReduxStore === false
+      );
+
+      React.useEffect(() => {
+        setHasChanged(isEqual(baseContent, content) === false);
+      }, [baseContent, content]);
+
+      const getCurrentValByKey = (key: string) => {
+        const traverseResult = traverse(content);
+        return traverseResult.get(key.split('.'));
+      };
+
+      const updateKey = (key: string, val: any) => {
+        const latest = cloneDeep(content);
+        const traverseResult = traverse(latest);
+        const paths = traverseResult.paths().filter((p) => p.length > 0);
+        let i = 0;
+        for (i = 0; i < paths.length; i++) {
+          const address = paths[i].join('.');
+          if (address === key) {
+            traverseResult.set(paths[i], val);
+            break;
+          }
+        }
+        setContentToState(latest);
+      };
+
+      return {
+        isAvailable: content !== null && content !== undefined,
+        hasChanged,
+        content,
+        reset: () => {
+          setContentToState(baseContent);
+          setHasChanged(false);
+        },
+        setContent: (val) => {
+          setContentToState(val);
+          setBaseContent(val);
+          setHasChanged(false);
+        },
+        markAsSaved: () => {
+          setBaseContent(content);
+          setHasChanged(false);
+        },
+        insertItem: (key, indexToInsert, val) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(key, [
+              ...item.slice(0, indexToInsert),
+              val,
+              ...item.slice(indexToInsert, item.length),
+            ]);
+          } else {
+            throw new Error(
+              `${key} is not an array. pushItem can be only called upon an array`
+            );
+          }
+        },
+        pushItem: (key, val) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(key, [...item, val]);
+          } else {
+            throw new Error(
+              `${key} is not an array. pushItem can be only called upon an array`
+            );
+          }
+        },
+        unshiftItem: (key, val) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(key, [val, ...item]);
+          } else {
+            throw new Error(
+              `${key} is not an array. unshiftItem can be only called upon an array`
+            );
+          }
+        },
+        updateKey,
+      };
     },
   })
 );
