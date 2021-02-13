@@ -17,6 +17,11 @@ const mainCommand = commandLineArgs(
       alias: 'v',
       type: Boolean,
     },
+    {
+      name: 'upgrade',
+      alias: 'u',
+      type: Boolean,
+    },
   ],
   {
     stopAtFirstUnknown: true,
@@ -40,7 +45,11 @@ switch (mainCommand.command) {
     if (mainCommand.version === true) {
       console.log(`v${require('../package.json').version}`);
       break;
+    } else if (mainCommand.upgrade === true) {
+      console.log('upgrade running...');
+      break;
     }
+
     console.log(
       commandLineUsage([
         {
@@ -86,6 +95,12 @@ switch (mainCommand.command) {
               name: 'version',
               alias: 'v',
               description: 'Prints the version information',
+              type: Boolean,
+            },
+            {
+              name: 'upgrade',
+              alias: 'u',
+              description: 'Upgrade this project to the latest version of Ark',
               type: Boolean,
             },
           ],
