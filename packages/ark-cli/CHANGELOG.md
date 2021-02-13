@@ -5,14 +5,9 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## [2.2.4](https://github.com/skyslit/ark/compare/v2.2.3...v2.2.4) (2021-02-05)
 
-
 ### Bug Fixes
 
-* issues identified on feb 5 ([#13](https://github.com/skyslit/ark/issues/13)) ([c512cc0](https://github.com/skyslit/ark/commit/c512cc0638ad8599432698f06160aa1bcca7f8bb))
-
-
-
-
+- issues identified on feb 5 ([#13](https://github.com/skyslit/ark/issues/13)) ([c512cc0](https://github.com/skyslit/ark/commit/c512cc0638ad8599432698f06160aa1bcca7f8bb))
 
 ## [2.2.3](https://github.com/skyslit/ark/compare/v2.2.2...v2.2.3) (2021-02-04)
 

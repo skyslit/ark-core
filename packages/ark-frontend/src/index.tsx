@@ -19,6 +19,9 @@ import {
   Redirect,
 } from 'react-router-dom';
 import ReactDOMServer from 'react-dom/server';
+import traverse from 'traverse';
+import cloneDeep from 'lodash/cloneDeep';
+import isEqual from 'lodash/isEqual';
 
 export type RenderMode = 'ssr' | 'csr';
 
@@ -43,12 +46,10 @@ type ServiceHookOptions = {
 type ServiceInvokeOptions = {
   force: boolean;
 };
-type ServiceHook<
-  T = ServiceResponse<any, any>,
-  E = ServiceResponse<any, any>
-> = (
+type ServiceHook<T = ServiceResponse<any, any>, E = Error> = (
   serviceId: string | Partial<ServiceHookOptions>
 ) => {
+  statusCode: number;
   hasInitialized: boolean;
   isLoading: boolean;
   response: T;
@@ -56,15 +57,33 @@ type ServiceHook<
   invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
 };
 
-type ContextHook<
-  T = ServiceResponse<any, any>,
-  E = ServiceResponse<any, any>
-> = () => {
+type ContextHook<T = ServiceResponse<any, any>, E = Error> = () => {
+  statusCode: number;
   hasInitialized: boolean;
   isLoading: boolean;
   response: T;
   err: E;
   invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
+};
+
+type ContentHookOptions<T> = {
+  serviceId: string;
+  defaultContent: T;
+  useReduxStore: boolean;
+};
+type ContentHook = <T>(
+  serviceId: string | ContentHookOptions<T>
+) => {
+  isAvailable: boolean;
+  hasChanged: boolean;
+  content: T;
+  markAsSaved: () => void;
+  setContent: (content: T) => void;
+  updateKey: (key: string, val: T) => void;
+  pushItem: (key: string, val: any) => void;
+  unshiftItem: (key: string, val: any) => void;
+  insertItem: (key: string, indexToInsert: number, val: any) => void;
+  reset: () => void;
 };
 
 type MapRoute = (
@@ -101,6 +120,7 @@ declare global {
           refId: string,
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
+        useContent: ContentHook;
         mapRoute: MapRoute;
         useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
       }
@@ -491,15 +511,23 @@ const useServiceCreator: (
   const [response, setResponse] = useStoreCreator(modId, ctx)<
     ServiceResponse<any, any>
   >(`RESPONSE_${option.serviceId}`, null, !option.useRedux);
-  const [err, setError] = useStoreCreator(modId, ctx)<
-    ServiceResponse<any, any>
-  >(`ERROR_${option.serviceId}`, null, !option.useRedux);
+  const [err, setError] = useStoreCreator(modId, ctx)<Error>(
+    `ERROR_${option.serviceId}`,
+    null,
+    !option.useRedux
+  );
+  const [statusCode, setStatusCode] = useStoreCreator(modId, ctx)<number>(
+    `STATUS_CODE_${option.serviceId}`,
+    null,
+    !option.useRedux
+  );
 
   return {
     hasInitialized: hasInitialized || false,
     isLoading: isLoading || false,
     response,
     err,
+    statusCode,
     invoke: (data?, opts_?) => {
       return new Promise((resolve, reject) => {
         const opts: ServiceInvokeOptions = Object.assign<
@@ -513,20 +541,34 @@ const useServiceCreator: (
         );
 
         if (hasInitialized !== true || opts.force === true) {
+          setStatusCode(-1);
           setLoading(true);
           setError(null);
           setResponse(null);
           axios(Object.assign(option.ajax, { data }))
             .then((response) => {
+              setStatusCode(response.status);
               setHasInitialized(true);
               setResponse(response.data);
               setLoading(false);
               resolve(response.data);
             })
             .catch((err) => {
-              setError(err);
+              let statusCodeVal = 500;
+              let errObj = err;
+              // Fix: API error is not visible in redux state
+              try {
+                if (err.response) {
+                  statusCodeVal = err.response.status;
+                  errObj = err.response.data;
+                }
+              } catch (e) {
+                // Do nothing
+              }
+              setError(errObj);
+              setStatusCode(statusCodeVal);
               setLoading(false);
-              reject(err);
+              reject(errObj);
             });
         } else {
           resolve(false);
@@ -711,6 +753,113 @@ export const Frontend = createPointer<Ark.MERN.React>(
           })
         );
       });
+    },
+    useContent: (opts_) => {
+      const opts: ContentHookOptions<any> = Object.assign<
+        ContentHookOptions<any>,
+        ContentHookOptions<any>
+      >(
+        {
+          serviceId: typeof opts_ === 'string' ? opts_ : undefined,
+          defaultContent: undefined,
+          useReduxStore: false,
+        },
+        typeof opts_ === 'object' ? opts_ : undefined
+      );
+      const useStore = useStoreCreator(moduleId, context);
+      const [baseContent, setBaseContent] = useStore<any>(
+        `_cmsHook/_base_${opts.serviceId}`,
+        opts.defaultContent,
+        opts.useReduxStore === false
+      );
+      const [content, setContentToState] = useStore<any>(
+        `_cmsHook/${opts.serviceId}`,
+        opts.defaultContent,
+        opts.useReduxStore === false
+      );
+      const [hasChanged, setHasChanged] = useStore<boolean>(
+        `_cmsHook/_changed_${opts.serviceId}`,
+        false,
+        opts.useReduxStore === false
+      );
+
+      React.useEffect(() => {
+        setHasChanged(isEqual(baseContent, content) === false);
+      }, [baseContent, content]);
+
+      const getCurrentValByKey = (key: string) => {
+        const traverseResult = traverse(content);
+        return traverseResult.get(key.split('.'));
+      };
+
+      const updateKey = (key: string, val: any) => {
+        const latest = cloneDeep(content);
+        const traverseResult = traverse(latest);
+        const paths = traverseResult.paths().filter((p) => p.length > 0);
+        let i = 0;
+        for (i = 0; i < paths.length; i++) {
+          const address = paths[i].join('.');
+          if (address === key) {
+            traverseResult.set(paths[i], val);
+            break;
+          }
+        }
+        setContentToState(latest);
+      };
+
+      return {
+        isAvailable: content !== null && content !== undefined,
+        hasChanged,
+        content,
+        reset: () => {
+          setContentToState(baseContent);
+          setHasChanged(false);
+        },
+        setContent: (val) => {
+          setContentToState(val);
+          setBaseContent(val);
+          setHasChanged(false);
+        },
+        markAsSaved: () => {
+          setBaseContent(content);
+          setHasChanged(false);
+        },
+        insertItem: (key, indexToInsert, val) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(key, [
+              ...item.slice(0, indexToInsert),
+              val,
+              ...item.slice(indexToInsert, item.length),
+            ]);
+          } else {
+            throw new Error(
+              `${key} is not an array. pushItem can be only called upon an array`
+            );
+          }
+        },
+        pushItem: (key, val) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(key, [...item, val]);
+          } else {
+            throw new Error(
+              `${key} is not an array. pushItem can be only called upon an array`
+            );
+          }
+        },
+        unshiftItem: (key, val) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(key, [val, ...item]);
+          } else {
+            throw new Error(
+              `${key} is not an array. unshiftItem can be only called upon an array`
+            );
+          }
+        },
+        updateKey,
+      };
     },
   })
 );

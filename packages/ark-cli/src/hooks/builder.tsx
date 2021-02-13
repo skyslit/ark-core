@@ -6,18 +6,10 @@ import chalk from 'chalk';
 import { BackendBuilder, SPABuilder } from '@skyslit/ark-devtools';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
+import rimraf from 'rimraf';
+import { BuilderMonitor } from '@skyslit/ark-devtools/build/utils/BuilderBase';
 
 const clear = require('console-clear');
-const isInteractive: boolean = true;
-
-/**
- * Clears console
- */
-function clearConsole() {
-  if (isInteractive === true) {
-    clear();
-  }
-}
 
 type Options = {
   cwd: string;
@@ -48,6 +40,28 @@ export const useBuilder = (opts: Options) => {
 
     const updateSnapshot = (key: string, item: BuilderSnapshotItem) => {
       state[key] = item;
+    };
+
+    const isInteractive: boolean = mode === 'development';
+
+    /**
+     * Clears console
+     */
+    const clearConsole = () => {
+      if (isInteractive === true) {
+        clear();
+      }
+    };
+
+    const renderTargets = () => {
+      console.log(
+        chalk.gray(
+          `Targets: ${[
+            ...serverEntries.map((e) => `${path.basename(e)} (express)`),
+            ...clientEntries.map((e) => `${path.basename(e)} (client)`),
+          ].join(', ')}`
+        )
+      );
     };
 
     const renderSnapshot = () => {
@@ -85,6 +99,8 @@ export const useBuilder = (opts: Options) => {
         `).trim()
         );
         console.log('');
+        renderTargets();
+        console.log('');
         console.log(error);
       } else if (hasWarnings) {
         console.log(
@@ -93,6 +109,8 @@ export const useBuilder = (opts: Options) => {
         `).trim()
         );
         console.log('');
+        renderTargets();
+        console.log('');
         console.log(warnings.join('\n'));
       } else {
         console.log(
@@ -100,24 +118,40 @@ export const useBuilder = (opts: Options) => {
           ${chalk.green('Compiled successfully')}
         `).trim()
         );
+        console.log('');
+        renderTargets();
       }
     };
 
     let appProcess: ChildProcess = null;
 
+    const targetBuildDir = path.join(opts.cwd, 'build');
+    const cleanBuildDir = () => {
+      if (fs.existsSync(targetBuildDir)) {
+        rimraf.sync(targetBuildDir);
+      }
+    };
+
     const runApp = () => {
-      if (appProcess) {
-        appProcess.kill('SIGTERM');
+      if (mode === 'development') {
+        if (appProcess) {
+          appProcess.kill('SIGTERM');
+        }
+        const appPath: string = path.join(
+          opts.cwd,
+          'build',
+          'server',
+          'main.js'
+        );
+        if (!fs.existsSync(appPath)) {
+          console.log('');
+          console.log(chalk.yellow('Waiting for output...'));
+          return false;
+        }
+        appProcess = spawn('node', [appPath], {
+          stdio: 'inherit',
+        });
       }
-      const appPath: string = path.join(opts.cwd, 'build', 'server', 'main.js');
-      if (!fs.existsSync(appPath)) {
-        console.log('');
-        console.log(chalk.yellow('Waiting for output...'));
-        return false;
-      }
-      appProcess = spawn('node', [appPath], {
-        stdio: 'inherit',
-      });
     };
 
     const buildBackend = (entryFilePaths: string[]) => {
@@ -158,7 +192,7 @@ export const useBuilder = (opts: Options) => {
       frontendRunning = true;
       clientEntryFilePaths.forEach((entryFilePath, index) => {
         const builder = new SPABuilder(
-          'admin',
+          path.basename(entryFilePath).split('.')[0],
           path.join(opts.cwd, entryFilePath)
         );
         builder.attachMonitor((err, result) => {
@@ -190,16 +224,113 @@ export const useBuilder = (opts: Options) => {
     });
 
     clearConsole();
-    console.log(chalk.blueBright('Starting compilation...'));
-    if (serverEntries.length > 0) {
-      if (clientEntries.length > 0) {
-        buildFrontend(clientEntries, serverEntries);
+    if (mode === 'development') {
+      console.log(chalk.blueBright('Starting compilation...'));
+      cleanBuildDir();
+      if (serverEntries.length > 0) {
+        if (clientEntries.length > 0) {
+          buildFrontend(clientEntries, serverEntries);
+        } else {
+          buildBackend(serverEntries);
+        }
       } else {
-        buildBackend(serverEntries);
+        console.log('0 server build target(s) found');
+        process.exit(0);
       }
     } else {
-      console.log('0 server build target(s) found');
-      process.exit(0);
+      console.log('Creating production build...');
+      console.log(' ');
+      renderTargets();
+      console.log(' ');
+      cleanBuildDir();
+      [
+        ...serverEntries.map((e) => ({
+          path: e,
+          type: 'server',
+        })),
+        ...clientEntries.map((e) => ({
+          path: e,
+          type: 'client',
+        })),
+      ]
+        .reduce((acc, item) => {
+          return acc.then(() => {
+            return new Promise<any>((resolve, reject) => {
+              const monitor: BuilderMonitor = (err, result) => {
+                console.log(' ');
+                if (err) {
+                  reject(err);
+                } else {
+                  if (result.hasErrors() === true) {
+                    console.log(chalk.red(`${item.path} compiled with errors`));
+                    reject(result.compilation.errors[0]);
+                  } else if (result.hasWarnings() === true) {
+                    console.log(
+                      chalk.yellow(`${item.path} compiled with warnings`)
+                    );
+                    console.warn(result.compilation.warnings[0]);
+                    resolve(true);
+                  } else {
+                    console.log(chalk.gray(result.toString()));
+                    console.log(' ');
+                    console.log(
+                      chalk.green(`${item.path} compiled successfully`)
+                    );
+                    resolve(true);
+                  }
+                }
+                console.log(' ');
+              };
+
+              if (item.type === 'server') {
+                const builder = new BackendBuilder(
+                  path.join(opts.cwd, item.path)
+                );
+                builder.attachMonitor(monitor);
+                console.log(
+                  chalk.blueBright(
+                    `Compilation started for server app: ${path.basename(
+                      item.path
+                    )}...`
+                  )
+                );
+                builder.build({
+                  cwd: opts.cwd,
+                  mode: 'production',
+                  watchMode: false,
+                });
+              } else if (item.type === 'client') {
+                const builder = new SPABuilder(
+                  path.basename(item.path).split('.')[0],
+                  path.join(opts.cwd, item.path)
+                );
+                builder.attachMonitor(monitor);
+                console.log(
+                  chalk.blueBright(
+                    `Compilation started for client app: ${path.basename(
+                      item.path
+                    )}...`
+                  )
+                );
+                builder.build({
+                  cwd: opts.cwd,
+                  mode: 'production',
+                  watchMode: false,
+                });
+              } else {
+                reject(new Error(`Unknown type: ${item.type}`));
+              }
+            });
+          });
+        }, Promise.resolve())
+        .then(() => {
+          console.log(chalk.greenBright('All process completed successfully'));
+          process.exit(0);
+        })
+        .catch((err) => {
+          console.error(err);
+          process.exit(1);
+        });
     }
   }, []);
 

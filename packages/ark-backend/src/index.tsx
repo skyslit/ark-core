@@ -67,7 +67,10 @@ type ServiceConsumerOptions = {
 };
 
 type WebAppRenderer = {
-  render: (initialState?: any) => expressApp.RequestHandler;
+  render: (
+    initialState?: any,
+    reqs_?: Array<ServiceReq>
+  ) => expressApp.RequestHandler;
 };
 
 type UseServicePointer = (
@@ -331,6 +334,7 @@ export const Data = createPointer<Partial<Ark.Data>>(
                 {
                   useNewUrlParser: true,
                   useUnifiedTopology: true,
+                  useCreateIndex: true,
                 },
                 opts
               )

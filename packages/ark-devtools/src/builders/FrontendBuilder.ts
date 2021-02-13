@@ -4,6 +4,7 @@ import path from 'path';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
 import { GhostFileActions, createGhostFile } from '../utils/ghostFile';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
 
 /**
  * SPA Builder
@@ -34,7 +35,7 @@ export class SPABuilder extends BuilderBase {
     return [
       createGhostFile(
         path.join(__dirname, '../../assets/Frontend/root.tsx.ejs'),
-        'src/index.tsx',
+        `src/${this.appId}.tsx`,
         {
           relativeAppFilePath: path.relative(
             path.join(opts.cwd, 'src'),
@@ -50,6 +51,7 @@ export class SPABuilder extends BuilderBase {
    */
   getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
     return {
+      devtool: mode === 'development' ? 'source-map' : false,
       context: cwd,
       mode,
       resolve: {
@@ -63,20 +65,24 @@ export class SPABuilder extends BuilderBase {
         },
         symlinks: true,
       },
-      entry: path.join(cwd, 'src', 'index.tsx'),
+      entry: {
+        [this.appId]: path.join(cwd, 'src', `${this.appId}.tsx`),
+      },
       output: {
         publicPath: '/',
-        filename: `_browser/${this.appId}.js`,
+        filename: `_browser/[name].js`,
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',
+        chunkFilename: '[name].[contenthash].js',
       },
       plugins: [
         new HTMLWebpackPlugin({
-          filename: `${this.appId}.html`,
+          filename: '[name].html',
           template: path.resolve(__dirname, '../../assets/index.template.html'),
         }),
         new MiniCssExtractPlugin({
-          filename: `./assets/[name].css`,
+          filename: './assets/[name].css',
+          chunkFilename: './assets/[name].[contenthash:8].chunk.css',
         }),
       ],
       stats: {
@@ -86,13 +92,21 @@ export class SPABuilder extends BuilderBase {
       module: {
         rules: [
           {
-            test: /\.(ts|tsx|js|jsx)$/,
+            test: /\.js$/,
+            enforce: 'pre',
+            use: [require.resolve('source-map-loader')],
+          },
+          {
+            test: /\.(js|mjs|jsx|ts|tsx)$/,
             exclude: /node_modules/,
             use: [
               {
                 loader: require.resolve('babel-loader'),
                 options: {
-                  compact: false,
+                  // Should not take any babelrc file located in the project root
+                  babelrc: false,
+                  sourceMaps: mode === 'development' ? 'inline' : false,
+                  compact: mode === 'production',
                   presets: [
                     [
                       require.resolve('@babel/preset-env'),
@@ -108,6 +122,7 @@ export class SPABuilder extends BuilderBase {
                     [require.resolve('@babel/preset-react')],
                   ],
                   cacheDirectory: true,
+                  cacheCompression: false,
                   plugins: [
                     require.resolve('@babel/plugin-proposal-class-properties'),
                     require.resolve('@babel/plugin-syntax-dynamic-import'),
@@ -143,6 +158,39 @@ export class SPABuilder extends BuilderBase {
             ],
           },
         ],
+      },
+      performance: {
+        maxEntrypointSize: 5242880,
+        maxAssetSize: 5242880,
+      },
+      optimization: {
+        minimize: mode === 'production',
+        minimizer: [new TerserPlugin()],
+        splitChunks: {
+          chunks: 'async',
+          minSize: 20000,
+          minRemainingSize: 0,
+          maxSize: 31232,
+          minChunks: 1,
+          maxAsyncRequests: 30,
+          maxInitialRequests: 30,
+          enforceSizeThreshold: 50000,
+          cacheGroups: {
+            defaultVendors: {
+              test: /[\\/]node_modules[\\/]/,
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+            default: {
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+        runtimeChunk: {
+          name: (entrypoint: any) => `runtime-${entrypoint.name}`,
+        },
       },
     };
   }
