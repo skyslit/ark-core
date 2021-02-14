@@ -1,7 +1,7 @@
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
 
-import runInitProject from '../tasks/initProject.task';
+import runInitProject from '../tasks/init-project.task';
 
 const optionDefs = [
   {
