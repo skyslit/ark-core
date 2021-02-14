@@ -42,7 +42,6 @@
     "@babel/preset-react": "^7.12.7",
     "@babel/preset-typescript": "^7.12.1",
     "@skyslit/ark-devtools": "^2.3.0",
-    "@types/listr": "^0.14.2",
     "chalk": "^4.1.0",
     "command-line-args": "^5.1.1",
     "command-line-usage": "^6.1.1",
@@ -55,9 +54,9 @@
     "ink-table": "^3.0.0",
     "ink-text-input": "^4.0.1",
     "inquirer": "^7.3.3",
-    "listr": "^0.14.3",
     "react": "^16.0.1",
     "rimraf": "^3.0.2",
+    "rxjs": "^6.6.3",
     "strip-indent": "^3.0.0",
     "tiny-glob": "^0.2.8"
   },
