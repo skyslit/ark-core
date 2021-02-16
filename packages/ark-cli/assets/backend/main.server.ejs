@@ -1,14 +1,11 @@
-import { runApp } from '@skyslit/ark-core';
-import { Backend } from '@skyslit/ark-backend';
+<%- moduleImport.join('\n'); %>
 
-runApp(({use}) => {
-  const {useServer, useRoute} = use(Backend);
+runApp(({<%- runAppPropDeps.join(', '); %>}) => {
+  <% if (backendImports.length > 0) { %>
+  const {<%- backendImports.join(', '); %>} = use(Backend);
+  <% } %>
   
-  useRoute('get', '/', (req, res) => {
-    res.json({
-        message: 'Hello World!'
-    })
-  });
+  <%- runAppSnippets.join('\n\n'); %>
 
   useServer({
     hostname: 'localhost',

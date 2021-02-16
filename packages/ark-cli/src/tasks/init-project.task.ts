@@ -8,6 +8,11 @@ import gitP from 'simple-git/promise';
 import runCommand from '../utils/run-command';
 import ensureDir from '../utils/ensure-dir';
 import ejs from 'ejs';
+import formatCode from '../utils/format-code';
+
+const skipDepInstalls: boolean = false;
+
+// type ProjectType = 'solution' | 'module';
 
 export default (cwd_?: string) => {
   const packager: 'npm' | 'yarn' = 'npm';
@@ -128,6 +133,7 @@ export default (cwd_?: string) => {
     },
     {
       title: 'install and configure typescript',
+      skip: () => skipDepInstalls,
       task: () =>
         runCommand(
           `using ${packager}...`,
@@ -143,6 +149,7 @@ export default (cwd_?: string) => {
         new Listr([
           {
             title: 'install prettier (exact)',
+            skip: () => skipDepInstalls,
             task: () =>
               runCommand(
                 `using ${packager}...`,
@@ -154,6 +161,7 @@ export default (cwd_?: string) => {
           },
           {
             title: 'install pretty-quick, husky',
+            skip: () => skipDepInstalls,
             task: () =>
               runCommand(
                 `using ${packager}...`,
@@ -171,6 +179,7 @@ export default (cwd_?: string) => {
         return new Listr([
           {
             title: 'install .eslintrc dependencies',
+            skip: () => skipDepInstalls,
             task: () => {
               const deps = [
                 'eslint@^7.14.0',
@@ -229,6 +238,7 @@ export default (cwd_?: string) => {
     },
     {
       title: 'install dependencies',
+      skip: () => skipDepInstalls,
       task: () => {
         const deps = [
           // Backend
@@ -242,6 +252,8 @@ export default (cwd_?: string) => {
 
           // Frontend
           'axios@^0.21.1',
+          'antd@^4.11.2',
+          '@ant-design/icons@^4.4.0',
 
           // Core
           '@skyslit/ark-core@^2.0.0',
@@ -264,6 +276,7 @@ export default (cwd_?: string) => {
         new Listr([
           {
             title: 'install @types declarations',
+            skip: () => skipDepInstalls,
             task: () => {
               const deps = [
                 '@types/cookie-parser@^1.4.2',
@@ -314,35 +327,319 @@ export default (cwd_?: string) => {
         ]),
     },
     {
-      title: 'write main server application',
-      task: (ctx: any, task: any) => {
-        return new Observable((observer) => {
-          const { cwd } = ctx;
+      title: 'scaffolding a full stack application',
+      enabled: (ctx) => ctx.projectType === 'solution',
+      task: () =>
+        new Listr([
+          {
+            title: 'create admin client application',
+            skip: (ctx) => ctx.requireAdminDashboard === false,
+            task: (ctx: any, task: any) => {
+              return new Observable((observer) => {
+                const { cwd } = ctx;
 
-          // Check if ark-env.d.ts exists
-          const filePath = path.join(cwd, 'src', 'server', 'main.server.ts');
+                // Check if ark-env.d.ts exists
+                const filePath = path.join(cwd, 'src', 'admin.client.tsx');
 
-          ensureDir(filePath);
+                ensureDir(filePath);
 
-          const doesFileExists = fs.existsSync(filePath);
+                const doesFileExists = fs.existsSync(filePath);
 
-          if (doesFileExists === true) {
-            task.skip('main.server.ts already exists');
-            observer.complete();
-          } else {
-            const templatePath = path.join(
-              __dirname,
-              '../../assets/backend/main.server.ejs'
-            );
+                if (doesFileExists === true) {
+                  task.skip('file already exists');
+                  observer.complete();
+                } else {
+                  const templatePath = path.join(
+                    __dirname,
+                    '../../assets/frontend/main.client.txt'
+                  );
 
-            fs.writeFileSync(
-              filePath,
-              ejs.render(fs.readFileSync(templatePath, 'utf-8'), {})
-            );
-            observer.complete();
-          }
-        });
-      },
+                  fs.writeFileSync(
+                    filePath,
+                    formatCode(
+                      ejs.render(fs.readFileSync(templatePath, 'utf-8'), {
+                        moduleImport: [],
+                        reactAppPropDeps: ['use'],
+                        runAppSnippets: [],
+                      })
+                    )
+                  );
+                  observer.complete();
+                }
+              });
+            },
+          },
+          {
+            title: 'write main server application',
+            task: (ctx: any, task: any) => {
+              return new Observable((observer) => {
+                const { cwd } = ctx;
+                const requireAdminDashboard: boolean =
+                  ctx.requireAdminDashboard || false;
+
+                // Check if ark-env.d.ts exists
+                const filePath = path.join(
+                  cwd,
+                  'src',
+                  'server',
+                  'main.server.ts'
+                );
+
+                ensureDir(filePath);
+
+                const doesFileExists = fs.existsSync(filePath);
+
+                if (doesFileExists === true) {
+                  task.skip('main.server.ts already exists');
+                  observer.complete();
+                } else {
+                  const templatePath = path.join(
+                    __dirname,
+                    '../../assets/backend/main.server.ejs'
+                  );
+
+                  fs.writeFileSync(
+                    filePath,
+                    formatCode(
+                      ejs.render(fs.readFileSync(templatePath, 'utf-8'), {
+                        /**
+                         * Module imports
+                         */
+                        moduleImport: [
+                          `import { runApp } from '@skyslit/ark-core';`,
+                          `import { Backend } from '@skyslit/ark-backend';`,
+                          (() => {
+                            if (requireAdminDashboard === true) {
+                              return `import adminWebAppCreator from '../admin.client';`;
+                            }
+                          })(),
+                        ].filter(Boolean),
+                        /**
+                         * runApp(props) props imports
+                         */
+                        runAppPropDeps: ['use'],
+                        /**
+                         * use(Backend) imports
+                         */
+                        backendImports: [
+                          'useServer',
+                          'useRoute',
+                          (() => {
+                            if (requireAdminDashboard === true) {
+                              return 'useWebApp';
+                            }
+                          })(),
+                        ].filter(Boolean),
+                        /**
+                         * code that goes inside runApp
+                         */
+                        runAppSnippets: [
+                          // useRoute (for index)
+                          (() => {
+                            if (requireAdminDashboard === true) {
+                              return `useRoute('get', '/*', useWebApp('admin', adminWebAppCreator).render());`;
+                            }
+
+                            return `useRoute('get', '/', (req, res) => {
+                            res.json({
+                                message: 'Hello World!'
+                            })
+                          });`;
+                          })(),
+                        ].filter(Boolean),
+                      })
+                    )
+                  );
+                  observer.complete();
+                }
+              });
+            },
+          },
+        ]),
+    },
+    {
+      title: 'scaffolding a module',
+      enabled: (ctx) => ctx.projectType === 'module',
+      task: () =>
+        new Listr([
+          {
+            title: 'create backend.module',
+            task: (ctx, task) => {
+              return new Observable((observer) => {
+                const { cwd } = ctx;
+                // Check if ark-env.d.ts exists
+                const filePath = path.join(
+                  cwd,
+                  'src',
+                  'modules',
+                  'main',
+                  'backend.module.ts'
+                );
+
+                ensureDir(filePath);
+
+                const doesFileExists = fs.existsSync(filePath);
+
+                if (doesFileExists === true) {
+                  task.skip('backend.module.ts already exists');
+                  observer.complete();
+                } else {
+                  const templatePath = path.join(
+                    __dirname,
+                    '../../assets/backend/backend.module.ejs'
+                  );
+
+                  fs.writeFileSync(
+                    filePath,
+                    formatCode(
+                      ejs.render(fs.readFileSync(templatePath, 'utf-8'), {})
+                    )
+                  );
+                  observer.complete();
+                }
+              });
+            },
+          },
+          {
+            title: 'create frontend.module',
+            task: (ctx, task) => {
+              return new Observable((observer) => {
+                const { cwd } = ctx;
+                // Check if ark-env.d.ts exists
+                const filePath = path.join(
+                  cwd,
+                  'src',
+                  'modules',
+                  'main',
+                  'frontend.module.ts'
+                );
+
+                ensureDir(filePath);
+
+                const doesFileExists = fs.existsSync(filePath);
+
+                if (doesFileExists === true) {
+                  task.skip('frontend.module.ts already exists');
+                  observer.complete();
+                } else {
+                  const templatePath = path.join(
+                    __dirname,
+                    '../../assets/frontend/frontend.module.ejs'
+                  );
+
+                  fs.writeFileSync(
+                    filePath,
+                    formatCode(
+                      ejs.render(fs.readFileSync(templatePath, 'utf-8'), {})
+                    )
+                  );
+                  observer.complete();
+                }
+              });
+            },
+          },
+          {
+            title: 'write main client application',
+            task: (ctx: any, task: any) => {
+              return new Observable((observer) => {
+                const { cwd } = ctx;
+
+                const filePath = path.join(cwd, 'src', 'main.client.tsx');
+
+                ensureDir(filePath);
+
+                const doesFileExists = fs.existsSync(filePath);
+
+                if (doesFileExists === true) {
+                  task.skip('file already exists');
+                  observer.complete();
+                } else {
+                  const templatePath = path.join(
+                    __dirname,
+                    '../../assets/frontend/main.client.txt'
+                  );
+
+                  fs.writeFileSync(
+                    filePath,
+                    formatCode(
+                      ejs.render(fs.readFileSync(templatePath, 'utf-8'), {
+                        moduleImport: [
+                          `import createMainModule from './modules/main/frontend.module';`,
+                        ],
+                        reactAppPropDeps: ['use', 'useModule'],
+                        runAppSnippets: [
+                          `useModule('main', createMainModule);`,
+                        ],
+                      })
+                    )
+                  );
+                  observer.complete();
+                }
+              });
+            },
+          },
+          {
+            title: 'write main server application',
+            task: (ctx: any, task: any) => {
+              return new Observable((observer) => {
+                const { cwd } = ctx;
+
+                // Check if ark-env.d.ts exists
+                const filePath = path.join(
+                  cwd,
+                  'src',
+                  'server',
+                  'main.server.ts'
+                );
+
+                ensureDir(filePath);
+
+                const doesFileExists = fs.existsSync(filePath);
+
+                if (doesFileExists === true) {
+                  task.skip('main.server.ts already exists');
+                  observer.complete();
+                } else {
+                  const templatePath = path.join(
+                    __dirname,
+                    '../../assets/backend/main.server.ejs'
+                  );
+
+                  fs.writeFileSync(
+                    filePath,
+                    formatCode(
+                      ejs.render(fs.readFileSync(templatePath, 'utf-8'), {
+                        /**
+                         * Module imports
+                         */
+                        moduleImport: [
+                          `import { runApp } from '@skyslit/ark-core';`,
+                          `import { Backend } from '@skyslit/ark-backend';`,
+                          `import createMainModule from '../modules/main/backend.module';`,
+                        ],
+                        /**
+                         * runApp(props) props imports
+                         */
+                        runAppPropDeps: ['use', 'useModule'],
+                        /**
+                         * use(Backend) imports
+                         */
+                        backendImports: ['useServer'],
+                        /**
+                         * code that goes inside runApp
+                         */
+                        runAppSnippets: [
+                          `useModule('main', createMainModule);`,
+                        ],
+                      })
+                    )
+                  );
+                  observer.complete();
+                }
+              });
+            },
+          },
+        ]),
     },
     {
       title: 'commit changes',
@@ -365,6 +662,7 @@ export default (cwd_?: string) => {
           name: 'projectName',
           message: 'Name of this project?',
           type: 'input',
+          default: path.basename(cwd),
         },
         {
           name: 'projectType',
@@ -372,6 +670,13 @@ export default (cwd_?: string) => {
           type: 'list',
           choices: ['full-stack application', 'freepizza module'],
           default: 0,
+        },
+        {
+          name: 'requireAdminDashboard',
+          message: 'Do you need admin dashboard?',
+          type: 'confirm',
+          default: true,
+          when: (v) => v.projectType === 'full-stack application',
         },
       ])
     )

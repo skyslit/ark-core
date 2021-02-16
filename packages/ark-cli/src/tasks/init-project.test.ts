@@ -20,12 +20,13 @@ beforeEach(() => {
 });
 
 test(
-  'should scaffold a full stack project',
+  'should scaffold a full stack project with dashboard',
   (done) => {
     // @ts-ignore
-    inquirer.prompt = jest
-      .fn()
-      .mockResolvedValue({ projectName: 'cool-project' });
+    inquirer.prompt = jest.fn().mockResolvedValue({
+      projectName: 'cool-project',
+      requireAdminDashboard: true,
+    });
 
     const log = console.log;
     console.log = () => {};

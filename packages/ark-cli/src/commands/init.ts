@@ -5,12 +5,6 @@ import runInitProject from '../tasks/init-project.task';
 
 const optionDefs = [
   {
-    name: 'module',
-    type: Boolean,
-    defaultValue: false,
-    description: 'Scaffold a project suitable for publishing as FPZ Module',
-  },
-  {
     name: 'help',
     alias: 'h',
     type: Boolean,
