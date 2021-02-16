@@ -119,6 +119,7 @@ export default (cwd_?: string) => {
                 '',
                 '# Utils',
                 '.DS_Store',
+                '.fpz',
                 '',
               ].join('\n')
             );

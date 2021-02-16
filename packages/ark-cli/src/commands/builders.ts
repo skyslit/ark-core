@@ -326,7 +326,7 @@ export const runStart = (argv?: string[]) => {
       },
     ],
     {
-      argv,
+      argv: argv || [],
       stopAtFirstUnknown: true,
     }
   );

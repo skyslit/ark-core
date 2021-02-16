@@ -4,6 +4,7 @@ import commandLineUsage from 'command-line-usage';
 
 import runInit from './commands/init';
 import { runStart, runBuild } from './commands/builders';
+import runAdd from './commands/add';
 
 const mainCommand = commandLineArgs(
   [
@@ -39,6 +40,10 @@ switch (mainCommand.command) {
   }
   case 'build': {
     runBuild(mainCommand._unknown);
+    break;
+  }
+  case 'add': {
+    runAdd(mainCommand._unknown);
     break;
   }
   default: {
@@ -78,6 +83,10 @@ switch (mainCommand.command) {
               name: 'build',
               summary:
                 'Creates an optimized production build of your application',
+            },
+            {
+              name: 'add',
+              summary: 'Integrates a fpz module with this project',
             },
             { name: 'publish', summary: 'Publish Ark Module to FreePizza.io' },
           ],

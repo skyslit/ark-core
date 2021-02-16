@@ -1,9 +1,15 @@
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
+import chalk from 'chalk';
 
-import runInitProject from '../tasks/init-project.task';
+import addModuleTask from '../tasks/add-module.task';
 
 const optionDefs = [
+  {
+    name: 'command',
+    type: String,
+    defaultOption: true,
+  },
   {
     name: 'help',
     alias: 'h',
@@ -18,17 +24,33 @@ export default (argv?: string[]) => {
     stopAtFirstUnknown: true,
   });
 
+  if (!options.command || typeof options.command !== 'string') {
+    console.log(
+      chalk.redBright(
+        commandLineUsage([
+          {
+            content: 'package name is required',
+          },
+          {
+            header: 'Sample Usage',
+            content: '$ fpz add <package-name>',
+          },
+        ])
+      )
+    );
+    process.exit(1);
+  }
+
   if (options.help) {
     console.log(
       commandLineUsage([
         {
-          header: 'Initialize Project',
-          content:
-            'Scaffolds a template suitable for building enterprise grade business application or re-usable FPZ module',
+          header: 'Add Freepizza module',
+          content: 'Integrates Freepizza module to the current project',
         },
         {
           header: 'Usage',
-          content: '$ fpz init <option>',
+          content: '$ fpz add <package-name>',
         },
         {
           header: 'Options List',
@@ -40,13 +62,12 @@ export default (argv?: string[]) => {
     console.log(
       commandLineUsage([
         {
-          header: 'Create Project',
-          content:
-            'Scaffolds a template suitable for building enterprise grade business application or re-usable FPZ module',
+          header: 'Add Freepizza module',
+          content: 'Integrates Freepizza module to the current project',
         },
       ])
     );
-    runInitProject()
+    addModuleTask()
       .then(() => {
         process.exit(0);
       })
