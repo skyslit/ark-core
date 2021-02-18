@@ -67,7 +67,7 @@ export default (argv?: string[]) => {
         },
       ])
     );
-    addModuleTask()
+    addModuleTask(options.command)
       .then(() => {
         process.exit(0);
       })
