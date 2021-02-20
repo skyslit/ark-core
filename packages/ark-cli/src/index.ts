@@ -5,6 +5,7 @@ import commandLineUsage from 'command-line-usage';
 import runInit from './commands/init';
 import { runStart, runBuild } from './commands/builders';
 import runAdd from './commands/add';
+import runUpgrade from './commands/upgrade';
 
 const mainCommand = commandLineArgs(
   [
@@ -51,7 +52,7 @@ switch (mainCommand.command) {
       console.log(`v${require('../package.json').version}`);
       break;
     } else if (mainCommand.upgrade === true) {
-      console.log('upgrade running...');
+      runUpgrade(mainCommand._unknown);
       break;
     }
 
