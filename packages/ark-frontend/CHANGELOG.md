@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
+
+
+### Bug Fixes
+
+* API error is not visible in redux state ([7d09548](https://github.com/skyslit/ark/commit/7d0954823ec296825656fcc47c4e48dfe9127d7f))
+* issue that always take to pre-defined login url ([46d7167](https://github.com/skyslit/ark/commit/46d7167e5cc0bc64256667e6283641ad502b8473))
+* issue with data model in  useService() ([27bedb1](https://github.com/skyslit/ark/commit/27bedb1de8c7ae762a87080415ade44e99853e68))
+* removeItemAt is undefined ([4213719](https://github.com/skyslit/ark/commit/421371976b5ac8ec2721e34bf157bee18fe9a1f2))
+
+
+### Features
+
+* added useContent hook feature ([7adfa7d](https://github.com/skyslit/ark/commit/7adfa7ded6f0bb21b8c2f07d530b85d4ce84a767))
+
+
+
+
+
 # [2.3.0](https://github.com/skyslit/ark/compare/v2.2.4...v2.3.0) (2021-02-13)
 
 ### Features

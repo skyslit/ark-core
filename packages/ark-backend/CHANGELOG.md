@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
+
+
+### Bug Fixes
+
+* added body parser middleware to support json and url-encoded forms ([81b67f5](https://github.com/skyslit/ark/commit/81b67f5284b3d34c06e9157876892b60e692aa70))
+* issue with data model in  useService() ([27bedb1](https://github.com/skyslit/ark/commit/27bedb1de8c7ae762a87080415ade44e99853e68))
+* removed less loader + optimised bundler ufs + formatted evaluator error ([0388083](https://github.com/skyslit/ark/commit/03880839acc58111dee22bb48dc3ff0b98214648))
+* types issue in web app renderer ([10ea7b1](https://github.com/skyslit/ark/commit/10ea7b1cfe59ed5dcaafe54095bf55483289aa62))
+* with multiple web app renderers ([04e4d93](https://github.com/skyslit/ark/commit/04e4d9365cef1d5795ce884fb68bea6702365b1b))
+
+
+
+
+
 # [2.3.0](https://github.com/skyslit/ark/compare/v2.2.4...v2.3.0) (2021-02-13)
 
 ### Features
