@@ -345,6 +345,8 @@ describe('functionality tests', () => {
           hasChanged,
           markAsSaved,
           reset,
+          runBatch,
+          removeItemAt,
         } = useContent<any>('test-content');
         return (
           <div>
@@ -402,10 +404,32 @@ describe('functionality tests', () => {
               Update content inside
             </button>
             <button
+              onClick={() => {
+                runBatch(() => {
+                  updateKey('keyA', 100);
+                  updateKey('keyB', 200);
+                });
+              }}
+            >
+              Update multiple key
+            </button>
+            <button
+              onClick={() => {
+                runBatch(() => {
+                  removeItemAt('itemsToRemoveFrom', 3);
+                });
+              }}
+            >
+              Remove item at index 3
+            </button>
+            <button
               onClick={() =>
                 setContent({
                   title: 'Sample',
+                  keyA: 1,
+                  keyB: 2,
                   items: [1, 2, 3],
+                  itemsToRemoveFrom: ['a', 'b', 'c', 'd', 'e'],
                   innerObj: {
                     collection: [
                       {
@@ -578,6 +602,42 @@ describe('functionality tests', () => {
               getByTestId('output').getElementsByTagName('code')[0].textContent
             ).innerObj.collection[0].subTitle
           ).toEqual('Collection Sub Title');
+
+          act(() => {
+            // Click `Update multiple key` button
+            getByText('Update multiple key').click();
+          });
+
+          // Check if keyA and keyB are updated
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).keyA
+          ).toEqual(100);
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).keyB
+          ).toEqual(200);
+
+          // Expect items before removal
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).itemsToRemoveFrom
+          ).toEqual(['a', 'b', 'c', 'd', 'e']);
+
+          act(() => {
+            // Click `Remove item at index 3` button
+            getByText('Remove item at index 3').click();
+          });
+
+          // Expect item to be removed
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).itemsToRemoveFrom
+          ).toEqual(['a', 'b', 'c', 'e']);
         })
         .then(() => {
           done();

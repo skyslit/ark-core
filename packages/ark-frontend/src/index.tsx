@@ -77,11 +77,13 @@ type ContentHook = <T>(
   isAvailable: boolean;
   hasChanged: boolean;
   content: T;
+  runBatch: (fn: () => void) => void;
   markAsSaved: () => void;
   setContent: (content: T) => void;
   updateKey: (key: string, val: T) => void;
   pushItem: (key: string, val: any) => void;
   unshiftItem: (key: string, val: any) => void;
+  removeItemAt: (key: string, index: any) => void;
   insertItem: (key: string, indexToInsert: number, val: any) => void;
   reset: () => void;
 };
@@ -777,6 +779,7 @@ export const Frontend = createPointer<Ark.MERN.React>(
         },
         typeof opts_ === 'object' ? opts_ : undefined
       );
+
       const useStore = useStoreCreator(moduleId, context);
       const [baseContent, setBaseContent] = useStore<any>(
         `_cmsHook/_base_${opts.serviceId}`,
@@ -803,8 +806,18 @@ export const Frontend = createPointer<Ark.MERN.React>(
         return traverseResult.get(key.split('.'));
       };
 
+      let isBatchModeEnabled: boolean = false;
+      let batchContent: any = null;
+
       const updateKey = (key: string, val: any) => {
-        const latest = cloneDeep(content);
+        let latest: any = null;
+
+        if (isBatchModeEnabled === true) {
+          latest = batchContent;
+        } else {
+          latest = cloneDeep(content);
+        }
+
         const traverseResult = traverse(latest);
         const paths = traverseResult.paths().filter((p) => p.length > 0);
         let i = 0;
@@ -815,13 +828,26 @@ export const Frontend = createPointer<Ark.MERN.React>(
             break;
           }
         }
-        setContentToState(latest);
+
+        if (isBatchModeEnabled === true) {
+          batchContent = latest;
+        } else {
+          setContentToState(latest);
+        }
       };
 
       return {
         isAvailable: content !== null && content !== undefined,
         hasChanged,
         content,
+        runBatch: (fn: () => void) => {
+          isBatchModeEnabled = true;
+          batchContent = cloneDeep(content);
+          fn && fn();
+          isBatchModeEnabled = false;
+          setContentToState(batchContent);
+          batchContent = null;
+        },
         reset: () => {
           setContentToState(baseContent);
           setHasChanged(false);
@@ -863,6 +889,19 @@ export const Frontend = createPointer<Ark.MERN.React>(
           const item = getCurrentValByKey(key);
           if (Array.isArray(item)) {
             updateKey(key, [val, ...item]);
+          } else {
+            throw new Error(
+              `${key} is not an array. unshiftItem can be only called upon an array`
+            );
+          }
+        },
+        removeItemAt: (key, index) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(
+              key,
+              item.filter((x, i) => i !== index)
+            );
           } else {
             throw new Error(
               `${key} is not an array. unshiftItem can be only called upon an array`
