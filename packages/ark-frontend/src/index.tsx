@@ -77,11 +77,13 @@ type ContentHook = <T>(
   isAvailable: boolean;
   hasChanged: boolean;
   content: T;
+  runBatch: (fn: () => void) => void;
   markAsSaved: () => void;
   setContent: (content: T) => void;
   updateKey: (key: string, val: T) => void;
   pushItem: (key: string, val: any) => void;
   unshiftItem: (key: string, val: any) => void;
+  removeItemAt: (key: string, index: any) => void;
   insertItem: (key: string, indexToInsert: number, val: any) => void;
   reset: () => void;
 };
@@ -101,6 +103,11 @@ type RouteConfigItem = {
 export type ArkReactComponent<T> = (
   props: ComponentPropType & T
 ) => JSX.Element;
+
+export type AuthConfiguration = {
+  loginPageUrl: string;
+  defaultProtectedUrl: string;
+};
 
 declare global {
   // eslint-disable-next-line no-unused-vars
@@ -123,6 +130,8 @@ declare global {
         useContent: ContentHook;
         mapRoute: MapRoute;
         useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
+        configureAuth: (opts: AuthConfiguration) => void;
+        useAuthConfiguration: () => AuthConfiguration;
       }
     }
   }
@@ -620,8 +629,10 @@ const mapRouteCreator = (
 export const Routers = {
   ProtectedRoute: createComponent(
     ({ component, use, currentModuleId, children, ...rest }) => {
-      const { useContext } = use(Frontend);
+      const { useContext, useAuthConfiguration } = use(Frontend);
       const { hasInitialized, isLoading, response } = useContext();
+      const { loginPageUrl } = useAuthConfiguration();
+
       let isAuthenticated: boolean = false;
       try {
         if (hasInitialized === true && isLoading === false) {
@@ -638,12 +649,12 @@ export const Routers = {
         <Route
           {...rest}
           render={({ location }) =>
-            isAuthenticated ? (
+            isAuthenticated === true ? (
               <Component {...rest} />
             ) : (
               <Redirect
                 to={{
-                  pathname: '/auth/login',
+                  pathname: loginPageUrl,
                   state: { from: location },
                 }}
               />
@@ -655,8 +666,10 @@ export const Routers = {
   ),
   AuthRoute: createComponent(
     ({ component, use, currentModuleId, children, ...rest }) => {
-      const { useContext } = use(Frontend);
+      const { useContext, useAuthConfiguration } = use(Frontend);
       const { hasInitialized, isLoading, response } = useContext();
+      const { defaultProtectedUrl } = useAuthConfiguration();
+
       let isAuthenticated: boolean = false;
       try {
         if (hasInitialized === true && isLoading === false) {
@@ -678,7 +691,7 @@ export const Routers = {
             ) : (
               <Redirect
                 to={{
-                  pathname: '/',
+                  pathname: defaultProtectedUrl,
                   state: { from: location },
                 }}
               />
@@ -766,6 +779,7 @@ export const Frontend = createPointer<Ark.MERN.React>(
         },
         typeof opts_ === 'object' ? opts_ : undefined
       );
+
       const useStore = useStoreCreator(moduleId, context);
       const [baseContent, setBaseContent] = useStore<any>(
         `_cmsHook/_base_${opts.serviceId}`,
@@ -792,8 +806,18 @@ export const Frontend = createPointer<Ark.MERN.React>(
         return traverseResult.get(key.split('.'));
       };
 
+      let isBatchModeEnabled: boolean = false;
+      let batchContent: any = null;
+
       const updateKey = (key: string, val: any) => {
-        const latest = cloneDeep(content);
+        let latest: any = null;
+
+        if (isBatchModeEnabled === true) {
+          latest = batchContent;
+        } else {
+          latest = cloneDeep(content);
+        }
+
         const traverseResult = traverse(latest);
         const paths = traverseResult.paths().filter((p) => p.length > 0);
         let i = 0;
@@ -804,13 +828,26 @@ export const Frontend = createPointer<Ark.MERN.React>(
             break;
           }
         }
-        setContentToState(latest);
+
+        if (isBatchModeEnabled === true) {
+          batchContent = latest;
+        } else {
+          setContentToState(latest);
+        }
       };
 
       return {
         isAvailable: content !== null && content !== undefined,
         hasChanged,
         content,
+        runBatch: (fn: () => void) => {
+          isBatchModeEnabled = true;
+          batchContent = cloneDeep(content);
+          fn && fn();
+          isBatchModeEnabled = false;
+          setContentToState(batchContent);
+          batchContent = null;
+        },
         reset: () => {
           setContentToState(baseContent);
           setHasChanged(false);
@@ -858,8 +895,31 @@ export const Frontend = createPointer<Ark.MERN.React>(
             );
           }
         },
+        removeItemAt: (key, index) => {
+          const item = getCurrentValByKey(key);
+          if (Array.isArray(item)) {
+            updateKey(
+              key,
+              item.filter((x, i) => i !== index)
+            );
+          } else {
+            throw new Error(
+              `${key} is not an array. unshiftItem can be only called upon an array`
+            );
+          }
+        },
         updateKey,
       };
+    },
+    configureAuth: (opts) => {
+      controller.ensureInitializing();
+      context.setData<AuthConfiguration>('default', 'authOptions', opts);
+    },
+    useAuthConfiguration: () => {
+      return context.getData<AuthConfiguration>('default', 'authOptions', {
+        loginPageUrl: '/auth/login',
+        defaultProtectedUrl: '/',
+      });
     },
   })
 );

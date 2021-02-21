@@ -1,12 +1,14 @@
 import React from 'react';
 import { render, cleanup, act } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
+import { useHistory } from 'react-router-dom';
 import {
   createReactApp,
   Frontend,
   createComponent,
   makeApp,
   reduxServiceStateSnapshot,
+  Routers,
 } from '../index';
 
 describe('functionality tests', () => {
@@ -343,6 +345,8 @@ describe('functionality tests', () => {
           hasChanged,
           markAsSaved,
           reset,
+          runBatch,
+          removeItemAt,
         } = useContent<any>('test-content');
         return (
           <div>
@@ -400,10 +404,32 @@ describe('functionality tests', () => {
               Update content inside
             </button>
             <button
+              onClick={() => {
+                runBatch(() => {
+                  updateKey('keyA', 100);
+                  updateKey('keyB', 200);
+                });
+              }}
+            >
+              Update multiple key
+            </button>
+            <button
+              onClick={() => {
+                runBatch(() => {
+                  removeItemAt('itemsToRemoveFrom', 3);
+                });
+              }}
+            >
+              Remove item at index 3
+            </button>
+            <button
               onClick={() =>
                 setContent({
                   title: 'Sample',
+                  keyA: 1,
+                  keyB: 2,
                   items: [1, 2, 3],
+                  itemsToRemoveFrom: ['a', 'b', 'c', 'd', 'e'],
                   innerObj: {
                     collection: [
                       {
@@ -576,11 +602,292 @@ describe('functionality tests', () => {
               getByTestId('output').getElementsByTagName('code')[0].textContent
             ).innerObj.collection[0].subTitle
           ).toEqual('Collection Sub Title');
+
+          act(() => {
+            // Click `Update multiple key` button
+            getByText('Update multiple key').click();
+          });
+
+          // Check if keyA and keyB are updated
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).keyA
+          ).toEqual(100);
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).keyB
+          ).toEqual(200);
+
+          // Expect items before removal
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).itemsToRemoveFrom
+          ).toEqual(['a', 'b', 'c', 'd', 'e']);
+
+          act(() => {
+            // Click `Remove item at index 3` button
+            getByText('Remove item at index 3').click();
+          });
+
+          // Expect item to be removed
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).itemsToRemoveFrom
+          ).toEqual(['a', 'b', 'c', 'e']);
         })
         .then(() => {
           done();
         })
         .catch(done);
     });
+  });
+});
+
+describe('predefined Routers', () => {
+  const LoginPage = createComponent(() => {
+    return <h1>Login Page</h1>;
+  });
+
+  const Dashboard = createComponent(() => {
+    return <h1>Dashboard</h1>;
+  });
+
+  const Layout = createComponent((props) => {
+    const history = useHistory();
+    return (
+      <div>
+        <span>P: {history.location.pathname}</span>
+        <h1>Layout D</h1>
+        {props.children}
+      </div>
+    );
+  });
+
+  test('should take to login page when not authenticated', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout } = use(Frontend);
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      useRouteConfig(() => [
+        {
+          path: '/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: false,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Login Page/i).textContent).toBe('Login Page');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('should take to dashboard page when authenticated', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout } = use(Frontend);
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      useRouteConfig(() => [
+        {
+          path: '/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: true,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Dash/i).textContent).toBe('Dashboard');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('should take to custom login url', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout, configureAuth } = use(
+        Frontend
+      );
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      configureAuth({
+        loginPageUrl: '/custom/auth/login',
+        defaultProtectedUrl: '/',
+      });
+
+      useRouteConfig(() => [
+        {
+          path: '/custom/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+          exact: true,
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: false,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Login Page/i).textContent).toBe('Login Page');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('should take to custom default url', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout, configureAuth } = use(
+        Frontend
+      );
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      configureAuth({
+        loginPageUrl: '/custom/auth/login',
+        defaultProtectedUrl: '/custom-landing',
+      });
+
+      useRouteConfig(() => [
+        {
+          path: '/custom/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/custom-landing',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+          exact: true,
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: true,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Dashboard/i).textContent).toBe('Dashboard');
+        done();
+      })
+      .catch(done);
   });
 });

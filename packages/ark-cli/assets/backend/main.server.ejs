@@ -1,0 +1,14 @@
+<%- moduleImport.join('\n'); %>
+
+runApp(({<%- runAppPropDeps.join(', '); %>}) => {
+  <% if (backendImports.length > 0) { %>
+  const {<%- backendImports.join(', '); %>} = use(Backend);
+  <% } %>
+  
+  <%- runAppSnippets.join('\n\n'); %>
+
+  useServer({
+    hostname: 'localhost',
+    port: 3000,
+  });
+});

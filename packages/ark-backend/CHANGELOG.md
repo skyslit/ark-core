@@ -5,14 +5,9 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [2.3.0](https://github.com/skyslit/ark/compare/v2.2.4...v2.3.0) (2021-02-13)
 
-
 ### Features
 
-* useContent hook ([#14](https://github.com/skyslit/ark/issues/14)) ([96a2983](https://github.com/skyslit/ark/commit/96a29835e165074c28fae93f36f1b9d802626e5d))
-
-
-
-
+- useContent hook ([#14](https://github.com/skyslit/ark/issues/14)) ([96a2983](https://github.com/skyslit/ark/commit/96a29835e165074c28fae93f36f1b9d802626e5d))
 
 ## [2.2.4](https://github.com/skyslit/ark/compare/v2.2.3...v2.2.4) (2021-02-05)
 
