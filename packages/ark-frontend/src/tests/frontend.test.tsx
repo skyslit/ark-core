@@ -1,12 +1,14 @@
 import React from 'react';
 import { render, cleanup, act } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
+import { useHistory } from 'react-router-dom';
 import {
   createReactApp,
   Frontend,
   createComponent,
   makeApp,
   reduxServiceStateSnapshot,
+  Routers,
 } from '../index';
 
 describe('functionality tests', () => {
@@ -582,5 +584,250 @@ describe('functionality tests', () => {
         })
         .catch(done);
     });
+  });
+});
+
+describe('predefined Routers', () => {
+  const LoginPage = createComponent(() => {
+    return <h1>Login Page</h1>;
+  });
+
+  const Dashboard = createComponent(() => {
+    return <h1>Dashboard</h1>;
+  });
+
+  const Layout = createComponent((props) => {
+    const history = useHistory();
+    return (
+      <div>
+        <span>P: {history.location.pathname}</span>
+        <h1>Layout D</h1>
+        {props.children}
+      </div>
+    );
+  });
+
+  test('should take to login page when not authenticated', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout } = use(Frontend);
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      useRouteConfig(() => [
+        {
+          path: '/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: false,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Login Page/i).textContent).toBe('Login Page');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('should take to dashboard page when authenticated', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout } = use(Frontend);
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      useRouteConfig(() => [
+        {
+          path: '/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: true,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Dash/i).textContent).toBe('Dashboard');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('should take to custom login url', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout, configureAuth } = use(
+        Frontend
+      );
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      configureAuth({
+        loginPageUrl: '/custom/auth/login',
+        defaultProtectedUrl: '/',
+      });
+
+      useRouteConfig(() => [
+        {
+          path: '/custom/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+          exact: true,
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: false,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Login Page/i).textContent).toBe('Login Page');
+        done();
+      })
+      .catch(done);
+  });
+
+  test('should take to custom default url', (done) => {
+    const ctx = new ApplicationContext();
+
+    const testContext = createReactApp(({ use }) => {
+      const { useRouteConfig, useComponent, useLayout, configureAuth } = use(
+        Frontend
+      );
+
+      useComponent('dashboard-page', Dashboard);
+      useComponent('login-page', LoginPage);
+      useLayout('layout-a', Layout);
+
+      useComponent('ProtectedRoute', Routers.ProtectedRoute);
+      useComponent('AuthRoute', Routers.AuthRoute);
+
+      configureAuth({
+        loginPageUrl: '/custom/auth/login',
+        defaultProtectedUrl: '/custom-landing',
+      });
+
+      useRouteConfig(() => [
+        {
+          path: '/custom/auth/login',
+          component: useComponent('login-page'),
+          layout: useLayout('layout-a'),
+          exact: true,
+          Route: useComponent('AuthRoute'),
+        },
+        {
+          path: '/custom-landing',
+          component: useComponent('dashboard-page'),
+          layout: useLayout('layout-a'),
+          Route: useComponent('ProtectedRoute'),
+          exact: true,
+        },
+      ]);
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: true,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        const { getByText } = render(<App />);
+        // Expect component and layout
+        expect(getByText(/Layou/i).textContent).toBe('Layout D');
+        expect(getByText(/Dashboard/i).textContent).toBe('Dashboard');
+        done();
+      })
+      .catch(done);
   });
 });

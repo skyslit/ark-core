@@ -102,6 +102,11 @@ export type ArkReactComponent<T> = (
   props: ComponentPropType & T
 ) => JSX.Element;
 
+export type AuthConfiguration = {
+  loginPageUrl: string;
+  defaultProtectedUrl: string;
+};
+
 declare global {
   // eslint-disable-next-line no-unused-vars
   namespace Ark {
@@ -123,6 +128,8 @@ declare global {
         useContent: ContentHook;
         mapRoute: MapRoute;
         useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
+        configureAuth: (opts: AuthConfiguration) => void;
+        useAuthConfiguration: () => AuthConfiguration;
       }
     }
   }
@@ -620,8 +627,10 @@ const mapRouteCreator = (
 export const Routers = {
   ProtectedRoute: createComponent(
     ({ component, use, currentModuleId, children, ...rest }) => {
-      const { useContext } = use(Frontend);
+      const { useContext, useAuthConfiguration } = use(Frontend);
       const { hasInitialized, isLoading, response } = useContext();
+      const { loginPageUrl } = useAuthConfiguration();
+
       let isAuthenticated: boolean = false;
       try {
         if (hasInitialized === true && isLoading === false) {
@@ -638,12 +647,12 @@ export const Routers = {
         <Route
           {...rest}
           render={({ location }) =>
-            isAuthenticated ? (
+            isAuthenticated === true ? (
               <Component {...rest} />
             ) : (
               <Redirect
                 to={{
-                  pathname: '/auth/login',
+                  pathname: loginPageUrl,
                   state: { from: location },
                 }}
               />
@@ -655,8 +664,10 @@ export const Routers = {
   ),
   AuthRoute: createComponent(
     ({ component, use, currentModuleId, children, ...rest }) => {
-      const { useContext } = use(Frontend);
+      const { useContext, useAuthConfiguration } = use(Frontend);
       const { hasInitialized, isLoading, response } = useContext();
+      const { defaultProtectedUrl } = useAuthConfiguration();
+
       let isAuthenticated: boolean = false;
       try {
         if (hasInitialized === true && isLoading === false) {
@@ -678,7 +689,7 @@ export const Routers = {
             ) : (
               <Redirect
                 to={{
-                  pathname: '/',
+                  pathname: defaultProtectedUrl,
                   state: { from: location },
                 }}
               />
@@ -860,6 +871,16 @@ export const Frontend = createPointer<Ark.MERN.React>(
         },
         updateKey,
       };
+    },
+    configureAuth: (opts) => {
+      controller.ensureInitializing();
+      context.setData<AuthConfiguration>('default', 'authOptions', opts);
+    },
+    useAuthConfiguration: () => {
+      return context.getData<AuthConfiguration>('default', 'authOptions', {
+        loginPageUrl: '/auth/login',
+        defaultProtectedUrl: '/',
+      });
     },
   })
 );
