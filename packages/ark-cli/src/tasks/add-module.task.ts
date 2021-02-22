@@ -5,6 +5,7 @@ import fs from 'fs';
 import ensureDir from '../utils/ensure-dir';
 import { Observable } from 'rxjs';
 import ncp from 'ncp';
+import runCommand from '../utils/run-command';
 import chalk from 'chalk';
 import semver from 'semver';
 
@@ -45,7 +46,7 @@ export const diff = (source: DepMap, target: DepMap): Array<DiffItem> => {
           packageId,
           state: 'incompatible',
           version: source[packageId],
-          message: `source dependency '${packageId} (${source[packageId]})' does not satisfies the version installed in target ${target[packageId]}`,
+          message: `source dependency '${packageId} (${source[packageId]})' does not satisfies the version installed in target (${target[packageId]})`,
         });
       }
     }
@@ -55,6 +56,7 @@ export const diff = (source: DepMap, target: DepMap): Array<DiffItem> => {
 };
 
 export default (packageId: string, cwd_?: string) => {
+  const packager: 'npm' | 'yarn' = 'npm';
   const cwd = cwd_ || process.cwd();
   const isNotAPath = packageId === path.basename(packageId);
 
@@ -173,6 +175,19 @@ export default (packageId: string, cwd_?: string) => {
           targetPackageJsonPath,
           JSON.stringify(targetPackageJson, null, ' ')
         );
+
+        try {
+          if (process.env.skipDepInstalls === 'true') {
+            return;
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        return runCommand(
+          'installing dependencies',
+          `${packager} install; exit`
+        );
       },
     },
   ]);
@@ -233,25 +248,27 @@ export default (packageId: string, cwd_?: string) => {
         deps: Array<DiffItem>
       ) => {
         console.log(' ');
-        console.log(title);
+        console.log(chalk.yellow(title));
         console.log(' ');
         deps.forEach((dep, index) => {
-          console.log(`${index + 1}. ${dep.message}`);
+          console.log(chalk.red(`${index + 1}. ${dep.message}`));
         });
+        console.log(' ');
+        console.log(chalk.red('Aborted'));
         console.log(' ');
       };
 
       if (incompatibleDeps.length > 0 || incompatibleDeps.length > 0) {
         if (incompatibleDeps.length > 0) {
           showIncompatibilityNotice(
-            'Incompatible Dependencies',
+            'Module Incompatible (Dependencies)',
             incompatibleDeps
           );
         }
 
         if (incompatibleDevDeps.length > 0) {
           showIncompatibilityNotice(
-            'Incompatible Dev Dependencies',
+            'Module Incompatible (Dev Dependencies)',
             incompatibleDevDeps
           );
         }
@@ -263,10 +280,17 @@ export default (packageId: string, cwd_?: string) => {
     })
     .then((input) => {
       if (input) {
-        return job.run({
-          cwd,
-          ...input,
-        });
+        return job
+          .run({
+            cwd,
+            ...input,
+          })
+          .then(() => {
+            console.log('');
+            console.log(chalk.green('Integration successful'));
+            console.log('');
+            return true;
+          });
       } else {
         return false;
       }

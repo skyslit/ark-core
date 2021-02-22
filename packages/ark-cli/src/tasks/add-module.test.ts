@@ -11,6 +11,8 @@ const testDir = path.join(
 
 jest.mock('inquirer');
 
+process.env.skipDepInstalls = 'true';
+
 const smallModulePackageJson = {
   name: 'test',
   description: 'Cloud Application powered by Skyslit Ark',
@@ -403,7 +405,7 @@ test('incompatibility notice should show', (done) => {
     .then(() => {
       const joinedLogs = logs.join(', ');
       expect(joinedLogs).toContain(
-        `source dependency 'react (^16.14.0)' does not satisfies the version installed in target ^17.14.0`
+        `source dependency 'react (^16.14.0)' does not satisfies the version installed in target (^17.14.0)`
       );
       return true;
     })
