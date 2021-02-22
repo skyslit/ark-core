@@ -72,7 +72,7 @@ beforeEach(() => {
   fs.mkdirSync(testDir, { recursive: true });
 });
 
-describe('diff()', () => {
+describe('dependency diff()', () => {
   test('should add react-dom to target', () => {
     const sourceDeps: any = {
       react: '16.0.0',
