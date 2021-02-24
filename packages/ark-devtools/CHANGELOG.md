@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
+
+
+### Bug Fixes
+
+* enabled minimiser in bundler ([7929755](https://github.com/skyslit/ark/commit/79297555b66c9ff38b61a7de80255c3229843944))
+* issue with husky hook ([e881139](https://github.com/skyslit/ark/commit/e881139ff1937a5d69792049069405203e31ab8a))
+* issue with image (png|jpg) import + scss import issue ([5ce80f8](https://github.com/skyslit/ark/commit/5ce80f83cb8d1a231879525dd5f2972ac1703685))
+* issue with typescript version ([c5263d9](https://github.com/skyslit/ark/commit/c5263d9d121f6a0e16f864bdac412865268b5645))
+* removed less loader + optimised bundler ufs + formatted evaluator error ([0388083](https://github.com/skyslit/ark/commit/03880839acc58111dee22bb48dc3ff0b98214648))
+* removed unnecessary console.log ([b3c98ec](https://github.com/skyslit/ark/commit/b3c98ec02696012025367c5fb2836e6b624ee4dd))
+* sourcemap enabled in webpack ([67c8c8a](https://github.com/skyslit/ark/commit/67c8c8a90567910f74602e08410faf60f9058017))
+* typescript init not working on windows ([605a76e](https://github.com/skyslit/ark/commit/605a76e2d8eb83ee355e27d84cabf14b3519cdc6))
+* with multiple web app renderers ([04e4d93](https://github.com/skyslit/ark/commit/04e4d9365cef1d5795ce884fb68bea6702365b1b))
+* **devtools:** moved execa from dev dep to prod dep ([ab00e41](https://github.com/skyslit/ark/commit/ab00e411f279511ea64f29d8e1c4ee11afd13cd0))
+
+
+### Features
+
+* added support for code splitting ([91e097b](https://github.com/skyslit/ark/commit/91e097ba6fbb43afdb06b9da73ae370e696b0f08))
+
+
+
+
+
 # [2.3.0](https://github.com/skyslit/ark/compare/v2.2.4...v2.3.0) (2021-02-13)
 
 ### Features
