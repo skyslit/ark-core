@@ -534,7 +534,7 @@ export const Data = createPointer<Partial<Ark.Data>>(
   })
 );
 
-const createAuthMiddleware = (authOpts: AuthOptions) => async (
+export const createAuthMiddleware = (authOpts: AuthOptions) => async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -554,6 +554,12 @@ const createAuthMiddleware = (authOpts: AuthOptions) => async (
   }
 
   if (token) {
+    try {
+      token = decodeURI(token);
+    } catch (e) {
+      /** Do nothing */
+    }
+
     if (token.startsWith('Bearer ')) {
       token = token.replace('Bearer ', '');
     }
