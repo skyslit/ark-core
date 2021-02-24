@@ -6,6 +6,8 @@ import {
   createController,
   createPointer,
   extractRef,
+  useEnv,
+  setDefaultEnv,
 } from '..';
 
 interface TestDataPointerType {
@@ -21,6 +23,28 @@ declare global {
     interface Pointers extends TestDataPointerType {}
   }
 }
+
+describe('useEnv', () => {
+  test('useEnv should return default val', () => {
+    setDefaultEnv({
+      TEST_KEY_1: 'TEST_VAL_1',
+    });
+
+    const result = useEnv('TEST_KEY_1');
+    expect(result).toStrictEqual('TEST_VAL_1');
+  });
+
+  test('useEnv should return val from process.env', () => {
+    process.env['TEST_KEY_2'] = 'TEST_VAL_2_FROM_ENV';
+
+    setDefaultEnv({
+      TEST_KEY_2: 'TEST_VAL_2',
+    });
+
+    const result = useEnv('TEST_KEY_2');
+    expect(result).toStrictEqual('TEST_VAL_2_FROM_ENV');
+  });
+});
 
 describe('application context', () => {
   test('get / set data', () => {
