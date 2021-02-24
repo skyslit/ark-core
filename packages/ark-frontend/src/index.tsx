@@ -495,9 +495,17 @@ const useServiceCreator: (
   );
 
   if (typeof service === 'string') {
+    const ref = extractRef(service, modId);
+    modId = ref.moduleName;
+    service = ref.refId;
+
     option.ajax.url = getServiceUrl(modId, service);
     option.ajax.method = 'post';
   } else {
+    const ref = extractRef(service.serviceId, modId);
+    modId = ref.moduleName;
+    service.serviceId = ref.refId;
+
     try {
       option.ajax.url = getServiceUrl(modId, service.serviceId);
       if (service.ajax) {
