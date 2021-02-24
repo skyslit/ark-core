@@ -97,7 +97,7 @@ type MapRoute = (
 
 type RouteConfigItem = {
   layout?: any;
-  Route?: 'public' | 'auth' | 'protected' | React.FunctionComponent<{}>;
+  Route?: 'public' | React.FunctionComponent<{}>;
 } & RouteProps;
 
 export type ArkReactComponent<T> = (
@@ -282,23 +282,7 @@ export function makeApp(
                     config.Route = 'public';
                   }
 
-                  if (config.Route === 'auth') {
-                    RouteComponent = (props: any) => (
-                      <Routers.AuthRoute
-                        {...props}
-                        redirectUrl={'/'}
-                        isAuthenticated={main.response.meta.isAuthenticated}
-                      />
-                    );
-                  } else if (config.Route === 'protected') {
-                    RouteComponent = (props: any) => (
-                      <Routers.ProtectedRoute
-                        {...props}
-                        loginUrl={'/auth/login'}
-                        isAuthenticated={main.response.meta.isAuthenticated}
-                      />
-                    );
-                  } else if (config.Route === 'public') {
+                  if (config.Route === 'public') {
                     RouteComponent = Route;
                   } else {
                     RouteComponent = config.Route;
@@ -477,9 +461,11 @@ const getServiceUrl = (modId: string, service: string) =>
   `/___service/${modId}/${service}`;
 
 const useServiceCreator: (
-  modId: string,
+  _modId: string,
   ctx: ApplicationContext
-) => ServiceHook = (modId, ctx) => (service) => {
+) => ServiceHook = (_modId, ctx) => (service) => {
+  let modId = _modId;
+
   const option: ServiceHookOptions = Object.assign<
     ServiceHookOptions,
     Partial<ServiceHookOptions>
@@ -495,9 +481,17 @@ const useServiceCreator: (
   );
 
   if (typeof service === 'string') {
+    const ref = extractRef(service, modId);
+    modId = ref.moduleName;
+    service = ref.refId;
+
     option.ajax.url = getServiceUrl(modId, service);
     option.ajax.method = 'post';
   } else {
+    const ref = extractRef(service.serviceId, modId);
+    modId = ref.moduleName;
+    service.serviceId = ref.refId;
+
     try {
       option.ajax.url = getServiceUrl(modId, service.serviceId);
       if (service.ajax) {

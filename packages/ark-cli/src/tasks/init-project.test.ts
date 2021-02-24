@@ -26,6 +26,7 @@ test(
     inquirer.prompt = jest.fn().mockResolvedValue({
       projectName: 'cool-project',
       requireAdminDashboard: true,
+      projectType: 'full-stack application',
     });
 
     const log = console.log;

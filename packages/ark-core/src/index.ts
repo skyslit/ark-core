@@ -699,3 +699,20 @@ export function createModule<T>(fn: ContextScope<T>): ContextScope<T> {
 export function runApp(fn: ContextScope<void>): Promise<any> {
   return ApplicationContext.getInstance().activate(fn, 'default');
 }
+
+/**
+ * Get environment variable
+ * @param {string} key
+ * @return {string}
+ */
+export function useEnv(key: string): string {
+  return process.env[key];
+}
+
+/**
+ * Set default configuration
+ * @param {object} payload env configuration
+ */
+export function setDefaultEnv(payload: { [key: string]: string }) {
+  process.env = Object.assign(payload, process.env);
+}

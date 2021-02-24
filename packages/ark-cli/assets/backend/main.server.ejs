@@ -1,9 +1,14 @@
 <%- moduleImport.join('\n'); %>
 
+<% if (typeof defaultEnv !== 'undefined') { %>
+  setDefaultEnv(<%- JSON.stringify(defaultEnv, null, ' ') %>)
+<% } %>
+
 runApp(({<%- runAppPropDeps.join(', '); %>}) => {
-  <% if (backendImports.length > 0) { %>
-  const {<%- backendImports.join(', '); %>} = use(Backend);
-  <% } %>
+  <% if (dataImports.length > 0) { %>const {<%- dataImports.join(', '); %>} = use(Data);<% } %>
+  <% if (backendImports.length > 0) { %>const {<%- backendImports.join(', '); %>} = use(Backend);<% } %>
+  <% if (typeof shouldConnectDB !== 'undefined') { %>
+    useDatabase('default', useEnv('MONGO_CONNECTION_STRING'));<% } %>
   
   <%- runAppSnippets.join('\n\n'); %>
 

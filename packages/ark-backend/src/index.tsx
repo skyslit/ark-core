@@ -128,6 +128,7 @@ declare global {
         schema?: SchemaDefinition | (() => Schema),
         dbName?: keyof Ark.PackageDatabases
       ) => Model<T & Document>;
+      useVolume: (ref: string, vol?: IArkVolume) => IArkVolume;
     }
     // eslint-disable-next-line no-unused-vars
     interface Databases {}
@@ -137,6 +138,111 @@ declare global {
     } & Databases;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/*                              Ark Volume Begin                              */
+/* -------------------------------------------------------------------------- */
+
+type ArkVolumeOptions = {
+  baseDir: string;
+};
+
+export interface IArkVolume {
+  putAsync: (path: string, data: NodeJS.ArrayBufferView) => void;
+  getAsync: (path: string) => NodeJS.ArrayBufferView;
+  renameAsync: (oldPath: string, newPath: string) => void;
+  deleteAsync: (path: string) => void;
+}
+
+/**
+ * Ensures that directory exists, if not create one
+ * @param {string} p path
+ */
+export function ensureDir(p: string) {
+  if (!fs.existsSync(p)) {
+    fs.mkdirSync(p, { recursive: true });
+  }
+}
+
+/**
+ * Creates an abstract class for accessing file system
+ */
+export class FileVolume implements IArkVolume {
+  static instance: IArkVolume;
+
+  /**
+   * Gets singleton instance of FileVolume
+   * @param {ArkVolumeOptions} opts
+   * @return {IArkVolume}
+   */
+  static getInstance(opts: ArkVolumeOptions): IArkVolume {
+    if (!FileVolume.instance) {
+      FileVolume.instance = new FileVolume(opts);
+    }
+
+    return FileVolume.instance;
+  }
+
+  private opts: ArkVolumeOptions;
+
+  /**
+   * Creates new instance of ArkVolume
+   * @param {ArkVolumeOptions} opts
+   */
+  constructor(opts: ArkVolumeOptions) {
+    this.opts = opts;
+  }
+
+  /**
+   * Writes buffer to file
+   * @param {string} p
+   * @param {NodeJS.ArrayBufferView} data
+   */
+  putAsync(p: string, data: NodeJS.ArrayBufferView) {
+    const fullPath = path.join(this.opts.baseDir, p);
+    ensureDir(path.dirname(fullPath));
+    fs.writeFileSync(fullPath, data);
+  }
+
+  /**
+   * Read buffer to file
+   * @param {string} p
+   * @return {NodeJS.ArrayBufferView}
+   */
+  getAsync(p: string): NodeJS.ArrayBufferView {
+    return fs.readFileSync(path.join(this.opts.baseDir, p));
+  }
+
+  /**
+   * Deletes file
+   * @param {string} p
+   */
+  deleteAsync(p: string) {
+    fs.unlinkSync(path.join(this.opts.baseDir, p));
+  }
+
+  /**
+   * Renames a file
+   * @param {string} oldPath
+   * @param {string} newPath
+   */
+  renameAsync(oldPath: string, newPath: string) {
+    fs.renameSync(oldPath, newPath);
+  }
+}
+
+/**
+ * Defines a new volume that can be mounted in Ark Backend
+ * @param {IArkVolume} vol
+ * @return {IArkVolume}
+ */
+export function defineVolume(vol: IArkVolume): IArkVolume {
+  return vol;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               Ark Volume End                               */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Reads static HTML file from resource
@@ -402,10 +508,33 @@ export const Data = createPointer<Partial<Ark.Data>>(
         'model'
       );
     },
+    useVolume: (refId, vol) => {
+      let result: any = null;
+
+      try {
+        result = context.useDataFromContext(
+          moduleId,
+          refId || '',
+          vol,
+          false,
+          'volume'
+        );
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      if (!result) {
+        return FileVolume.getInstance({
+          baseDir: path.join(process.cwd(), 'user-uploads'),
+        });
+      }
+
+      return result;
+    },
   })
 );
 
-const createAuthMiddleware = (authOpts: AuthOptions) => async (
+export const createAuthMiddleware = (authOpts: AuthOptions) => async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -425,6 +554,12 @@ const createAuthMiddleware = (authOpts: AuthOptions) => async (
   }
 
   if (token) {
+    try {
+      token = decodeURI(token);
+    } catch (e) {
+      /** Do nothing */
+    }
+
     if (token.startsWith('Bearer ')) {
       token = token.replace('Bearer ', '');
     }

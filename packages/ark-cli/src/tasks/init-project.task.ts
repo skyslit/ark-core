@@ -55,6 +55,10 @@ export default (cwd_?: string) => {
                   scripts: {
                     start: 'fpz start',
                     build: 'fpz build',
+                    ['build-image']: `docker build . -t ${ctx.projectName.replace(
+                      ' ',
+                      '-'
+                    )}:latest`,
                     lint: 'eslint .',
                     test: 'echo "Error: no test specified" && exit 1',
                   },
@@ -121,11 +125,26 @@ export default (cwd_?: string) => {
                 '.DS_Store',
                 '.fpz',
                 '',
+                '# Ark',
+                'user-uploads',
               ].join('\n')
             );
             observer.complete();
           }
         });
+      },
+    },
+    {
+      title: 'add docker',
+      task: () => {
+        fs.copyFileSync(
+          path.join(__dirname, '../../assets/docker/dockerignore'),
+          path.join(cwd, '.dockerignore')
+        );
+        fs.copyFileSync(
+          path.join(__dirname, '../../assets/docker/Dockerfile'),
+          path.join(cwd, 'Dockerfile')
+        );
       },
     },
     {
@@ -407,8 +426,18 @@ export default (cwd_?: string) => {
                          * Module imports
                          */
                         moduleImport: [
-                          `import { runApp } from '@skyslit/ark-core';`,
-                          `import { Backend } from '@skyslit/ark-backend';`,
+                          (() => {
+                            if (requireAdminDashboard === true) {
+                              return `import { runApp, useEnv, setDefaultEnv } from '@skyslit/ark-core';`;
+                            }
+                            return `import { runApp } from '@skyslit/ark-core';`;
+                          })(),
+                          (() => {
+                            if (requireAdminDashboard === true) {
+                              return `import { Backend, Data } from '@skyslit/ark-backend';`;
+                            }
+                            return `import { Backend } from '@skyslit/ark-backend';`;
+                          })(),
                           (() => {
                             if (requireAdminDashboard === true) {
                               return `import adminWebAppCreator from '../admin.client';`;
@@ -419,6 +448,16 @@ export default (cwd_?: string) => {
                          * runApp(props) props imports
                          */
                         runAppPropDeps: ['use'],
+                        /**
+                         * use(Data) imports
+                         */
+                        dataImports: [
+                          (() => {
+                            if (requireAdminDashboard === true) {
+                              return 'useDatabase';
+                            }
+                          })(),
+                        ].filter(Boolean),
                         /**
                          * use(Backend) imports
                          */
@@ -431,6 +470,16 @@ export default (cwd_?: string) => {
                             }
                           })(),
                         ].filter(Boolean),
+                        /**
+                         * Creates a DB connection
+                         */
+                        shouldConnectDB: true,
+                        defaultEnv: {
+                          MONGO_CONNECTION_STRING: `mongodb://localhost:27017/${ctx.projectName.replace(
+                            ' ',
+                            '_'
+                          )}`,
+                        },
                         /**
                          * code that goes inside runApp
                          */
@@ -622,6 +671,10 @@ export default (cwd_?: string) => {
                          * runApp(props) props imports
                          */
                         runAppPropDeps: ['use', 'useModule'],
+                        /**
+                         * use(Data) imports
+                         */
+                        dataImports: [],
                         /**
                          * use(Backend) imports
                          */
