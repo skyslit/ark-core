@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
+
+
+### Bug Fixes
+
+* serviceId cannot be used in refId format ([c272b9f](https://github.com/skyslit/ark/commit/c272b9f03dd109920f17d3b8f70c266125f38f83))
+* split chunk size revised to 5mb ([9410c7c](https://github.com/skyslit/ark/commit/9410c7c8a81522471f507c89d3770c442ac3100f))
+
+
+
+
+
 # [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
 
 

@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
+
+
+### Bug Fixes
+
+* issue with uriEncode bearer token ([81c42e1](https://github.com/skyslit/ark/commit/81c42e1d64e21fa12e5ef56ef51de7d517f9a51e))
+
+
+### Features
+
+* added volume support in backend ([d0f5a09](https://github.com/skyslit/ark/commit/d0f5a0976b41a1b2a7705511bd7e6a513050f132))
+
+
+
+
+
 # [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
 
 

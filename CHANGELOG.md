@@ -3,6 +3,27 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
+
+
+### Bug Fixes
+
+* issue with uriEncode bearer token ([81c42e1](https://github.com/skyslit/ark/commit/81c42e1d64e21fa12e5ef56ef51de7d517f9a51e))
+* serviceId cannot be used in refId format ([c272b9f](https://github.com/skyslit/ark/commit/c272b9f03dd109920f17d3b8f70c266125f38f83))
+* split chunk size revised to 5mb ([9410c7c](https://github.com/skyslit/ark/commit/9410c7c8a81522471f507c89d3770c442ac3100f))
+
+
+### Features
+
+* added docker support ([ff9d1cf](https://github.com/skyslit/ark/commit/ff9d1cfda7e5c30041bc3cc4cc6f497db9018554))
+* added process automation for module integration ([9e4fc2e](https://github.com/skyslit/ark/commit/9e4fc2ea111d98f96ac313074a500b8e013945e9))
+* added useEnv feature to support environment variables ([b8e4af2](https://github.com/skyslit/ark/commit/b8e4af2424f4fb345574b137ba2939a6359c0baa))
+* added volume support in backend ([d0f5a09](https://github.com/skyslit/ark/commit/d0f5a0976b41a1b2a7705511bd7e6a513050f132))
+
+
+
+
+
 # [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
 
 

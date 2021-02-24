@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
+
+
+### Features
+
+* added docker support ([ff9d1cf](https://github.com/skyslit/ark/commit/ff9d1cfda7e5c30041bc3cc4cc6f497db9018554))
+* added process automation for module integration ([9e4fc2e](https://github.com/skyslit/ark/commit/9e4fc2ea111d98f96ac313074a500b8e013945e9))
+
+
+
+
+
 # [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
 
 
