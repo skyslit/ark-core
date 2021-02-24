@@ -170,11 +170,11 @@ export class SPABuilder extends BuilderBase {
           chunks: 'async',
           minSize: 20000,
           minRemainingSize: 0,
-          maxSize: 31232,
+          maxSize: 5242880,
           minChunks: 1,
           maxAsyncRequests: 30,
           maxInitialRequests: 30,
-          enforceSizeThreshold: 50000,
+          enforceSizeThreshold: 5242880,
           cacheGroups: {
             defaultVendors: {
               test: /[\\/]node_modules[\\/]/,
