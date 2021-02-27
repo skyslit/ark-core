@@ -34,8 +34,8 @@
           "height": 60
         },
         "position": {
-          "x": 120,
-          "y": 0
+          "x": 780,
+          "y": 90
         },
         "z": 1,
         "embeds": []
@@ -63,7 +63,11 @@
         },
         "z": 1,
         "embeds": [],
-        "dependson": ["3f53ec46-08db-4fa8-90ff-91c2bf64a7ef"]
+        "dependson": [
+          "3f53ec46-08db-4fa8-90ff-91c2bf64a7ef",
+          "02f17461-eeec-4b55-8a74-26fc88a7d2df",
+          "b7cf91a3-c7b9-46fe-be92-03d69a8a411e"
+        ]
       },
       "77040f03-aa43-4243-b0b2-2bc5d41705f1": {
         "size": {
@@ -71,8 +75,8 @@
           "height": 60
         },
         "position": {
-          "x": 240,
-          "y": 0
+          "x": 900,
+          "y": 90
         },
         "z": 1,
         "embeds": []
@@ -83,8 +87,8 @@
           "height": 60
         },
         "position": {
-          "x": 360,
-          "y": 0
+          "x": 330,
+          "y": 90
         },
         "z": 1,
         "embeds": []
@@ -137,14 +141,33 @@
         "z": 1,
         "embeds": []
       },
-      "b37559ba-66e4-4d93-974e-690ca3ab547f": {
-        "source": {
-          "id": "963407ab-5a04-46d3-92db-c31e3fc6533f"
+      "b7cf91a3-c7b9-46fe-be92-03d69a8a411e": {
+        "size": {
+          "width": 60,
+          "height": 60
         },
-        "target": {
-          "id": "3f53ec46-08db-4fa8-90ff-91c2bf64a7ef"
+        "position": {
+          "x": 600,
+          "y": 240
         },
-        "z": 11
+        "z": 1,
+        "embeds": []
+      },
+      "6f6365a5-63c8-4af3-b20f-523fcb8efa8a": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 330,
+          "y": 180
+        },
+        "z": 1,
+        "embeds": [],
+        "isassociatedwith": [
+          "b7cf91a3-c7b9-46fe-be92-03d69a8a411e",
+          "6a80220f-ef52-4539-a876-8192cec0556f"
+        ]
       }
     }
   },
@@ -192,27 +215,88 @@
         }
       }
     },
+    "stagingFileSystem": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {
+        "BackupPolicy": {
+          "Status": "DISABLED"
+        },
+        "LifecyclePolicies": [
+          {
+            "TransitionToIA": "AFTER_30_DAYS"
+          }
+        ],
+        "PerformanceMode": "generalPurpose",
+        "ThroughputMode": "bursting"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "b7cf91a3-c7b9-46fe-be92-03d69a8a411e"
+        }
+      }
+    },
+    "stagingFileSystemMountTarget": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "stagingFileSystem"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "securityGroup"
+          }
+        ],
+        "SubnetId": {
+          "Fn::Select": [
+            "0",
+            {
+              "Ref": "mSubnets"
+            }
+          ]
+        }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "6f6365a5-63c8-4af3-b20f-523fcb8efa8a"
+        }
+      }
+    },
     "taskDef": {
       "Type": "AWS::ECS::TaskDefinition",
       "Properties": {
         "ContainerDefinitions": [
           {
             "Image": "nginx:latest",
-            "MountPoints": [],
-            "Name": {
-              "Fn::Sub": [
-                "${ProjectNameStr}-container",
-                {
-                  "ProjectNameStr": {
-                    "Ref": "mProjectName"
-                  }
-                }
-              ]
-            },
+            "MountPoints": [
+              {
+                "ContainerPath": "/app/user-uploads",
+                "ReadOnly": false,
+                "SourceVolume": "efs-mnt"
+              }
+            ],
+            "Name": "web-app-container",
             "PortMappings": [
               {
                 "ContainerPort": 80,
                 "HostPort": 80
+              }
+            ],
+            "Privileged": false
+          },
+          {
+            "Image": "mongo:4.2",
+            "MountPoints": [
+              {
+                "ContainerPath": "/data/db",
+                "ReadOnly": false,
+                "SourceVolume": "efs-mnt"
+              }
+            ],
+            "Name": "mongo-db-container",
+            "PortMappings": [
+              {
+                "ContainerPort": 27017,
+                "HostPort": 27017
               }
             ],
             "Privileged": false
@@ -230,7 +314,18 @@
           ]
         },
         "Memory": "512",
-        "NetworkMode": "awsvpc"
+        "NetworkMode": "awsvpc",
+        "Volumes": [
+          {
+            "Name": "efs-mnt",
+            "EFSVolumeConfiguration": {
+              "FilesystemId": {
+                "Ref": "stagingFileSystem"
+              },
+              "RootDirectory": "/"
+            }
+          }
+        ]
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": {
@@ -374,6 +469,7 @@
         "Cluster": {
           "Ref": "ecsCluster"
         },
+        "PlatformVersion": "1.4.0",
         "ServiceName": {
           "Fn::Sub": [
             "dev-${ProjectNameStr}-service",
@@ -394,16 +490,7 @@
         },
         "LoadBalancers": [
           {
-            "ContainerName": {
-              "Fn::Sub": [
-                "${ProjectNameStr}-container",
-                {
-                  "ProjectNameStr": {
-                    "Ref": "mProjectName"
-                  }
-                }
-              ]
-            },
+            "ContainerName": "web-app-container",
             "ContainerPort": 80,
             "TargetGroupArn": {
               "Ref": "devTargetGroup"
@@ -412,15 +499,22 @@
         ],
         "NetworkConfiguration": {
           "AwsvpcConfiguration": {
-            "AssignPublicIp": "DISABLED",
+            "AssignPublicIp": "ENABLED",
             "SecurityGroups": [
               {
                 "Fn::GetAtt": ["securityGroup", "GroupId"]
               }
             ],
-            "Subnets": {
-              "Ref": "mSubnets"
-            }
+            "Subnets": [
+              {
+                "Fn::Select": [
+                  "0",
+                  {
+                    "Ref": "mSubnets"
+                  }
+                ]
+              }
+            ]
           }
         }
       },
@@ -429,7 +523,12 @@
           "id": "963407ab-5a04-46d3-92db-c31e3fc6533f"
         }
       },
-      "DependsOn": ["loadBalancer", "httpListenerRule"]
+      "DependsOn": [
+        "loadBalancer",
+        "httpListenerRule",
+        "stagingFileSystem",
+        "stagingFileSystemMountTarget"
+      ]
     },
     "securityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
@@ -461,6 +560,13 @@
             "FromPort": 80,
             "IpProtocol": "tcp",
             "ToPort": 80
+          },
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow EFS (NFS)",
+            "FromPort": 2049,
+            "IpProtocol": "tcp",
+            "ToPort": 2049
           }
         ],
         "VpcId": {
