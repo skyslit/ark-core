@@ -519,6 +519,7 @@
     },
     "pipelineBucket": {
       "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
       "Properties": {
         "BucketName": {
           "Fn::Sub": [
