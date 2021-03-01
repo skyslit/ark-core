@@ -1,33 +1,22 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
-    "mProjectName": {
+    "ProjectName": {
       "Type": "String",
-      "Description": "e.g. small-project"
+      "Default": "project-phoenix",
+      "Description": "Please enter your project name. e.g. project-phoenix"
     },
-    "mVPCID": {
+    "VPCID": {
       "Type": "AWS::EC2::VPC::Id",
       "Description": "Please choose the target VPC"
     },
-    "mSubnets": {
+    "Subnets": {
       "Type": "List<AWS::EC2::Subnet::Id>",
       "Description": "Please choose preferred subnets"
     }
   },
   "Metadata": {
     "AWS::CloudFormation::Designer": {
-      "bac3d5f5-6f51-4f17-845a-9a924f6b4303": {
-        "size": {
-          "width": 60,
-          "height": 60
-        },
-        "position": {
-          "x": 60,
-          "y": 180
-        },
-        "z": 1,
-        "embeds": []
-      },
       "dbdf8573-365d-4db7-83d5-b6b74e153de2": {
         "size": {
           "width": 60,
@@ -35,18 +24,6 @@
         },
         "position": {
           "x": 780,
-          "y": 90
-        },
-        "z": 1,
-        "embeds": []
-      },
-      "439e00c8-098f-4560-9d80-85c1934a5d5a": {
-        "size": {
-          "width": 60,
-          "height": 60
-        },
-        "position": {
-          "x": 60,
           "y": 90
         },
         "z": 1,
@@ -66,7 +43,8 @@
         "dependson": [
           "3f53ec46-08db-4fa8-90ff-91c2bf64a7ef",
           "02f17461-eeec-4b55-8a74-26fc88a7d2df",
-          "b7cf91a3-c7b9-46fe-be92-03d69a8a411e"
+          "b7cf91a3-c7b9-46fe-be92-03d69a8a411e",
+          "6f6365a5-63c8-4af3-b20f-523fcb8efa8a"
         ]
       },
       "77040f03-aa43-4243-b0b2-2bc5d41705f1": {
@@ -79,7 +57,8 @@
           "y": 90
         },
         "z": 1,
-        "embeds": []
+        "embeds": [],
+        "dependson": ["60dadbce-9b7f-469e-be8e-c9aa6c714536"]
       },
       "6a80220f-ef52-4539-a876-8192cec0556f": {
         "size": {
@@ -168,53 +147,35 @@
           "b7cf91a3-c7b9-46fe-be92-03d69a8a411e",
           "6a80220f-ef52-4539-a876-8192cec0556f"
         ]
+      },
+      "1a8a47f5-ce00-4323-ac3e-37cdc5b85225": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 130,
+          "y": 90
+        },
+        "z": 1,
+        "embeds": []
+      },
+      "60dadbce-9b7f-469e-be8e-c9aa6c714536": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 690,
+          "y": 180
+        },
+        "z": 1,
+        "embeds": [],
+        "isassociatedwith": ["1a8a47f5-ce00-4323-ac3e-37cdc5b85225"]
       }
     }
   },
   "Resources": {
-    "codeCommit": {
-      "Type": "AWS::CodeCommit::Repository",
-      "Properties": {
-        "RepositoryDescription": "A sample description",
-        "RepositoryName": {
-          "Fn::Sub": [
-            "${ProjectNameStr}-code-repo",
-            {
-              "ProjectNameStr": {
-                "Ref": "mProjectName"
-              }
-            }
-          ]
-        },
-        "Tags": [],
-        "Triggers": []
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "bac3d5f5-6f51-4f17-845a-9a924f6b4303"
-        }
-      }
-    },
-    "imageRepository": {
-      "Type": "AWS::ECR::Repository",
-      "Properties": {
-        "RepositoryName": {
-          "Fn::Sub": [
-            "${ProjectNameStr}-image",
-            {
-              "ProjectNameStr": {
-                "Ref": "mProjectName"
-              }
-            }
-          ]
-        }
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "439e00c8-098f-4560-9d80-85c1934a5d5a"
-        }
-      }
-    },
     "stagingFileSystem": {
       "Type": "AWS::EFS::FileSystem",
       "Properties": {
@@ -250,7 +211,7 @@
           "Fn::Select": [
             "0",
             {
-              "Ref": "mSubnets"
+              "Ref": "Subnets"
             }
           ]
         }
@@ -261,9 +222,88 @@
         }
       }
     },
+    "ecsTaskExecutionPolicy": {
+      "Description": "Setting IAM policy for service role for CodePipeline",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "*"
+            }
+          ]
+        },
+        "PolicyName": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-ecs-task-execution-policy",
+            {
+              "ProjectNameStr": {
+                "Ref": "ProjectName"
+              }
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ecsTaskExecutionRole"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Policy",
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "60dadbce-9b7f-469e-be8e-c9aa6c714536"
+        }
+      }
+    },
+    "ecsTaskExecutionRole": {
+      "Description": "Creating service role in IAM for AWS ECS",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              }
+            }
+          ]
+        },
+        "Path": "/",
+        "RoleName": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-ecs-task-execution-role",
+            {
+              "ProjectNameStr": {
+                "Ref": "ProjectName"
+              }
+            }
+          ]
+        }
+      },
+      "Type": "AWS::IAM::Role",
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "1a8a47f5-ce00-4323-ac3e-37cdc5b85225"
+        }
+      }
+    },
     "taskDef": {
       "Type": "AWS::ECS::TaskDefinition",
       "Properties": {
+        "RequiresCompatibilities": ["FARGATE"],
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": ["ecsTaskExecutionRole", "Arn"]
+        },
         "ContainerDefinitions": [
           {
             "Image": "nginx:latest",
@@ -282,24 +322,6 @@
               }
             ],
             "Privileged": false
-          },
-          {
-            "Image": "mongo:4.2",
-            "MountPoints": [
-              {
-                "ContainerPath": "/data/db",
-                "ReadOnly": false,
-                "SourceVolume": "efs-mnt"
-              }
-            ],
-            "Name": "mongo-db-container",
-            "PortMappings": [
-              {
-                "ContainerPort": 27017,
-                "HostPort": 27017
-              }
-            ],
-            "Privileged": false
           }
         ],
         "Cpu": "256",
@@ -308,7 +330,7 @@
             "${ProjectNameStr}-task-def",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -327,6 +349,7 @@
           }
         ]
       },
+      "DependsOn": ["ecsTaskExecutionPolicy"],
       "Metadata": {
         "AWS::CloudFormation::Designer": {
           "id": "77040f03-aa43-4243-b0b2-2bc5d41705f1"
@@ -341,7 +364,7 @@
             "${ProjectNameStr}-ecs-cluster",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -362,14 +385,14 @@
             "${ProjectNameStr}-load-balancer",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
         },
         "Scheme": "internet-facing",
         "Subnets": {
-          "Ref": "mSubnets"
+          "Ref": "Subnets"
         },
         "Type": "application"
       },
@@ -444,7 +467,7 @@
             "${ProjectNameStr}-dev-target-group",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -453,7 +476,7 @@
         "Protocol": "HTTP",
         "TargetType": "ip",
         "VpcId": {
-          "Ref": "mVPCID"
+          "Ref": "VPCID"
         }
       },
       "Metadata": {
@@ -475,7 +498,7 @@
             "dev-${ProjectNameStr}-service",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -510,7 +533,7 @@
                 "Fn::Select": [
                   "0",
                   {
-                    "Ref": "mSubnets"
+                    "Ref": "Subnets"
                   }
                 ]
               }
@@ -538,7 +561,7 @@
             "Security group for ${ProjectNameStr}",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -548,7 +571,7 @@
             "${ProjectNameStr}-sg",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -570,7 +593,7 @@
           }
         ],
         "VpcId": {
-          "Ref": "mVPCID"
+          "Ref": "VPCID"
         }
       },
       "Metadata": {
@@ -581,10 +604,10 @@
     }
   },
   "Outputs": {
-    "CloneURL": {
-      "Description": "Information about the value",
+    "URL": {
+      "Description": "Access the application using the URL",
       "Value": {
-        "Fn::GetAtt": ["codeCommit", "CloneUrlHttp"]
+        "Fn::GetAtt": ["loadBalancer", "DNSName"]
       }
     }
   }
