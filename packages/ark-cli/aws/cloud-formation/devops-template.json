@@ -1,9 +1,10 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
-    "mProjectName": {
+    "ProjectName": {
       "Type": "String",
-      "Description": "e.g. small-project"
+      "Default": "project-phoenix",
+      "Description": "Please enter your project name. e.g. project-phoenix"
     }
   },
   "Metadata": {
@@ -126,13 +127,12 @@
     "codeCommit": {
       "Type": "AWS::CodeCommit::Repository",
       "Properties": {
-        "RepositoryDescription": "A sample description",
         "RepositoryName": {
           "Fn::Sub": [
-            "${ProjectNameStr}-code-repo",
+            "${ProjectNameStr}-repo",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -154,7 +154,7 @@
             "${ProjectNameStr}-image",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -213,7 +213,7 @@
             "${ProjectNameStr}-code-build-policy",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -247,14 +247,13 @@
         },
         "Path": "/",
         "RoleName": {
-          "Fn::Join": [
-            "-",
-            [
-              {
-                "Ref": "AWS::StackName"
-              },
-              "CodeBuild"
-            ]
+          "Fn::Sub": [
+            "${ProjectNameStr}-code-build-role",
+            {
+              "ProjectNameStr": {
+                "Ref": "ProjectName"
+              }
+            }
           ]
         }
       },
@@ -268,7 +267,16 @@
     "codeBuild": {
       "Type": "AWS::CodeBuild::Project",
       "Properties": {
-        "Name": "MyProject",
+        "Name": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-builder",
+            {
+              "ProjectNameStr": {
+                "Ref": "ProjectName"
+              }
+            }
+          ]
+        },
         "ServiceRole": {
           "Ref": "codeBuildRole"
         },
@@ -465,7 +473,7 @@
             "${ProjectNameStr}-code-pipeline-policy",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -499,14 +507,13 @@
         },
         "Path": "/",
         "RoleName": {
-          "Fn::Join": [
-            "-",
-            [
-              {
-                "Ref": "AWS::StackName"
-              },
-              "CodePipeline"
-            ]
+          "Fn::Sub": [
+            "${ProjectNameStr}-code-pipeline-role",
+            {
+              "ProjectNameStr": {
+                "Ref": "ProjectName"
+              }
+            }
           ]
         }
       },
@@ -526,7 +533,7 @@
             "${ProjectNameStr}-pipeline-bucket",
             {
               "ProjectNameStr": {
-                "Ref": "mProjectName"
+                "Ref": "ProjectName"
               }
             }
           ]
@@ -541,6 +548,16 @@
     "codePipeline": {
       "Type": "AWS::CodePipeline::Pipeline",
       "Properties": {
+        "Name": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-pipeline",
+            {
+              "ProjectNameStr": {
+                "Ref": "ProjectName"
+              }
+            }
+          ]
+        },
         "ArtifactStore": {
           "Type": "S3",
           "Location": {
@@ -621,10 +638,15 @@
     }
   },
   "Outputs": {
-    "CloneURL": {
-      "Description": "Information about the value",
+    "GitCloneURL": {
+      "Description": "Clone source code from here",
       "Value": {
         "Fn::GetAtt": ["codeCommit", "CloneUrlHttp"]
+      }
+    },
+    "ContainerRegistryARN": {
+      "Value": {
+        "Fn::GetAtt": ["imageRepository", "Arn"]
       }
     }
   }
