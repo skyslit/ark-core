@@ -127,7 +127,6 @@
     "codeCommit": {
       "Type": "AWS::CodeCommit::Repository",
       "Properties": {
-        "RepositoryDescription": "",
         "RepositoryName": {
           "Fn::Sub": [
             "${ProjectNameStr}-repo",
@@ -527,7 +526,6 @@
     },
     "pipelineBucket": {
       "Type": "AWS::S3::Bucket",
-      "DeletionPolicy": "Retain",
       "Properties": {
         "BucketName": {
           "Fn::Sub": [
@@ -639,15 +637,25 @@
     }
   },
   "Outputs": {
-    "GitCloneURL": {
+    "GitCloneUrl": {
       "Description": "Clone source code from here",
       "Value": {
         "Fn::GetAtt": ["codeCommit", "CloneUrlHttp"]
       }
     },
-    "ContainerRegistryARN": {
+    "ImageRepoName": {
       "Value": {
-        "Fn::GetAtt": ["imageRepository", "Arn"]
+        "Ref": "imageRepository"
+      }
+    },
+    "AWSRegion": {
+      "Value": {
+        "Ref": "AWS::Region"
+      }
+    },
+    "AWSAccountId": {
+      "Value": {
+        "Ref": "AWS::AccountId"
       }
     }
   }
