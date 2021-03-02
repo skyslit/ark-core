@@ -217,6 +217,42 @@
         }
       }
     },
+    "dbFileSystem": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {
+        "BackupPolicy": {
+          "Status": "DISABLED"
+        },
+        "LifecyclePolicies": [
+          {
+            "TransitionToIA": "AFTER_30_DAYS"
+          }
+        ],
+        "PerformanceMode": "generalPurpose",
+        "ThroughputMode": "bursting"
+      }
+    },
+    "dbFileSystemMountTarget": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "dbFileSystem"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "securityGroup"
+          }
+        ],
+        "SubnetId": {
+          "Fn::Select": [
+            "0",
+            {
+              "Ref": "Subnets"
+            }
+          ]
+        }
+      }
+    },
     "ecsTaskExecutionPolicy": {
       "Description": "Setting IAM policy for service role for CodePipeline",
       "Properties": {
@@ -302,6 +338,21 @@
         "ContainerDefinitions": [
           {
             "Image": "nginx:latest",
+            "Environment": [
+              {
+                "Name": "MONGO_CONNECTION_STRING",
+                "Value": {
+                  "Fn::Sub": [
+                    "mongodb://${stackName}-db.${stackName}-local:27017/default",
+                    {
+                      "stackName": {
+                        "Ref": "AWS::StackName"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
             "MountPoints": [
               {
                 "ContainerPath": "/app/user-uploads",
@@ -350,6 +401,60 @@
           "id": "77040f03-aa43-4243-b0b2-2bc5d41705f1"
         }
       }
+    },
+    "dbTaskDef": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "RequiresCompatibilities": ["FARGATE"],
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": ["ecsTaskExecutionRole", "Arn"]
+        },
+        "ContainerDefinitions": [
+          {
+            "Image": "mongo:4.2",
+            "MountPoints": [
+              {
+                "ContainerPath": "/data/db",
+                "ReadOnly": false,
+                "SourceVolume": "efs-mnt"
+              }
+            ],
+            "Name": "db-container",
+            "PortMappings": [
+              {
+                "ContainerPort": 27017,
+                "HostPort": 27017
+              }
+            ],
+            "Privileged": false
+          }
+        ],
+        "Cpu": "256",
+        "Family": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-db-task-def",
+            {
+              "ProjectNameStr": {
+                "Ref": "AWS::StackName"
+              }
+            }
+          ]
+        },
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "Volumes": [
+          {
+            "Name": "efs-mnt",
+            "EFSVolumeConfiguration": {
+              "FilesystemId": {
+                "Ref": "dbFileSystem"
+              },
+              "RootDirectory": "/"
+            }
+          }
+        ]
+      },
+      "DependsOn": ["ecsTaskExecutionPolicy"]
     },
     "ecsCluster": {
       "Type": "AWS::ECS::Cluster",
@@ -459,7 +564,7 @@
       "Properties": {
         "Name": {
           "Fn::Sub": [
-            "${ProjectNameStr}-dev-target-group",
+            "${ProjectNameStr}-target-group",
             {
               "ProjectNameStr": {
                 "Ref": "AWS::StackName"
@@ -490,7 +595,7 @@
         "PlatformVersion": "1.4.0",
         "ServiceName": {
           "Fn::Sub": [
-            "dev-${ProjectNameStr}-service",
+            "${ProjectNameStr}-service",
             {
               "ProjectNameStr": {
                 "Ref": "AWS::StackName"
@@ -548,6 +653,109 @@
         "fileSystemMountTarget"
       ]
     },
+    "dbPrivateDNS": {
+      "Type": "AWS::ServiceDiscovery::PrivateDnsNamespace",
+      "Properties": {
+        "Description": "AWS Cloud Map private DNS namespace for database",
+        "Vpc": {
+          "Ref": "VPCID"
+        },
+        "Name": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-local",
+            {
+              "ProjectNameStr": {
+                "Ref": "AWS::StackName"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "dbCloudMapService": {
+      "Type": "AWS::ServiceDiscovery::Service",
+      "Properties": {
+        "Description": "Service based on a private DNS namespace",
+        "DnsConfig": {
+          "DnsRecords": [
+            {
+              "Type": "A",
+              "TTL": 60
+            }
+          ],
+          "RoutingPolicy": "WEIGHTED"
+        },
+        "Name": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-db",
+            {
+              "ProjectNameStr": {
+                "Ref": "AWS::StackName"
+              }
+            }
+          ]
+        },
+        "NamespaceId": {
+          "Ref": "dbPrivateDNS"
+        }
+      }
+    },
+    "dbService": {
+      "Type": "AWS::ECS::Service",
+      "Properties": {
+        "LaunchType": "FARGATE",
+        "Cluster": {
+          "Ref": "ecsCluster"
+        },
+        "PlatformVersion": "1.4.0",
+        "ServiceName": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-db-service",
+            {
+              "ProjectNameStr": {
+                "Ref": "AWS::StackName"
+              }
+            }
+          ]
+        },
+        "ServiceRegistries": [
+          {
+            "RegistryArn": {
+              "Fn::GetAtt": ["dbCloudMapService", "Arn"]
+            }
+          }
+        ],
+        "SchedulingStrategy": "REPLICA",
+        "DesiredCount": 1,
+        "DeploymentController": {
+          "Type": "ECS"
+        },
+        "TaskDefinition": {
+          "Ref": "dbTaskDef"
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "ENABLED",
+            "SecurityGroups": [
+              {
+                "Fn::GetAtt": ["securityGroup", "GroupId"]
+              }
+            ],
+            "Subnets": [
+              {
+                "Fn::Select": [
+                  "0",
+                  {
+                    "Ref": "Subnets"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "DependsOn": ["fileSystem", "fileSystemMountTarget"]
+    },
     "securityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -585,6 +793,13 @@
             "FromPort": 2049,
             "IpProtocol": "tcp",
             "ToPort": 2049
+          },
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow MongoDB",
+            "FromPort": 27017,
+            "IpProtocol": "tcp",
+            "ToPort": 27017
           }
         ],
         "VpcId": {

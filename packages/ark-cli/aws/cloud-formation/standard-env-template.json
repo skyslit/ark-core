@@ -459,7 +459,7 @@
       "Properties": {
         "Name": {
           "Fn::Sub": [
-            "${ProjectNameStr}-dev-target-group",
+            "${ProjectNameStr}-target-group",
             {
               "ProjectNameStr": {
                 "Ref": "AWS::StackName"
@@ -490,7 +490,7 @@
         "PlatformVersion": "1.4.0",
         "ServiceName": {
           "Fn::Sub": [
-            "dev-${ProjectNameStr}-service",
+            "${ProjectNameStr}-service",
             {
               "ProjectNameStr": {
                 "Ref": "AWS::StackName"
