@@ -6,6 +6,7 @@ import runInit from './commands/init';
 import { runStart, runBuild } from './commands/builders';
 import runAdd from './commands/add';
 import runUpgrade from './commands/upgrade';
+import setupDevops from './commands/setup-devops';
 
 const mainCommand = commandLineArgs(
   [
@@ -45,6 +46,10 @@ switch (mainCommand.command) {
   }
   case 'add': {
     runAdd(mainCommand._unknown);
+    break;
+  }
+  case 'setup-devops': {
+    setupDevops(mainCommand._unknown);
     break;
   }
   default: {
@@ -90,6 +95,11 @@ switch (mainCommand.command) {
               summary: 'Integrates a fpz module with this project',
             },
             { name: 'publish', summary: 'Publish Ark Module to FreePizza.io' },
+            {
+              name: 'setup-devops',
+              summary:
+                'Sets up code repo, image repo, pipeline and environments',
+            },
           ],
         },
         {
