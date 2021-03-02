@@ -1,11 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
-    "ProjectName": {
-      "Type": "String",
-      "Default": "project-phoenix",
-      "Description": "Please enter your project name. e.g. project-phoenix"
-    },
     "VPCID": {
       "Type": "AWS::EC2::VPC::Id",
       "Description": "Please choose the target VPC"
@@ -176,7 +171,7 @@
     }
   },
   "Resources": {
-    "stagingFileSystem": {
+    "fileSystem": {
       "Type": "AWS::EFS::FileSystem",
       "Properties": {
         "BackupPolicy": {
@@ -196,11 +191,11 @@
         }
       }
     },
-    "stagingFileSystemMountTarget": {
+    "fileSystemMountTarget": {
       "Type": "AWS::EFS::MountTarget",
       "Properties": {
         "FileSystemId": {
-          "Ref": "stagingFileSystem"
+          "Ref": "fileSystem"
         },
         "SecurityGroups": [
           {
@@ -246,7 +241,7 @@
             "${ProjectNameStr}-ecs-task-execution-policy",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -284,7 +279,7 @@
             "${ProjectNameStr}-ecs-task-execution-role",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -330,7 +325,7 @@
             "${ProjectNameStr}-task-def",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -342,7 +337,7 @@
             "Name": "efs-mnt",
             "EFSVolumeConfiguration": {
               "FilesystemId": {
-                "Ref": "stagingFileSystem"
+                "Ref": "fileSystem"
               },
               "RootDirectory": "/"
             }
@@ -364,7 +359,7 @@
             "${ProjectNameStr}-ecs-cluster",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -385,7 +380,7 @@
             "${ProjectNameStr}-load-balancer",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -444,7 +439,7 @@
             "Type": "forward",
             "Order": 1,
             "TargetGroupArn": {
-              "Ref": "devTargetGroup"
+              "Ref": "targetGroup"
             }
           }
         ],
@@ -459,7 +454,7 @@
         }
       }
     },
-    "devTargetGroup": {
+    "targetGroup": {
       "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
       "Properties": {
         "Name": {
@@ -467,7 +462,7 @@
             "${ProjectNameStr}-dev-target-group",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -485,7 +480,7 @@
         }
       }
     },
-    "devService": {
+    "appService": {
       "Type": "AWS::ECS::Service",
       "Properties": {
         "LaunchType": "FARGATE",
@@ -498,7 +493,7 @@
             "dev-${ProjectNameStr}-service",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -516,7 +511,7 @@
             "ContainerName": "web-app-container",
             "ContainerPort": 80,
             "TargetGroupArn": {
-              "Ref": "devTargetGroup"
+              "Ref": "targetGroup"
             }
           }
         ],
@@ -549,8 +544,8 @@
       "DependsOn": [
         "loadBalancer",
         "httpListenerRule",
-        "stagingFileSystem",
-        "stagingFileSystemMountTarget"
+        "fileSystem",
+        "fileSystemMountTarget"
       ]
     },
     "securityGroup": {
@@ -561,7 +556,7 @@
             "Security group for ${ProjectNameStr}",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]
@@ -571,7 +566,7 @@
             "${ProjectNameStr}-sg",
             {
               "ProjectNameStr": {
-                "Ref": "ProjectName"
+                "Ref": "AWS::StackName"
               }
             }
           ]

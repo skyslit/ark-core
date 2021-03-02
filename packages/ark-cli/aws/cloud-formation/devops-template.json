@@ -127,6 +127,7 @@
     "codeCommit": {
       "Type": "AWS::CodeCommit::Repository",
       "Properties": {
+        "RepositoryDescription": "",
         "RepositoryName": {
           "Fn::Sub": [
             "${ProjectNameStr}-repo",
