@@ -35,7 +35,7 @@ function copyTemplate(
   ensureDir(destPath, false);
 
   // Write template: ./target/devops-template.json
-  fs.writeFileSync(destPath, content);
+  fs.writeFileSync(destPath, content, { encoding: 'utf-8' });
 }
 
 export default (cwd_?: string) => {
@@ -53,7 +53,19 @@ export default (cwd_?: string) => {
             '../../aws/cloud-formation/devops-template.json'
           ),
           path.join(cwd, 'aws', 'devops-template.json'),
-          (c) => c
+          (c) => {
+            try {
+              const packageJson = JSON.parse(
+                fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
+              );
+              const content = JSON.parse(c);
+              content.Parameters.ProjectName.Default = packageJson.name;
+              return JSON.stringify(content, undefined, ' ');
+            } catch (e) {
+              /** Do nothing */
+            }
+            return c;
+          }
         ),
     },
     {
@@ -74,7 +86,7 @@ export default (cwd_?: string) => {
               );
               const content = JSON.parse(c);
               content.Parameters.ProjectName.Default = packageJson.name;
-              return JSON.stringify(c, null, ' ');
+              return JSON.stringify(content, undefined, ' ');
             } catch (e) {
               /** Do nothing */
             }
@@ -93,7 +105,19 @@ export default (cwd_?: string) => {
             '../../aws/cloud-formation/standard-env-template.json'
           ),
           path.join(cwd, 'aws', 'standard-env-template.json'),
-          (c) => c
+          (c) => {
+            try {
+              const packageJson = JSON.parse(
+                fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
+              );
+              const content = JSON.parse(c);
+              content.Parameters.ProjectName.Default = packageJson.name;
+              return JSON.stringify(content, undefined, ' ');
+            } catch (e) {
+              /** Do nothing */
+            }
+            return c;
+          }
         ),
     },
     {

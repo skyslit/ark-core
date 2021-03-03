@@ -3,7 +3,8 @@
   "Parameters": {
     "ProjectName": {
       "Type": "String",
-      "Description": "Please enter your project name. e.g. project-phoenix"
+      "Description": "Please enter your project name. e.g. project-phoenix",
+      "MaxLength": 20
     }
   },
   "Metadata": {

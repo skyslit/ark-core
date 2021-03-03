@@ -7,7 +7,7 @@
     },
     "Subnets": {
       "Type": "List<AWS::EC2::Subnet::Id>",
-      "Description": "Please choose preferred subnets"
+      "Description": "Please choose preferred subnets (public)"
     }
   },
   "Metadata": {
@@ -389,6 +389,11 @@
         "Subnets": {
           "Ref": "Subnets"
         },
+        "SecurityGroups": [
+          {
+            "Ref": "loadBalancerSecurityGroup"
+          }
+        ],
         "Type": "application"
       },
       "Metadata": {
@@ -585,6 +590,55 @@
             "FromPort": 2049,
             "IpProtocol": "tcp",
             "ToPort": 2049
+          }
+        ],
+        "VpcId": {
+          "Ref": "VPCID"
+        }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "6a80220f-ef52-4539-a876-8192cec0556f"
+        }
+      }
+    },
+    "loadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": {
+          "Fn::Sub": [
+            "Security group for ${ProjectNameStr}",
+            {
+              "ProjectNameStr": {
+                "Ref": "AWS::StackName"
+              }
+            }
+          ]
+        },
+        "GroupName": {
+          "Fn::Sub": [
+            "${ProjectNameStr}-sg",
+            {
+              "ProjectNameStr": {
+                "Ref": "AWS::StackName"
+              }
+            }
+          ]
+        },
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow HTTP",
+            "FromPort": 80,
+            "IpProtocol": "tcp",
+            "ToPort": 80
+          },
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow HTTPS",
+            "FromPort": 443,
+            "IpProtocol": "tcp",
+            "ToPort": 443
           }
         ],
         "VpcId": {

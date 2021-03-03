@@ -4,6 +4,7 @@ import rimraf from 'rimraf';
 import inquirer from 'inquirer';
 import runCommand from '../utils/run-command';
 import setupDevopsAws from '../tasks/setup-devops-aws';
+import gitP from 'simple-git/promise';
 
 const testDir = path.join(
   __dirname,
@@ -29,11 +30,15 @@ test('setup-devops-aws', (done) => {
 
   Promise.resolve(true)
     .then(async () => {
+      const git = gitP(testDir);
       await runCommand('npm init -y', 'npm init -y; exit', {
         cwd: testDir,
       }).toPromise();
+
+      await git.add('/*');
+      await git.commit('initial commit');
     })
-    .then(() => setupDevopsAws(testDir))
+    // .then(() => setupDevopsAws(testDir))
     .then(() => {
       const devopsTemplate: any = JSON.parse(
         fs.readFileSync(
