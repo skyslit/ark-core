@@ -74,6 +74,7 @@ export default (argv?: string[]) => {
 
       setupAwsDevops()
         .then(() => {
+          console.log('');
           process.exit(0);
         })
         .catch((err) => {

@@ -3,7 +3,6 @@
   "Parameters": {
     "ProjectName": {
       "Type": "String",
-      "Default": "project-phoenix",
       "Description": "Please enter your project name. e.g. project-phoenix"
     }
   },
