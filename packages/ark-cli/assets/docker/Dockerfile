@@ -13,6 +13,7 @@ RUN npm install
 COPY . ./
 RUN npm run build
 
-EXPOSE 3000
+ENV NODE_PORT=80
+EXPOSE 80
 
 CMD ["node", "./build/server/main.js"]

@@ -482,7 +482,7 @@
         "IpAddressType": "ipv4",
         "Name": {
           "Fn::Sub": [
-            "${ProjectNameStr}-load-balancer",
+            "${ProjectNameStr}-lb",
             {
               "ProjectNameStr": {
                 "Ref": "AWS::StackName"
