@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.6.0](https://github.com/skyslit/ark/compare/v2.5.0...v2.6.0) (2021-03-04)
+
+
+### Bug Fixes
+
+* aws > issue with loadbalancer securitygroup ([9020a89](https://github.com/skyslit/ark/commit/9020a891bd120dd1016b4350c12e972b7bd140fe))
+* optimised setup-devops aws command ([a8bf0e2](https://github.com/skyslit/ark/commit/a8bf0e265b90d475e4275d938683fc4ef9626d54))
+
+
+### Features
+
+* added setup-devops command ([1d82e32](https://github.com/skyslit/ark/commit/1d82e329d461db3ac0516a48e983653b21882e43))
+
+
+
+
+
 # [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
 
 
