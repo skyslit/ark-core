@@ -692,6 +692,7 @@ export function createModule<T>(fn: ContextScope<T>): ContextScope<T> {
 // Singleton Functions
 
 /**
+ * @deprecated
  * Run application in singleton context
  * @param {ContextScope<T>} fn
  * @return {Promise<any>}
