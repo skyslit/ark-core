@@ -291,20 +291,29 @@ export default (cwd_?: string) => {
       },
     },
     {
-      title: 'configure @types in packages',
+      title: 'configure dev deps in packages',
       task: () =>
         new Listr([
           {
-            title: 'install @types declarations',
+            title: 'install dev deps declarations',
             skip: () => skipDepInstalls,
             task: () => {
               const deps = [
+                // @types
                 '@types/cookie-parser@^1.4.2',
                 '@types/express@^4.17.9',
                 '@types/mongoose@^5.10.0',
                 '@types/react@^16.0.1',
                 '@types/react-dom@^16.0.1',
                 '@types/react-router-dom@^5.1.6',
+                '@types/jest@^26.0.15',
+                '@types/supertest@^2.0.10',
+                // backend
+                'jest@^26.0.1',
+                'mongodb-memory-server@^6.9.2',
+                'supertest@^6.0.1',
+                // frontend
+                '@testing-library/react@^11.2.2',
               ];
               return runCommand(
                 `using ${packager}...`,

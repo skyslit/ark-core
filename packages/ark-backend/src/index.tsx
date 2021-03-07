@@ -140,6 +140,23 @@ declare global {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                  Utilities                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Resolve service Id to URL
+ * @param {string} serviceId
+ * @param {string} moduleId
+ * @return {string}
+ */
+export function resolveServiceUrl(
+  serviceId: string,
+  moduleId: string = 'default'
+): string {
+  return `/___service/${moduleId}/${serviceId}`;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                              Ark Volume Begin                              */
 /* -------------------------------------------------------------------------- */
 
@@ -599,7 +616,7 @@ export const useServiceCreator: (
   >(
     {
       alias: 'service',
-      path: `/___service/${moduleId}/${service.name}`,
+      path: resolveServiceUrl(service.name, moduleId),
       method: 'post',
       controller: ServiceController.getInstance(),
       skipServiceRegistration: false,
