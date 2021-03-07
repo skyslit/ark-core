@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.7.0](https://github.com/skyslit/ark/compare/v2.6.0...v2.7.0) (2021-03-07)
+
+
+### Features
+
+* file upload and fs volume support added ([07263aa](https://github.com/skyslit/ark/commit/07263aaa5a7004d5ed8f093ffd252cad69c8f793))
+
+
+
+
+
 # [2.6.0](https://github.com/skyslit/ark/compare/v2.5.0...v2.6.0) (2021-03-04)
 
 
