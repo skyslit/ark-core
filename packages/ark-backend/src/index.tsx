@@ -12,6 +12,7 @@ import expressApp, {
   CookieOptions,
   NextFunction,
   Request,
+  RequestHandler,
   Response,
 } from 'express';
 import Joi from 'joi';
@@ -128,7 +129,7 @@ declare global {
         schema?: SchemaDefinition | (() => Schema),
         dbName?: keyof Ark.PackageDatabases
       ) => Model<T & Document>;
-      useVolume: (ref: string, vol?: IArkVolume) => IArkVolume;
+      useVolume: (ref?: string, vol?: IArkVolume) => IArkVolume;
     }
     // eslint-disable-next-line no-unused-vars
     interface Databases {}
@@ -165,10 +166,10 @@ type ArkVolumeOptions = {
 };
 
 export interface IArkVolume {
-  putAsync: (path: string, data: NodeJS.ArrayBufferView) => void;
-  getAsync: (path: string) => NodeJS.ArrayBufferView;
-  renameAsync: (oldPath: string, newPath: string) => void;
-  deleteAsync: (path: string) => void;
+  put: (path: string, data: NodeJS.ArrayBufferView) => Promise<any>;
+  get: (path: string) => NodeJS.ArrayBufferView;
+  rename: (oldPath: string, newPath: string) => Promise<any>;
+  delete: (path: string) => Promise<any>;
 }
 
 /**
@@ -214,11 +215,13 @@ export class FileVolume implements IArkVolume {
    * Writes buffer to file
    * @param {string} p
    * @param {NodeJS.ArrayBufferView} data
+   * @return {Promise<boolean>}
    */
-  putAsync(p: string, data: NodeJS.ArrayBufferView) {
+  async put(p: string, data: NodeJS.ArrayBufferView): Promise<boolean> {
     const fullPath = path.join(this.opts.baseDir, p);
     ensureDir(path.dirname(fullPath));
     fs.writeFileSync(fullPath, data);
+    return true;
   }
 
   /**
@@ -226,25 +229,29 @@ export class FileVolume implements IArkVolume {
    * @param {string} p
    * @return {NodeJS.ArrayBufferView}
    */
-  getAsync(p: string): NodeJS.ArrayBufferView {
+  get(p: string): NodeJS.ArrayBufferView {
     return fs.readFileSync(path.join(this.opts.baseDir, p));
   }
 
   /**
    * Deletes file
    * @param {string} p
+   * @return {Promise<boolean>}
    */
-  deleteAsync(p: string) {
+  async delete(p: string): Promise<boolean> {
     fs.unlinkSync(path.join(this.opts.baseDir, p));
+    return true;
   }
 
   /**
    * Renames a file
    * @param {string} oldPath
    * @param {string} newPath
+   * @return {Promise<boolean>}
    */
-  renameAsync(oldPath: string, newPath: string) {
+  async rename(oldPath: string, newPath: string): Promise<boolean> {
     fs.renameSync(oldPath, newPath);
+    return true;
   }
 }
 
@@ -977,6 +984,7 @@ export type ServiceDefinitionOptions = {
   defineRule: (def: RuleDefinition) => void;
   defineLogic: (def: LogicDefinition) => void;
   defineCapabilities: (def: CapabilitiesDefinition) => void;
+  attachMiddleware: (handlers: RequestHandler | RequestHandler[]) => void;
   use: <T extends (...args: any) => any>(creators: T) => ReturnType<T>;
 };
 
@@ -1010,6 +1018,7 @@ export type ServiceRunnerOptions = {
   disableLogic: boolean;
   disableCapabilities: boolean;
   disableResponseFromatter: boolean;
+  disableMiddleware: boolean;
   controller: ServiceController;
   controllerContext: ControllerContext<any>;
   aliasMode: ServiceAlias;
@@ -1020,6 +1029,7 @@ export type ServiceRunnerOptions = {
 };
 
 type RunnerContext = {
+  middlewareRunner: () => any | Promise<any>;
   validationRunner: () => any | Promise<any>;
   preRunner: () => any | Promise<any>;
   policyExtractionAggregator: () => any | Promise<any>;
@@ -1246,6 +1256,7 @@ export function runService(
       disableLogic: false,
       disableCapabilities: false,
       disableResponseFromatter: false,
+      disableMiddleware: false,
       controller: ServiceController.getInstance(),
       controllerContext: new ControllerContext(
         ApplicationContext.getInstance()
@@ -1275,6 +1286,7 @@ export function runService(
 
   return new Promise<RunnerStat>((resolve, reject) => {
     const ctx: RunnerContext = {
+      middlewareRunner: null,
       validationRunner: null,
       policyExtractionAggregator: async () => {
         let extractedPolicies: string[] = [];
@@ -1397,6 +1409,26 @@ export function runService(
               creators
             );
           },
+          attachMiddleware: (handlers) =>
+            (ctx.middlewareRunner = () => {
+              const _handlers: RequestHandler[] = Array.isArray(handlers)
+                ? handlers
+                : [handlers];
+              return _handlers.reduce((acc, handler) => {
+                return acc.then(
+                  () =>
+                    new Promise((resolve, reject) => {
+                      handler(args.req, args.res, (err: any) => {
+                        if (err) {
+                          reject(err);
+                        } else {
+                          resolve(true);
+                        }
+                      });
+                    })
+                );
+              }, Promise.resolve(true));
+            }),
           defineValidator: (schema) =>
             (ctx.validationRunner = () => {
               stat.isValid = false;
@@ -1590,6 +1622,7 @@ export function runService(
       );
 
     [
+      ['disableMiddleware', 'middlewareRunner'],
       ['disableValidation', 'validationRunner'],
       ['disablePre', 'preRunner'],
       ['disablePolicyExtraction', 'policyExtractionAggregator'],

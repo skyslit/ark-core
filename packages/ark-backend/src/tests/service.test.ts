@@ -669,3 +669,32 @@ describe('use()', () => {
     expect(useFn).toBeTruthy();
   });
 });
+
+describe('attachMiddleware()', () => {
+  test('should run as the first item', async () => {
+    let testMatch: number = 0;
+    const TestService = defineService('TestService', (options) => {
+      options.attachMiddleware((req, res, next) => {
+        (req as any).testAbc = 100;
+        next();
+      });
+
+      options.defineLogic((opts) => {
+        testMatch = (opts.args.req as any).testAbc;
+        return opts.success({
+          message: 'Test',
+        });
+      });
+    });
+
+    const output = await runService(TestService, {
+      req: {} as any,
+    });
+
+    expect(output.result.type).toStrictEqual('success');
+
+    expect(output.responseCode).toStrictEqual(200);
+    expect(output.response.meta.message).toStrictEqual('Test');
+    expect(testMatch).toStrictEqual(100);
+  });
+});
