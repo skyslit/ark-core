@@ -132,9 +132,27 @@ declare global {
         useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
         configureAuth: (opts: AuthConfiguration) => void;
         useAuthConfiguration: () => AuthConfiguration;
+        resolveServiceUrl: (serviceId: string, moduleId?: string) => string;
       }
     }
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  Utilities                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Resolve service Id to URL
+ * @param {string} serviceId
+ * @param {string} moduleId
+ * @return {string}
+ */
+export function resolveServiceUrl(
+  serviceId: string,
+  moduleId: string = 'default'
+): string {
+  return `/___service/${moduleId}/${serviceId}`;
 }
 
 const createReducer = (initialState = {}) => (
@@ -914,6 +932,14 @@ export const Frontend = createPointer<Ark.MERN.React>(
         loginPageUrl: '/auth/login',
         defaultProtectedUrl: '/',
       });
+    },
+    resolveServiceUrl: (serviceId: string, modId?: string): string => {
+      let _moduleId = moduleId;
+      if (modId) {
+        _moduleId = modId;
+      }
+
+      return resolveServiceUrl(serviceId, _moduleId);
     },
   })
 );
