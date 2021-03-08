@@ -1,0 +1,18 @@
+FROM node:14.16-slim
+
+WORKDIR /app
+
+# Install platform deps
+RUN apt-get update -y
+RUN apt-get install git curl wget unzip nano -y
+RUN apt-get install python build-essential -y
+
+# Install AWS CLI
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
+
+RUN npm -g config set user root
+RUN npm i fpz --global
+
+ENTRYPOINT [ "bash" ]
