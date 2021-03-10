@@ -109,6 +109,10 @@ export type AuthConfiguration = {
   defaultProtectedUrl: string;
 };
 
+export type AccessPoint = {
+  getUrl: (filename: string) => string;
+};
+
 declare global {
   // eslint-disable-next-line no-unused-vars
   namespace Ark {
@@ -122,6 +126,7 @@ declare global {
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
         useService: ServiceHook;
+        useVolumeAccessPoint: (refId: string) => AccessPoint;
         useContext: ContextHook;
         useLayout: <T>(
           refId: string,
@@ -719,6 +724,13 @@ export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
     useService: useServiceCreator(moduleId, context),
+    useVolumeAccessPoint: (refId: string) => {
+      const ref = extractRef(refId, moduleId);
+      const accessPointPath = `/volumes/${ref.moduleName}/${ref.refId}`;
+      return {
+        getUrl: (fileName) => `${accessPointPath}/${fileName}`,
+      };
+    },
     useStore: useStoreCreator(moduleId, context),
     useContext: useContextCreator(context),
     useComponent: (refId, componentCreator = null) => {

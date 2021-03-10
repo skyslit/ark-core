@@ -891,3 +891,57 @@ describe('predefined Routers', () => {
       .catch(done);
   });
 });
+
+describe('useVolumeAccessPoint()', () => {
+  test('general tests', (done) => {
+    const ctx = new ApplicationContext();
+
+    let valFromDefault: string = null;
+    let valFromTestModule: string = null;
+    let valFromTestModuleFromDefault: string = null;
+
+    const testContext = createReactApp(({ use, useModule }) => {
+      const { useVolumeAccessPoint } = use(Frontend);
+
+      const accessPointFromDefault = useVolumeAccessPoint('testAP');
+      valFromDefault = accessPointFromDefault.getUrl('file');
+
+      useModule('testModule', ({ use }) => {
+        const { useVolumeAccessPoint } = use(Frontend);
+
+        const accessPointFromTest = useVolumeAccessPoint('testAP');
+        valFromTestModule = accessPointFromTest.getUrl('file');
+
+        const accessPointTestModuleFromDefault = useVolumeAccessPoint(
+          'default/testAP'
+        );
+        valFromTestModuleFromDefault = accessPointTestModuleFromDefault.getUrl(
+          'file'
+        );
+      });
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: false,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        render(<App />);
+        expect(valFromDefault).toStrictEqual('/volumes/default/testAP/file');
+        expect(valFromTestModule).toStrictEqual(
+          '/volumes/testModule/testAP/file'
+        );
+        expect(valFromTestModuleFromDefault).toStrictEqual(valFromDefault);
+        done();
+      })
+      .catch(done);
+  });
+});
