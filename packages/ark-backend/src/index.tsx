@@ -136,7 +136,7 @@ declare global {
       ) => Model<T & Document>;
       useVolume: (ref?: string, vol?: IArkVolume) => IArkVolume;
       useVolumeAccessPoint: (
-        path: string,
+        refId: string,
         vol: IArkVolume,
         opts?: Partial<AccessPointOptions>
       ) => void;
@@ -455,10 +455,11 @@ function getModelName(modId: string, name: string): string {
 
 export const Data = createPointer<Partial<Ark.Data>>(
   (moduleId, controller, context) => ({
-    useVolumeAccessPoint: (path, vol, opts) => {
+    useVolumeAccessPoint: (refId, vol, opts) => {
       controller.ensureInitializing(
         'useRoute() should be called on context root'
       );
+      const ref = extractRef(refId, moduleId);
       controller.run(() => {
         const options = Object.assign<
           AccessPointOptions,
@@ -469,8 +470,7 @@ export const Data = createPointer<Partial<Ark.Data>>(
           },
           opts
         );
-        const accessPointPath = `/volumes/${moduleId}/${path}`;
-        console.log(accessPointPath);
+        const accessPointPath = `/volumes/${ref.moduleName}/${ref.refId}`;
         const app = context.getData<expressApp.Application>(
           'default',
           'express'
