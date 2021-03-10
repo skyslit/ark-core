@@ -644,6 +644,346 @@ describe('functionality tests', () => {
         })
         .catch(done);
     });
+
+    describe('localStorage support', () => {
+      /**
+       * LocalStorageMock
+       */
+      class LocalStorageMock {
+        store: any;
+
+        /**
+         * Mock Constructor
+         */
+        constructor() {
+          this.store = {};
+        }
+
+        /**
+         * Clear fn
+         */
+        clear() {
+          this.store = {};
+        }
+
+        /**
+         * getItem key
+         * @param {string} key
+         * @return {any}
+         */
+        getItem(key: string) {
+          return this.store[key] || null;
+        }
+
+        /**
+         * getItem key
+         * @param {string} key
+         * @param {any} value
+         */
+        setItem(key: string, value: any) {
+          this.store[key] = String(value);
+        }
+
+        /**
+         * getItem key
+         * @param {string} key
+         */
+        removeItem(key: string) {
+          delete this.store[key];
+        }
+      }
+
+      Object.defineProperty(window, 'localStorage', {
+        value: new LocalStorageMock(),
+      });
+
+      test('localStorage setItem action should work without error', (done) => {
+        const createCMSComponent = createComponent(({ use }) => {
+          const { useContent } = use(Frontend);
+          const {
+            isAvailable,
+            content,
+            setContent,
+            hasChanged,
+            saveLocally,
+            hasLocalData,
+            markAsSaved,
+            reset,
+          } = useContent<any>({
+            serviceId: 'test-content',
+            enableLocalStorage: true,
+          });
+          return (
+            <div>
+              <div>Hello</div>
+              <button
+                onClick={() => {
+                  reset();
+                }}
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => {
+                  saveLocally();
+                  markAsSaved();
+                }}
+              >
+                Save Locally
+              </button>
+              <button
+                onClick={() =>
+                  setContent({
+                    title: 'Sample',
+                  })
+                }
+              >
+                Set Content
+              </button>
+              <div data-testid="has-local-data">{`output: ${hasLocalData()}`}</div>
+              <div data-testid="changed-field">
+                {String(Boolean(hasChanged))}
+              </div>
+              <div data-testid="output">
+                {isAvailable === true ? (
+                  <code>{JSON.stringify(content)}</code>
+                ) : null}
+              </div>
+            </div>
+          );
+        });
+
+        const testContext = createReactApp(({ use }) => {
+          const { useComponent, useRouteConfig } = use(Frontend);
+          const CMS = useComponent('cms', createCMSComponent);
+
+          useRouteConfig(() => [
+            {
+              path: '/',
+              component: CMS,
+            },
+          ]);
+        });
+
+        makeApp('csr', testContext, ctx, {
+          initialState: {
+            ...reduxServiceStateSnapshot('___context', 'default', {
+              responseCode: 200,
+              response: {},
+            }),
+          },
+        })
+          .then(async (App) => {
+            const { getByText, getByTestId } = render(<App />);
+
+            expect(getByTestId('output').innerHTML).toBe('');
+
+            act(() => {
+              // Click `Set Content` button
+              getByText('Set Content').click();
+            });
+
+            expect(getByTestId('has-local-data').innerHTML).toStrictEqual(
+              'output: false'
+            );
+            expect(getByTestId('output').innerHTML).toBe(
+              `<code>{\"title\":\"Sample\"}</code>`
+            );
+
+            act(() => {
+              // Click `Save Locally` button
+              getByText('Save Locally').click();
+            });
+
+            expect(
+              global.window.localStorage.store['_cmsHook/_ls/test-content']
+            ).toStrictEqual(`{"title":"Sample"}`);
+          })
+          .then(() => {
+            done();
+          })
+          .catch(done);
+      });
+
+      test('localStorage should load with data from localstorage', (done) => {
+        const createCMSComponent = createComponent(({ use }) => {
+          const { useContent } = use(Frontend);
+          const {
+            isAvailable,
+            content,
+            setContent,
+            hasChanged,
+            saveLocally,
+            hasLocalData,
+            reset,
+          } = useContent<any>({
+            serviceId: 'test-content',
+            enableLocalStorage: true,
+          });
+          return (
+            <div>
+              <div>Hello</div>
+              <button
+                onClick={() => {
+                  reset();
+                }}
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => {
+                  saveLocally();
+                }}
+              >
+                Save Locally
+              </button>
+              <button
+                onClick={() =>
+                  setContent({
+                    title: 'Sample',
+                  })
+                }
+              >
+                Set Content
+              </button>
+              <div data-testid="has-local-data">{`output: ${hasLocalData()}`}</div>
+              <div data-testid="changed-field">
+                {String(Boolean(hasChanged))}
+              </div>
+              <div data-testid="output">
+                {isAvailable === true ? (
+                  <code>{JSON.stringify(content)}</code>
+                ) : null}
+              </div>
+            </div>
+          );
+        });
+
+        const testContext = createReactApp(({ use }) => {
+          const { useComponent, useRouteConfig } = use(Frontend);
+          const CMS = useComponent('cms', createCMSComponent);
+
+          useRouteConfig(() => [
+            {
+              path: '/',
+              component: CMS,
+            },
+          ]);
+        });
+
+        makeApp('csr', testContext, ctx, {
+          initialState: {
+            ...reduxServiceStateSnapshot('___context', 'default', {
+              responseCode: 200,
+              response: {},
+            }),
+          },
+        })
+          .then(async (App) => {
+            const { getByTestId } = render(<App />);
+
+            expect(
+              global.window.localStorage.store['_cmsHook/_ls/test-content']
+            ).toStrictEqual(`{"title":"Sample"}`);
+            expect(getByTestId('output').innerHTML).toBe(
+              `<code>{\"title\":\"Sample\"}</code>`
+            );
+            expect(getByTestId('has-local-data').innerHTML).toStrictEqual(
+              'output: true'
+            );
+          })
+          .then(() => {
+            done();
+          })
+          .catch(done);
+      });
+
+      test('localStorage should not load with data from localstorage when disabled', (done) => {
+        const createCMSComponent = createComponent(({ use }) => {
+          const { useContent } = use(Frontend);
+          const {
+            isAvailable,
+            content,
+            setContent,
+            hasChanged,
+            saveLocally,
+            reset,
+          } = useContent<any>({
+            serviceId: 'test-content',
+            enableLocalStorage: false,
+          });
+          return (
+            <div>
+              <div>Hello</div>
+              <button
+                onClick={() => {
+                  reset();
+                }}
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => {
+                  saveLocally();
+                }}
+              >
+                Save Locally
+              </button>
+              <button
+                onClick={() =>
+                  setContent({
+                    title: 'Sample',
+                  })
+                }
+              >
+                Set Content
+              </button>
+              <div data-testid="changed-field">
+                {String(Boolean(hasChanged))}
+              </div>
+              <div data-testid="output">
+                {isAvailable === true ? (
+                  <code>{JSON.stringify(content)}</code>
+                ) : null}
+              </div>
+            </div>
+          );
+        });
+
+        const testContext = createReactApp(({ use }) => {
+          const { useComponent, useRouteConfig } = use(Frontend);
+          const CMS = useComponent('cms', createCMSComponent);
+
+          useRouteConfig(() => [
+            {
+              path: '/',
+              component: CMS,
+            },
+          ]);
+        });
+
+        makeApp('csr', testContext, ctx, {
+          initialState: {
+            ...reduxServiceStateSnapshot('___context', 'default', {
+              responseCode: 200,
+              response: {},
+            }),
+          },
+        })
+          .then(async (App) => {
+            const { getByTestId } = render(<App />);
+
+            expect(
+              global.window.localStorage.store['_cmsHook/_ls/test-content']
+            ).toStrictEqual(`{"title":"Sample"}`);
+            expect(getByTestId('output').innerHTML).toBe('');
+          })
+          .then(() => {
+            done();
+          })
+          .catch(done);
+      });
+    });
   });
 });
 
@@ -886,6 +1226,60 @@ describe('predefined Routers', () => {
         // Expect component and layout
         expect(getByText(/Layou/i).textContent).toBe('Layout D');
         expect(getByText(/Dashboard/i).textContent).toBe('Dashboard');
+        done();
+      })
+      .catch(done);
+  });
+});
+
+describe('useVolumeAccessPoint()', () => {
+  test('general tests', (done) => {
+    const ctx = new ApplicationContext();
+
+    let valFromDefault: string = null;
+    let valFromTestModule: string = null;
+    let valFromTestModuleFromDefault: string = null;
+
+    const testContext = createReactApp(({ use, useModule }) => {
+      const { useVolumeAccessPoint } = use(Frontend);
+
+      const accessPointFromDefault = useVolumeAccessPoint('testAP');
+      valFromDefault = accessPointFromDefault.getUrl('file');
+
+      useModule('testModule', ({ use }) => {
+        const { useVolumeAccessPoint } = use(Frontend);
+
+        const accessPointFromTest = useVolumeAccessPoint('testAP');
+        valFromTestModule = accessPointFromTest.getUrl('file');
+
+        const accessPointTestModuleFromDefault = useVolumeAccessPoint(
+          'default/testAP'
+        );
+        valFromTestModuleFromDefault = accessPointTestModuleFromDefault.getUrl(
+          'file'
+        );
+      });
+    });
+
+    makeApp('csr', testContext, ctx, {
+      initialState: {
+        ...reduxServiceStateSnapshot('___context', 'default', {
+          responseCode: 200,
+          response: {
+            meta: {
+              isAuthenticated: false,
+            },
+          },
+        }),
+      },
+    })
+      .then((App) => {
+        render(<App />);
+        expect(valFromDefault).toStrictEqual('/volumes/default/testAP/file');
+        expect(valFromTestModule).toStrictEqual(
+          '/volumes/testModule/testAP/file'
+        );
+        expect(valFromTestModuleFromDefault).toStrictEqual(valFromDefault);
         done();
       })
       .catch(done);

@@ -1,5 +1,7 @@
+import { ApplicationContext } from '@skyslit/ark-core';
 import fs from 'fs';
-import { ensureDir, FileVolume } from '../index';
+import supertest from 'supertest';
+import { Backend, Data, ensureDir, FileVolume } from '../index';
 
 jest.mock('fs', () => require('memfs').fs);
 
@@ -75,5 +77,91 @@ describe('FileVolume', () => {
     );
 
     expect(fileContentRenamed).toEqual('Test Content');
+  });
+});
+
+describe('useVolumeAccessPoint() server side', () => {
+  test('should say not found when try to access without files', (done) => {
+    const appContext = new ApplicationContext();
+    appContext
+      .activate(({ use }) => {
+        use(Backend);
+        const { useVolumeAccessPoint, useVolume } = use(Data);
+
+        useVolumeAccessPoint(
+          'test-ap',
+          useVolume(
+            'default',
+            new FileVolume({ baseDir: '/___test-upload-dir' })
+          )
+        );
+      })
+      .finally(() => {
+        supertest(appContext.getData('default', 'express'))
+          .get('/volumes/default/test-ap')
+          .then((res) => {
+            expect(res.text).toBe('Not Found');
+            done();
+          });
+      });
+  });
+
+  test('should return file', (done) => {
+    const appContext = new ApplicationContext();
+    fs.mkdirSync('/___test-upload-dir');
+    fs.writeFileSync('/___test-upload-dir/sample.txt', 'Hello World');
+    appContext
+      .activate(({ use }) => {
+        use(Backend);
+        const { useVolumeAccessPoint, useVolume } = use(Data);
+
+        useVolumeAccessPoint(
+          'test-ap',
+          useVolume(
+            'default',
+            new FileVolume({ baseDir: '/___test-upload-dir' })
+          )
+        );
+      })
+      .finally(() => {
+        supertest(appContext.getData('default', 'express'))
+          .get('/volumes/default/test-ap/sample.txt')
+          .then((res) => {
+            expect(res.text).toBe('Hello World');
+            done();
+          });
+      });
+  });
+
+  test('should return custom json with middleware', (done) => {
+    const appContext = new ApplicationContext();
+    fs.mkdirSync('/___test-upload-dir2');
+    fs.writeFileSync('/___test-upload-dir2/sample.txt', 'Hello World');
+    appContext
+      .activate(({ use }) => {
+        use(Backend);
+        const { useVolumeAccessPoint, useVolume } = use(Data);
+
+        useVolumeAccessPoint(
+          'test-ap',
+          useVolume(
+            'default',
+            new FileVolume({ baseDir: '/___test-upload-dir2' })
+          ),
+          {
+            middleware: [
+              (req, res) => res.status(403).json({ message: 'Intercepted' }),
+            ],
+          }
+        );
+      })
+      .finally(() => {
+        supertest(appContext.getData('default', 'express'))
+          .get('/volumes/default/test-ap/sample.txt')
+          .then((res) => {
+            expect(res.body.message).toBe('Intercepted');
+            done();
+          });
+      });
   });
 });

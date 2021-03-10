@@ -70,9 +70,10 @@ type ContentHookOptions<T> = {
   serviceId: string;
   defaultContent: T;
   useReduxStore: boolean;
+  enableLocalStorage?: boolean;
 };
 type ContentHook = <T>(
-  serviceId: string | ContentHookOptions<T>
+  serviceId: string | Partial<ContentHookOptions<T>>
 ) => {
   isAvailable: boolean;
   hasChanged: boolean;
@@ -85,6 +86,8 @@ type ContentHook = <T>(
   unshiftItem: (key: string, val: any) => void;
   removeItemAt: (key: string, index: any) => void;
   insertItem: (key: string, indexToInsert: number, val: any) => void;
+  saveLocally: () => void;
+  hasLocalData: () => boolean;
   reset: () => void;
 };
 
@@ -109,6 +112,10 @@ export type AuthConfiguration = {
   defaultProtectedUrl: string;
 };
 
+export type AccessPoint = {
+  getUrl: (filename: string) => string;
+};
+
 declare global {
   // eslint-disable-next-line no-unused-vars
   namespace Ark {
@@ -122,6 +129,7 @@ declare global {
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
         useService: ServiceHook;
+        useVolumeAccessPoint: (refId: string) => AccessPoint;
         useContext: ContextHook;
         useLayout: <T>(
           refId: string,
@@ -719,6 +727,13 @@ export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
     useService: useServiceCreator(moduleId, context),
+    useVolumeAccessPoint: (refId: string) => {
+      const ref = extractRef(refId, moduleId);
+      const accessPointPath = `/volumes/${ref.moduleName}/${ref.refId}`;
+      return {
+        getUrl: (fileName) => `${accessPointPath}/${fileName}`,
+      };
+    },
     useStore: useStoreCreator(moduleId, context),
     useContext: useContextCreator(context),
     useComponent: (refId, componentCreator = null) => {
@@ -782,15 +797,31 @@ export const Frontend = createPointer<Ark.MERN.React>(
     useContent: (opts_) => {
       const opts: ContentHookOptions<any> = Object.assign<
         ContentHookOptions<any>,
-        ContentHookOptions<any>
+        Partial<ContentHookOptions<any>>
       >(
         {
           serviceId: typeof opts_ === 'string' ? opts_ : undefined,
           defaultContent: undefined,
           useReduxStore: false,
+          enableLocalStorage: false,
         },
         typeof opts_ === 'object' ? opts_ : undefined
       );
+
+      const localStorageKey: string = `_cmsHook/_ls/${opts.serviceId}`;
+
+      if (opts.enableLocalStorage === true) {
+        try {
+          opts.defaultContent = JSON.parse(
+            localStorage.getItem(localStorageKey)
+          );
+        } catch (e) {
+          console.warn(
+            `Failed to load content from local storage for '${opts.serviceId};`
+          );
+          console.warn(e);
+        }
+      }
 
       const useStore = useStoreCreator(moduleId, context);
       const [baseContent, setBaseContent] = useStore<any>(
@@ -921,6 +952,34 @@ export const Frontend = createPointer<Ark.MERN.React>(
           }
         },
         updateKey,
+        saveLocally: () => {
+          try {
+            window.localStorage.setItem(
+              localStorageKey,
+              JSON.stringify(content)
+            );
+          } catch (e) {
+            console.warn(
+              `Failed to load content from local storage for '${opts.serviceId};`
+            );
+            console.warn(e);
+          }
+        },
+        hasLocalData: () => {
+          try {
+            const data = JSON.parse(
+              window.localStorage.getItem(localStorageKey)
+            );
+            return data !== undefined && data !== null;
+          } catch (e) {
+            console.warn(
+              `Failed to load content from local storage for '${opts.serviceId};`
+            );
+            console.warn(e);
+          }
+
+          return false;
+        },
       };
     },
     configureAuth: (opts) => {

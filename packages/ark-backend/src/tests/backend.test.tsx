@@ -131,12 +131,10 @@ describe('Backend services', () => {
   test('useRoute() fn', (done) => {
     const appContext = new ApplicationContext();
     appContext
-      .activate(({ use, run }) => {
+      .activate(({ use }) => {
         const { useRoute } = use(Backend);
-        run(() => {
-          useRoute('get', '/', (req, res, next) => {
-            res.send('hello');
-          });
+        useRoute('get', '/', (req, res, next) => {
+          res.send('hello');
         });
       })
       .finally(() => {
@@ -152,13 +150,11 @@ describe('Backend services', () => {
   test('body should be attached to the req', (done) => {
     const appContext = new ApplicationContext();
     appContext
-      .activate(({ use, run }) => {
+      .activate(({ use }) => {
         const { useRoute } = use(Backend);
-        run(() => {
-          useRoute('post', '/test-post', (req, res, next) => {
-            expect(req.body.sampleKey).toStrictEqual('testVal');
-            res.send('hello');
-          });
+        useRoute('post', '/test-post', (req, res, next) => {
+          expect(req.body.sampleKey).toStrictEqual('testVal');
+          res.send('hello');
         });
       })
       .finally(() => {
