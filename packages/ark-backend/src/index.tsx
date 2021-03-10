@@ -10,6 +10,7 @@ import {
 } from '@skyslit/ark-core';
 import expressApp, {
   CookieOptions,
+  Handler,
   NextFunction,
   Request,
   RequestHandler,
@@ -86,6 +87,10 @@ type AuthOptions = {
   jwtDecodeOptions?: jwt.DecodeOptions;
 };
 
+type AccessPointOptions = {
+  middleware: Array<Handler>;
+};
+
 declare global {
   // eslint-disable-next-line no-unused-vars
   namespace Express {
@@ -109,7 +114,7 @@ declare global {
         method: HttpVerbs,
         path: string,
         handlers: expressApp.RequestHandler | Array<expressApp.RequestHandler>
-      ) => expressApp.Application;
+      ) => void;
       useService: UseServicePointer;
       useWebApp: (
         appId: string,
@@ -130,6 +135,11 @@ declare global {
         dbName?: keyof Ark.PackageDatabases
       ) => Model<T & Document>;
       useVolume: (ref?: string, vol?: IArkVolume) => IArkVolume;
+      useVolumeAccessPoint: (
+        path: string,
+        vol: IArkVolume,
+        opts?: Partial<AccessPointOptions>
+      ) => void;
     }
     // eslint-disable-next-line no-unused-vars
     interface Databases {}
@@ -170,6 +180,7 @@ export interface IArkVolume {
   get: (path: string) => NodeJS.ArrayBufferView;
   rename: (oldPath: string, newPath: string) => Promise<any>;
   delete: (path: string) => Promise<any>;
+  getDownloadHandler: () => Array<Handler>;
 }
 
 /**
@@ -252,6 +263,14 @@ export class FileVolume implements IArkVolume {
   async rename(oldPath: string, newPath: string): Promise<boolean> {
     fs.renameSync(oldPath, newPath);
     return true;
+  }
+
+  /**
+   * Gets the download handler for file system volume
+   * @return {Array<Handler>}
+   */
+  getDownloadHandler(): Array<Handler> {
+    return [expressApp.static(this.opts.baseDir)];
   }
 }
 
@@ -436,6 +455,38 @@ function getModelName(modId: string, name: string): string {
 
 export const Data = createPointer<Partial<Ark.Data>>(
   (moduleId, controller, context) => ({
+    useVolumeAccessPoint: (path, vol, opts) => {
+      controller.ensureInitializing(
+        'useRoute() should be called on context root'
+      );
+      controller.run(() => {
+        const options = Object.assign<
+          AccessPointOptions,
+          Partial<AccessPointOptions>
+        >(
+          {
+            middleware: [],
+          },
+          opts
+        );
+        const accessPointPath = `/volumes/${moduleId}/${path}`;
+        console.log(accessPointPath);
+        const app = context.getData<expressApp.Application>(
+          'default',
+          'express'
+        );
+        app.use(accessPointPath, [
+          ...options.middleware,
+          ...((): Handler[] => {
+            if (vol && vol.getDownloadHandler) {
+              return vol.getDownloadHandler();
+            }
+            return [];
+          })(),
+          (req: Request, res: Response) => res.sendStatus(404),
+        ]);
+      });
+    },
     useDatabase: (
       name: keyof Ark.PackageDatabases,
       connectionString: string,
@@ -533,7 +584,7 @@ export const Data = createPointer<Partial<Ark.Data>>(
       );
     },
     useVolume: (refId, vol) => {
-      let result: any = null;
+      let result: IArkVolume = null;
 
       try {
         result = context.useDataFromContext(
@@ -778,9 +829,14 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
     },
     useApp: () => context.getData('default', 'express'),
     useRoute: (method, path, handlers) => {
-      return context
-        .getData<expressApp.Application>('default', 'express')
-        [method](path, handlers);
+      controller.ensureInitializing(
+        'useRoute() should be called on context root'
+      );
+      controller.run(() => {
+        context
+          .getData<expressApp.Application>('default', 'express')
+          [method](path, handlers);
+      });
     },
     useService: useServiceCreator(moduleId, context),
     useWebApp: (appId, ctx, htmlFileName) => {
