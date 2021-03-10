@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
+
+
+### Features
+
+* useVolumeAccessPoint implemented ([4940f71](https://github.com/skyslit/ark/commit/4940f71b854c37f52cd0e65812bc8f1edca63aed))
+
+
+
+
+
 # [2.7.0](https://github.com/skyslit/ark/compare/v2.6.0...v2.7.0) (2021-03-07)
 
 

@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
+
+
+### Features
+
+* added localstorage feature in useConnect() ([b962a69](https://github.com/skyslit/ark/commit/b962a69d467290db3e6cb84b088e9684de943ad8))
+* useVolumeAccessPoint() implemented on frontend ([44ffde2](https://github.com/skyslit/ark/commit/44ffde23bb28c8fd4eec75fbc13d4c41834c589d))
+
+
+
+
+
 # [2.7.0](https://github.com/skyslit/ark/compare/v2.6.0...v2.7.0) (2021-03-07)
 
 
