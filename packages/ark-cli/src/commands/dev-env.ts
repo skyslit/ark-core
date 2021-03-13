@@ -1,6 +1,10 @@
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
-import createDevEnv from '../tasks/create-dev-env';
+import {
+  createDevEnv,
+  startDevStack,
+  stopDevStack,
+} from '../tasks/manage-dev-env';
 
 const optionDefs = [
   {
@@ -90,9 +94,26 @@ export default (argv?: string[]) => {
         break;
       }
       case 'start': {
+        startDevStack(process.cwd())
+          .then(() => {
+            // Do nothing
+          })
+          .catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
         break;
       }
       case 'stop': {
+        stopDevStack(process.cwd())
+          .then(() => {
+            // Do nothing
+          })
+          .catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+        break;
         break;
       }
       case 'update-aws': {
