@@ -582,7 +582,13 @@
         "TargetType": "ip",
         "VpcId": {
           "Ref": "VPCID"
-        }
+        },
+        "TargetGroupAttributes": [
+          {
+            "Key": "deregistration_delay.timeout_seconds",
+            "Value": "10"
+          }
+        ]
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": {
@@ -596,6 +602,10 @@
         "LaunchType": "FARGATE",
         "Cluster": {
           "Ref": "ecsCluster"
+        },
+        "DeploymentConfiguration": {
+          "MaximumPercent": 100,
+          "MinimumHealthyPercent": 0
         },
         "PlatformVersion": "1.4.0",
         "ServiceName": {
