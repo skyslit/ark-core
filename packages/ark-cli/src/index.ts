@@ -7,6 +7,7 @@ import { runStart, runBuild } from './commands/builders';
 import runAdd from './commands/add';
 import runUpgrade from './commands/upgrade';
 import setupDevops from './commands/setup-devops';
+import manageDevEnv from './commands/dev-env';
 
 const mainCommand = commandLineArgs(
   [
@@ -50,6 +51,10 @@ switch (mainCommand.command) {
   }
   case 'setup-devops': {
     setupDevops(mainCommand._unknown);
+    break;
+  }
+  case 'dev-env': {
+    manageDevEnv(mainCommand._unknown);
     break;
   }
   default: {
@@ -99,6 +104,11 @@ switch (mainCommand.command) {
               name: 'setup-devops',
               summary:
                 'Sets up code repo, image repo, pipeline and environments',
+            },
+            {
+              name: 'dev-env',
+              summary:
+                'Creates and manage containerised development environment',
             },
           ],
         },

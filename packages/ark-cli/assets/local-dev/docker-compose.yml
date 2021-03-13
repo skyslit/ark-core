@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  dev-env:
+    container_name: ${TITLE}-local-dev-env
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    tty: true
+    volumes:
+      - myapp:/app
+      - ./root:/root
+volumes:
+  myapp:
