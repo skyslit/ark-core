@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.9.0](https://github.com/skyslit/ark/compare/v2.8.0...v2.9.0) (2021-03-14)
+
+
+### Bug Fixes
+
+* aws cf full-env ecs service takes long time to deploy ([8e439bd](https://github.com/skyslit/ark/commit/8e439bd06b3c199529d0c1ba0feb78d8620cbd86))
+* issue with git credential helper ([f57b825](https://github.com/skyslit/ark/commit/f57b825a38f9f8f9b8daeb6bac0f1c905950960f))
+* revised cf full-env-template ([cec8d89](https://github.com/skyslit/ark/commit/cec8d895ddc793b2489210cd1d7ab0c3afdc65ec))
+* revised cf standard-env-template with improved security ([b25d209](https://github.com/skyslit/ark/commit/b25d209fff462864ede9effe2119f0d96ea9d2fc))
+
+
+### Features
+
+* added dev-env command in cli ([cb02e0c](https://github.com/skyslit/ark/commit/cb02e0cfba8d0ab9256014da38c3f185f78baff1))
+* added stack start and stop feature ([79676f8](https://github.com/skyslit/ark/commit/79676f82d0c7a08871eb3bc719eb8051d733509c))
+
+
+
+
+
 # [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
 
 
