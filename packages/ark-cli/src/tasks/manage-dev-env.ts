@@ -40,11 +40,43 @@ export const createDevEnv = (cwd_?: string) => {
         ),
     },
     {
+      title: `create .vscode-server > ... > settings.json`,
+      task: () => {
+        const settingsFilePath = path.join(
+          cwd,
+          'root',
+          '.vscode-server',
+          'data',
+          'Machine',
+          'settings.json'
+        );
+
+        ensureDir(settingsFilePath);
+
+        fs.writeFileSync(
+          settingsFilePath,
+          JSON.stringify(
+            {
+              'remote.containers.copyGitConfig': false,
+              'remote.containers.gitCredentialHelperConfigLocation': 'none',
+            },
+            undefined,
+            ' '
+          )
+        );
+      },
+    },
+    {
       title: 'create .env file',
       task: (ctx) =>
         fs.writeFileSync(
           path.join(cwd, '.env'),
-          [`TITLE=${ctx.title}`].join('\n'),
+          [
+            `TITLE=${ctx.title}`,
+            `APP_PORT=3000`,
+            'MONGO_PORT=37017',
+            'IP_PREFIX=172.20',
+          ].join('\n'),
           { encoding: 'utf-8' }
         ),
     },
@@ -250,7 +282,7 @@ export const updateGit = (cwd_?: string) => {
         fs.writeFileSync(gitconfigFilePath, ini.stringify(config));
 
         console.log('');
-        console.log(chalk.green('Update successful!'));
+        console.log(chalk.green('Git Update successful!'));
         console.log(
           chalk.yellow('Please restart the stack to see this change in effect')
         );
@@ -259,4 +291,125 @@ export const updateGit = (cwd_?: string) => {
         return true;
       });
   });
+};
+
+export const updateAws = (cwd_?: string) => {
+  const cwd = cwd_ || process.cwd();
+  const awsConfigFilePath = path.join(cwd, 'root', '.aws', 'config');
+  const awsCredentialFilePath = path.join(cwd, 'root', '.aws', 'credentials');
+
+  let defaultAwsAccessKeyId = null;
+  let defaultSecretAccessKey = null;
+  let defaultRegionName = null;
+  let defaultOutputFormat = null;
+
+  try {
+    if (fs.existsSync(awsCredentialFilePath)) {
+      const existingCredentials = ini.parse(
+        fs.readFileSync(awsCredentialFilePath, 'utf-8')
+      );
+      if (existingCredentials && existingCredentials.default) {
+        defaultAwsAccessKeyId = existingCredentials.default.aws_access_key_id;
+        defaultSecretAccessKey =
+          existingCredentials.default.aws_secret_access_key;
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    /** Do nothing */
+  }
+
+  try {
+    if (fs.existsSync(awsConfigFilePath)) {
+      const existingConfig = ini.parse(
+        fs.readFileSync(awsConfigFilePath, 'utf-8')
+      );
+      if (existingConfig && existingConfig.default) {
+        defaultRegionName = existingConfig.default.region;
+        defaultOutputFormat = existingConfig.default.output;
+      }
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  return inquirer
+    .prompt([
+      {
+        name: 'accessKeyID',
+        message: 'AWS Access Key ID',
+        type: 'input',
+        default: defaultAwsAccessKeyId,
+      },
+      {
+        name: 'secretAccessKey',
+        message: 'AWS Secret Access Key',
+        type: 'input',
+        default: defaultSecretAccessKey,
+      },
+      {
+        name: 'regionName',
+        message: 'Default region name',
+        type: 'input',
+        default: defaultRegionName,
+      },
+      {
+        name: 'outputFormat',
+        message: 'Default output format',
+        type: 'input',
+        default: defaultOutputFormat,
+        when: () => false,
+      },
+    ])
+    .then((v) => {
+      ensureDir(awsConfigFilePath);
+
+      let config: any = {};
+      let credentials: any = {};
+
+      try {
+        if (fs.existsSync(awsConfigFilePath)) {
+          config = ini.parse(fs.readFileSync(awsConfigFilePath, 'utf-8'));
+        }
+        if (fs.existsSync(awsCredentialFilePath)) {
+          credentials = ini.parse(
+            fs.readFileSync(awsCredentialFilePath, 'utf-8')
+          );
+        }
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      /* --------------------------------- Config --------------------------------- */
+
+      if (!config.default) {
+        config.default = {};
+      }
+
+      config.default.region = v.regionName;
+
+      // Ouput (Disabled for now)
+      // config.default.output = v.outputFormat;
+
+      /* ------------------------------- Credential ------------------------------- */
+
+      if (!credentials.default) {
+        credentials.default = {};
+      }
+
+      credentials.default.aws_access_key_id = v.accessKeyID;
+      credentials.default.aws_secret_access_key = v.secretAccessKey;
+
+      fs.writeFileSync(awsConfigFilePath, ini.stringify(config));
+      fs.writeFileSync(awsCredentialFilePath, ini.stringify(credentials));
+
+      console.log('');
+      console.log(chalk.green('AWS Update successful!'));
+      console.log(
+        chalk.yellow('Please restart the stack to see this change in effect')
+      );
+      console.log('');
+
+      return true;
+    });
 };

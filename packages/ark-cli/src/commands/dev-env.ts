@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
 import {
@@ -5,6 +6,7 @@ import {
   startDevStack,
   stopDevStack,
   updateGit,
+  updateAws,
 } from '../tasks/manage-dev-env';
 
 const optionDefs = [
@@ -86,6 +88,7 @@ export default (argv?: string[]) => {
       case 'create': {
         createDevEnv(process.cwd())
           .then(() => updateGit(process.cwd()))
+          .then(() => updateAws(process.cwd()))
           .then(() => {
             // Do nothing, so it will exit after completion
           })
@@ -118,6 +121,14 @@ export default (argv?: string[]) => {
         break;
       }
       case 'update-aws': {
+        updateAws(process.cwd())
+          .then(() => {
+            // Do nothing
+          })
+          .catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
         break;
       }
       case 'update-git': {
@@ -129,6 +140,13 @@ export default (argv?: string[]) => {
             console.error(err);
             process.exit(1);
           });
+        break;
+      }
+      default: {
+        console.log('');
+        console.log(chalk.red('Unknown command'));
+        console.log('');
+        printHelp();
         break;
       }
     }
