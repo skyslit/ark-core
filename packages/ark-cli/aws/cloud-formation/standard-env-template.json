@@ -553,6 +553,34 @@
         "fileSystemMountTarget"
       ]
     },
+    "httpIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "DependsOn": "securityGroup",
+      "Properties": {
+        "GroupId": {
+          "Ref": "securityGroup"
+        },
+        "CidrIp": "0.0.0.0/0",
+        "Description": "Allow HTTP",
+        "FromPort": 80,
+        "IpProtocol": "tcp",
+        "ToPort": 80
+      }
+    },
+    "efsIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "DependsOn": "securityGroup",
+      "Properties": {
+        "GroupId": {
+          "Ref": "securityGroup"
+        },
+        "SourceSecurityGroupId": { "Ref": "securityGroup" },
+        "Description": "Allow EFS (NFS)",
+        "FromPort": 2049,
+        "IpProtocol": "tcp",
+        "ToPort": 2049
+      }
+    },
     "securityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -576,22 +604,6 @@
             }
           ]
         },
-        "SecurityGroupIngress": [
-          {
-            "CidrIp": "0.0.0.0/0",
-            "Description": "Allow HTTP",
-            "FromPort": 80,
-            "IpProtocol": "tcp",
-            "ToPort": 80
-          },
-          {
-            "CidrIp": "0.0.0.0/0",
-            "Description": "Allow EFS (NFS)",
-            "FromPort": 2049,
-            "IpProtocol": "tcp",
-            "ToPort": 2049
-          }
-        ],
         "VpcId": {
           "Ref": "VPCID"
         }
@@ -617,7 +629,7 @@
         },
         "GroupName": {
           "Fn::Sub": [
-            "${ProjectNameStr}-sg",
+            "${ProjectNameStr}-lb-sg",
             {
               "ProjectNameStr": {
                 "Ref": "AWS::StackName"
