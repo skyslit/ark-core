@@ -4,6 +4,7 @@ import {
   createDevEnv,
   startDevStack,
   stopDevStack,
+  updateGit,
 } from '../tasks/manage-dev-env';
 
 const optionDefs = [
@@ -84,6 +85,7 @@ export default (argv?: string[]) => {
     switch (options.command) {
       case 'create': {
         createDevEnv(process.cwd())
+          .then(() => updateGit(process.cwd()))
           .then(() => {
             // Do nothing, so it will exit after completion
           })
@@ -114,12 +116,19 @@ export default (argv?: string[]) => {
             process.exit(1);
           });
         break;
-        break;
       }
       case 'update-aws': {
         break;
       }
       case 'update-git': {
+        updateGit(process.cwd())
+          .then(() => {
+            // Do nothing
+          })
+          .catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
         break;
       }
     }

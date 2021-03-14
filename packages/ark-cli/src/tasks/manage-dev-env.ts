@@ -1,9 +1,12 @@
 import Listr from 'listr';
 import fs from 'fs';
 import path from 'path';
+import ini from 'ini';
 import chalk from 'chalk';
+import gitP from 'simple-git/promise';
 import inquirer from 'inquirer';
 import runCommand from '../utils/run-command';
+import ensureDir from '../utils/ensure-dir';
 
 export const createDevEnv = (cwd_?: string) => {
   const cwd = cwd_ || process.cwd();
@@ -164,4 +167,96 @@ export const stopDevStack = (cwd_?: string) => {
     console.log('');
     return Promise.resolve(true);
   }
+};
+
+export const updateGit = (cwd_?: string) => {
+  const cwd = cwd_ || process.cwd();
+  const git = gitP(cwd);
+
+  return git.listConfig().then((gitConfigList) => {
+    let gitDefaultName: string = null;
+    let gitDefaultEmail: string = null;
+
+    try {
+      let i = 0;
+      for (i = 0; i < gitConfigList.files.length; i++) {
+        const fPath: string = gitConfigList.files[i];
+
+        if (!gitDefaultName) {
+          if (gitConfigList.values[fPath]['user.name']) {
+            gitDefaultName = gitConfigList.values[fPath]['user.name'] as any;
+          }
+        }
+
+        if (!gitDefaultEmail) {
+          if (gitConfigList.values[fPath]['user.email']) {
+            gitDefaultEmail = gitConfigList.values[fPath]['user.email'] as any;
+          }
+        }
+      }
+    } catch (e) {
+      /** Do nothing */
+    }
+
+    return inquirer
+      .prompt([
+        {
+          name: 'name',
+          message: 'Your name',
+          type: 'input',
+          default: gitDefaultName,
+        },
+        {
+          name: 'email',
+          message: 'Your Email',
+          type: 'input',
+          default: gitDefaultEmail,
+        },
+      ])
+      .then((v) => {
+        const gitconfigFilePath = path.join(cwd, 'root', '.gitconfig');
+        ensureDir(gitconfigFilePath);
+
+        let config: any = {};
+
+        try {
+          if (fs.existsSync(gitconfigFilePath)) {
+            config = ini.parse(fs.readFileSync(gitconfigFilePath, 'utf-8'));
+          }
+        } catch (e) {
+          /** Do nothing */
+        }
+
+        if (!config.core) {
+          config.core = {};
+        }
+
+        config.core.ignorecase = false;
+
+        if (!config.credential) {
+          config.credential = {};
+        }
+
+        config.credential.helper = '!aws codecommit credential-helper $@';
+        config.credential.UseHttpPath = true;
+
+        if (!config.user) {
+          config.user = {};
+        }
+
+        config.user.name = v.name;
+        config.user.email = v.email;
+
+        fs.writeFileSync(gitconfigFilePath, ini.stringify(config));
+
+        console.log('');
+        console.log(chalk.green('Update successful!'));
+        console.log(
+          chalk.yellow('Please restart the stack to see this change in effect')
+        );
+        console.log('');
+
+        return true;
+      });
+  });
 };
