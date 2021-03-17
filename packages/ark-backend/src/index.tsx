@@ -1311,41 +1311,43 @@ export async function documentQueryToServiceResponse(
   let skip: number = undefined;
   let limit: number = undefined;
 
+  const input = req.input;
+
   try {
-    if (req.query.filter) {
-      filter = JSON.parse(req.query.filter as any);
+    if (input.filter) {
+      filter = JSON.parse(input.filter as any);
     }
   } catch (e) {
     /** Do nothing */
   }
 
   try {
-    if (req.query.sort) {
-      sort = JSON.parse(req.query.sort as any);
+    if (input.sort) {
+      sort = JSON.parse(input.sort as any);
     }
   } catch (e) {
     /** Do nothing */
   }
 
   try {
-    if (req.query.select) {
-      select = JSON.parse(req.query.select as any);
+    if (input.select) {
+      select = JSON.parse(input.select as any);
     }
   } catch (e) {
     /** Do nothing */
   }
 
   try {
-    if (req.query.skip) {
-      skip = parseInt(req.query.skip as any);
+    if (input.skip) {
+      skip = parseInt(input.skip as any);
     }
   } catch (e) {
     /** Do nothing */
   }
 
   try {
-    if (req.query.limit) {
-      limit = parseInt(req.query.limit as any);
+    if (input.limit) {
+      limit = parseInt(input.limit as any);
     }
   } catch (e) {
     /** Do nothing */

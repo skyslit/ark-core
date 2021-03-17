@@ -868,7 +868,7 @@ describe('Data services', () => {
           const filteredResult = await documentQueryToServiceResponse(
             BookModel.find({}),
             {
-              query: {
+              input: {
                 filter: JSON.stringify({
                   name: 'Test 21',
                 }),
@@ -879,7 +879,7 @@ describe('Data services', () => {
           const sortedResult = await documentQueryToServiceResponse(
             BookModel.find({}),
             {
-              query: {
+              input: {
                 sort: JSON.stringify({
                   name: -1,
                 }),
@@ -890,7 +890,7 @@ describe('Data services', () => {
           const projectedResult = await documentQueryToServiceResponse(
             BookModel.find({}),
             {
-              query: {
+              input: {
                 select: JSON.stringify({
                   name: -1,
                 }),
@@ -901,7 +901,7 @@ describe('Data services', () => {
           const skippedResult = await documentQueryToServiceResponse(
             BookModel.find({}),
             {
-              query: {
+              input: {
                 skip: 2,
               },
             } as any
@@ -910,7 +910,7 @@ describe('Data services', () => {
           const limitedResult = await documentQueryToServiceResponse(
             BookModel.find({}),
             {
-              query: {
+              input: {
                 limit: 2,
               },
             } as any
@@ -923,7 +923,7 @@ describe('Data services', () => {
               },
             }),
             {
-              query: {
+              input: {
                 filter: JSON.stringify({
                   age: {
                     $lt: 40,
@@ -940,7 +940,7 @@ describe('Data services', () => {
               },
             }),
             {
-              query: {
+              input: {
                 filter: JSON.stringify({
                   age: {
                     $lt: 40,
