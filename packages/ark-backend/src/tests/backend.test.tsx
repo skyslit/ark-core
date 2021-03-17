@@ -7,6 +7,7 @@ import {
   defineService,
   ServiceController,
   Security,
+  documentQueryToServiceResponse,
 } from '../index';
 import { Connection } from 'mongoose';
 import supertest from 'supertest';
@@ -25,7 +26,7 @@ declare global {
   }
 }
 
-process.env.disableServerLog = 'true';
+process.env.DISABLE_APP_LOG = 'true';
 
 describe('utils', () => {
   describe('useJwt', () => {
@@ -820,6 +821,189 @@ describe('Data services', () => {
         await appContext.deactivate();
         done();
       });
+  });
+
+  test('documentQueryToServiceResponse() function general usage', (done) => {
+    const appContext = new ApplicationContext();
+    appContext
+      .activate(({ use, useModule }) => {
+        const {} = use(Backend);
+        const { useDatabase } = use(Data);
+
+        useDatabase('testDb', testDbConnectionString);
+
+        useModule('default', async ({ use }) => {
+          const { useModel } = use(Data);
+
+          const BookModel = useModel(
+            'BookSchema',
+            {
+              name: {
+                type: String,
+              },
+              age: {
+                type: Number,
+              },
+            },
+            'testDb'
+          );
+
+          await Promise.all(
+            [
+              { name: 'Test 1', age: 20 },
+              { name: 'Test 21', age: 21 },
+              { name: 'Test 6', age: 15 },
+              { name: 'Test 19', age: 32 },
+              { name: 'Test 23', age: 31 },
+              { name: 'Test 2', age: 35 },
+              { name: 'Test 18', age: 42 },
+            ].map((doc) => new BookModel(doc).save())
+          );
+
+          const allResult = await documentQueryToServiceResponse(
+            BookModel.find({}),
+            {} as any
+          );
+
+          const filteredResult = await documentQueryToServiceResponse(
+            BookModel.find({}),
+            {
+              query: {
+                filter: JSON.stringify({
+                  name: 'Test 21',
+                }),
+              },
+            } as any
+          );
+
+          const sortedResult = await documentQueryToServiceResponse(
+            BookModel.find({}),
+            {
+              query: {
+                sort: JSON.stringify({
+                  name: -1,
+                }),
+              },
+            } as any
+          );
+
+          const projectedResult = await documentQueryToServiceResponse(
+            BookModel.find({}),
+            {
+              query: {
+                select: JSON.stringify({
+                  name: -1,
+                }),
+              },
+            } as any
+          );
+
+          const skippedResult = await documentQueryToServiceResponse(
+            BookModel.find({}),
+            {
+              query: {
+                skip: 2,
+              },
+            } as any
+          );
+
+          const limitedResult = await documentQueryToServiceResponse(
+            BookModel.find({}),
+            {
+              query: {
+                limit: 2,
+              },
+            } as any
+          );
+
+          const masterFilteredResult = await documentQueryToServiceResponse(
+            BookModel.find({
+              age: {
+                $gt: 30,
+              },
+            }),
+            {
+              query: {
+                filter: JSON.stringify({
+                  age: {
+                    $lt: 40,
+                  },
+                }),
+              },
+            } as any
+          );
+
+          const allOptionsResult = await documentQueryToServiceResponse(
+            BookModel.find({
+              age: {
+                $gt: 30,
+              },
+            }),
+            {
+              query: {
+                filter: JSON.stringify({
+                  age: {
+                    $lt: 40,
+                  },
+                }),
+                sort: JSON.stringify({
+                  name: 1,
+                }),
+                select: JSON.stringify('name'),
+                skip: 1,
+                limit: 1,
+              },
+            } as any
+          );
+
+          expect(allResult.data).toHaveLength(7);
+          expect(allResult.meta.totalCount).toStrictEqual(7);
+          expect(allResult.data[0].name).toStrictEqual('Test 1');
+          expect(allResult.data[0].age).toStrictEqual(20);
+          expect(allResult.data[6].name).toStrictEqual('Test 18');
+
+          expect(filteredResult.data).toHaveLength(1);
+          expect(filteredResult.meta.totalCount).toStrictEqual(1);
+
+          expect(sortedResult.data).toHaveLength(7);
+          expect(sortedResult.data[0].name).toStrictEqual('Test 6');
+          expect(sortedResult.data[6].name).toStrictEqual('Test 1');
+
+          expect(projectedResult.data).toHaveLength(7);
+          expect(projectedResult.data[0].name).toStrictEqual('Test 1');
+          expect(projectedResult.data[0].age).toBeFalsy();
+          expect(projectedResult.data[6].name).toStrictEqual('Test 18');
+
+          expect(skippedResult.data).toHaveLength(5);
+          expect(skippedResult.meta.totalCount).toStrictEqual(7);
+          expect(skippedResult.data[0].name).toStrictEqual('Test 6');
+          expect(
+            skippedResult.data[skippedResult.data.length - 1].name
+          ).toStrictEqual('Test 18');
+
+          expect(limitedResult.data).toHaveLength(2);
+          expect(limitedResult.meta.totalCount).toStrictEqual(7);
+          expect(limitedResult.data[0].name).toStrictEqual('Test 1');
+          expect(
+            limitedResult.data[limitedResult.data.length - 1].name
+          ).toStrictEqual('Test 21');
+
+          expect(masterFilteredResult.data).toHaveLength(3);
+          expect(masterFilteredResult.meta.totalCount).toStrictEqual(3);
+          expect(masterFilteredResult.data[0].name).toStrictEqual('Test 19');
+          expect(
+            masterFilteredResult.data[masterFilteredResult.data.length - 1].name
+          ).toStrictEqual('Test 2');
+
+          expect(allOptionsResult.data).toHaveLength(1);
+          expect(allOptionsResult.meta.totalCount).toStrictEqual(3);
+          expect(allOptionsResult.data[0].name).toStrictEqual('Test 2');
+          expect(allOptionsResult.data[0].age).toBeFalsy();
+        });
+      })
+      .then(() => appContext.deactivate())
+      .then(() => done())
+      .catch(done);
   });
 
   afterAll(async () => {
