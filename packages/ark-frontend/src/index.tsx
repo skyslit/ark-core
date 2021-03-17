@@ -551,13 +551,8 @@ const useServiceCreator: (
     !option.useRedux
   );
 
-  return {
-    hasInitialized: hasInitialized || false,
-    isLoading: isLoading || false,
-    response,
-    err,
-    statusCode,
-    invoke: (data?, opts_?) => {
+  const invoke = React.useCallback(
+    (data?: any, opts_?: Partial<ServiceInvokeOptions>) => {
       return new Promise((resolve, reject) => {
         const opts: ServiceInvokeOptions = Object.assign<
           ServiceInvokeOptions,
@@ -604,6 +599,24 @@ const useServiceCreator: (
         }
       });
     },
+    [
+      option,
+      setStatusCode,
+      setHasInitialized,
+      setResponse,
+      setLoading,
+      setError,
+      hasInitialized,
+    ]
+  );
+
+  return {
+    hasInitialized: hasInitialized || false,
+    isLoading: isLoading || false,
+    response,
+    err,
+    statusCode,
+    invoke,
   };
 };
 
