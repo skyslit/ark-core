@@ -25,6 +25,7 @@ import {
   ConnectionOptions,
   createConnection,
   Connection,
+  DocumentQuery,
 } from 'mongoose';
 import http from 'http';
 import {
@@ -165,6 +166,21 @@ export function resolveServiceUrl(
   moduleId: string = 'default'
 ): string {
   return `/___service/${moduleId}/${serviceId}`;
+}
+
+/**
+ * Checks if logging is disabled or not
+ * @return {boolean}
+ */
+export function isLoggingDisabled(): boolean {
+  try {
+    if (process.env.DISABLE_APP_LOG) {
+      return process.env.DISABLE_APP_LOG === 'true';
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+  return false;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -507,7 +523,9 @@ export const Data = createPointer<Partial<Ark.Data>>(
               return;
             }
 
-            console.log(`Connecting to '${name}' database...`);
+            if (!isLoggingDisabled()) {
+              console.log(`Connecting to '${name}' database...`);
+            }
 
             const connection = createConnection(
               connectionString,
@@ -530,8 +548,10 @@ export const Data = createPointer<Partial<Ark.Data>>(
 
             connection.on('open', () => {
               resolve(null);
-              console.log(`'${name}' database connected`);
-              console.log('');
+              if (!isLoggingDisabled()) {
+                console.log(`'${name}' database connected`);
+                console.log('');
+              }
             });
 
             connection.on('error', (err) => {
@@ -750,16 +770,7 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
       if (!context.existData('default', 'express')) {
         const instance = context.setData('default', 'express', expressApp());
 
-        let disableServerLog: boolean = false;
-        try {
-          if (process.env.disableServerLog) {
-            disableServerLog = Boolean(process.env.disableServerLog);
-          }
-        } catch (e) {
-          /** Do nothing */
-        }
-
-        if (disableServerLog === false) {
+        if (isLoggingDisabled() === false) {
           instance.use(morgan('dev'));
         }
 
@@ -984,6 +995,9 @@ export type RuleDefinition = (options: RuleDefinitionOptions) => any;
 
 export type LogicDefinitionOptions = {
   args: ServiceInput;
+  table: (
+    query: DocumentQuery<any, Document>
+  ) => Promise<ServiceResponse<any, any>>;
   success: (meta: any, data?: any | Array<any>) => ServiceResponse<any, any>;
   error: (err: Error | any, httpCode?: number) => ServiceResponse<any, any>;
   login: (token: string, opts?: CookieOptions) => void;
@@ -1272,6 +1286,124 @@ const getServiceErrorMessage = (message: string, stat?: RunnerStat) => {
   }
   return _message;
 };
+
+/**
+ * Converts document query to service response
+ * @param {DocumentQuery<any, Document, {}>} docQuery
+ * @param {Request} req
+ * @return {Promise<ServiceResponse<any, any>>}
+ */
+export async function documentQueryToServiceResponse(
+  docQuery: DocumentQuery<any, Document, {}>,
+  req: Request
+): Promise<ServiceResponse<any, any>> {
+  const response: ServiceResponse<any, any> = {
+    type: 'success',
+    meta: {
+      totalCount: 0,
+    },
+    data: [],
+  };
+
+  let query: any = undefined;
+  let sort: any = undefined;
+  let select: any = undefined;
+  let skip: number = undefined;
+  let limit: number = 30;
+
+  const input = req.input;
+
+  try {
+    let tableFilter: any = undefined;
+
+    if (input.filter) {
+      tableFilter = JSON.parse(input.filter as any);
+    }
+
+    if (tableFilter) {
+      let hasActiveFilter: boolean = false;
+
+      query = Object.keys(tableFilter).reduce(
+        (acc, item) => {
+          if (tableFilter[item]) {
+            hasActiveFilter = true;
+
+            acc['$and'].push({
+              [item]: {
+                $in: tableFilter[item].map(
+                  (keyword: string) => new RegExp(keyword, 'i')
+                ),
+              },
+            });
+          }
+
+          return acc;
+        },
+        {
+          $and: [],
+        } as any
+      );
+
+      if (hasActiveFilter === false) {
+        query = undefined;
+      }
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (input.query) {
+      query = JSON.parse(input.query as any);
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (input.sort) {
+      sort = JSON.parse(input.sort as any);
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (input.select) {
+      select = JSON.parse(input.select as any);
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (input.skip) {
+      skip = parseInt(input.skip as any);
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (input.limit) {
+      limit = parseInt(input.limit as any);
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  const q = docQuery.find(query);
+  response.meta.totalCount = await q.countDocuments().exec();
+  response.data = await q
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
+    .select(select)
+    .find()
+    .exec();
+
+  return response;
+}
 
 /**
  * Run business service
@@ -1566,6 +1698,7 @@ export function runService(
                 return Promise.resolve(
                   def({
                     args: args as any,
+                    table: (q) => documentQueryToServiceResponse(q, args.req),
                     success: (meta, data) => ({
                       type: 'success',
                       meta,

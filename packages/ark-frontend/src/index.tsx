@@ -66,6 +66,27 @@ type ContextHook<T = ServiceResponse<any, any>, E = Error> = () => {
   invoke: (body?: any, opts?: Partial<ServiceInvokeOptions>) => Promise<any>;
 };
 
+type TableHookOptions = {
+  defaultPageSize?: number;
+  defaultPage?: number;
+  columns?: any[];
+  additionalColumnNames?: string[];
+  disableSelect?: boolean;
+};
+
+type TableHook = (
+  serviceId: string | Partial<ServiceHookOptions & TableHookOptions>
+) => {
+  onChange: () => void;
+  dataSource: any[];
+  loading: boolean;
+  columns: any[];
+  pagination: {
+    current: number;
+    pageSize: number;
+  };
+};
+
 type ContentHookOptions<T> = {
   serviceId: string;
   defaultContent: T;
@@ -136,6 +157,7 @@ declare global {
           component?: ArkReactComponent<T>
         ) => React.FunctionComponent<T>;
         useContent: ContentHook;
+        useTableService: TableHook;
         mapRoute: MapRoute;
         useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
         configureAuth: (opts: AuthConfiguration) => void;
@@ -551,13 +573,8 @@ const useServiceCreator: (
     !option.useRedux
   );
 
-  return {
-    hasInitialized: hasInitialized || false,
-    isLoading: isLoading || false,
-    response,
-    err,
-    statusCode,
-    invoke: (data?, opts_?) => {
+  const invoke = React.useCallback(
+    (data?: any, opts_?: Partial<ServiceInvokeOptions>) => {
       return new Promise((resolve, reject) => {
         const opts: ServiceInvokeOptions = Object.assign<
           ServiceInvokeOptions,
@@ -604,6 +621,24 @@ const useServiceCreator: (
         }
       });
     },
+    [
+      option,
+      setStatusCode,
+      setHasInitialized,
+      setResponse,
+      setLoading,
+      setError,
+      hasInitialized,
+    ]
+  );
+
+  return {
+    hasInitialized: hasInitialized || false,
+    isLoading: isLoading || false,
+    response,
+    err,
+    statusCode,
+    invoke,
   };
 };
 
@@ -617,6 +652,166 @@ const useContextCreator: (context: ApplicationContext) => ContextHook = (
     serviceId: '___context',
     useRedux: true,
   });
+};
+
+const useTableServiceCreator: (
+  modId: string,
+  context: ApplicationContext
+) => TableHook = (modId: string, context: ApplicationContext) => (
+  serviceId
+) => {
+  let defaultCurrentPage: number = 1;
+  let defaultPageSize: number = 30;
+  let disableSelect: boolean = false;
+  let columns: any[] = undefined;
+  let additionalColumnNames: string[] = undefined;
+  let columnsToSelect: string[] = undefined;
+
+  try {
+    if (typeof serviceId === 'object') {
+      columns = serviceId.columns;
+      additionalColumnNames = serviceId.additionalColumnNames;
+      disableSelect =
+        typeof serviceId.disableSelect === 'boolean'
+          ? serviceId.disableSelect
+          : false;
+
+      if (!isNaN(serviceId.defaultPage)) {
+        defaultCurrentPage = serviceId.defaultPage;
+      }
+
+      if (!isNaN(serviceId.defaultPageSize)) {
+        defaultPageSize = serviceId.defaultPageSize;
+      }
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  if (disableSelect === false && Array.isArray(columns)) {
+    try {
+      columnsToSelect = React.useMemo(
+        () => [
+          ...columns.map((c) => c.dataIndex),
+          ...(Array.isArray(additionalColumnNames)
+            ? additionalColumnNames
+            : []),
+        ],
+        [columns, additionalColumnNames]
+      );
+    } catch (e) {
+      /** Do nothing */
+    }
+  }
+
+  const [currentPage, setCurrentPage] = React.useState(defaultCurrentPage);
+  const [pageSize, setPageSize] = React.useState(defaultPageSize);
+  const service = useServiceCreator(modId, context)(serviceId);
+
+  let dataSource: any[] = [];
+  let total: number = 0;
+  let pagination: any = {};
+
+  try {
+    if (Array.isArray(service.response.data)) {
+      dataSource = service.response.data;
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (!isNaN(service.response.meta.totalCount)) {
+      total = service.response.meta.totalCount;
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  pagination = {
+    current: currentPage,
+    pageSize: pageSize,
+    total,
+  };
+
+  const onChange = React.useCallback(
+    (_pag?: any, _filter?: any, _sorter?: any) => {
+      if (!_pag) {
+        _pag = pagination;
+      }
+
+      let sortQ: any = undefined;
+
+      if (_sorter) {
+        try {
+          const sortFields: any[] = Array.isArray(_sorter)
+            ? _sorter
+            : [_sorter];
+          sortQ = JSON.stringify(
+            sortFields.reduce((acc, item) => {
+              acc[item.field] = item.order === 'ascend' ? 1 : -1;
+              return acc;
+            }, {})
+          );
+        } catch (e) {
+          /** Do nothing */
+        }
+      }
+
+      let filterQ: any = undefined;
+
+      if (_filter) {
+        try {
+          filterQ = JSON.stringify(_filter);
+        } catch (e) {
+          /** Do nothing */
+        }
+      }
+
+      let selectQ: any = undefined;
+
+      try {
+        if (
+          disableSelect === false &&
+          Array.isArray(columnsToSelect) &&
+          columnsToSelect.length > 0
+        ) {
+          selectQ = JSON.stringify(columnsToSelect.join(' '));
+        }
+      } catch (e) {
+        /** Do nothing */
+      }
+
+      return service
+        .invoke(
+          {
+            skip: _pag.pageSize * (_pag.current - 1),
+            limit: _pag.pageSize,
+            sort: sortQ,
+            filter: filterQ,
+            select: selectQ,
+          },
+          { force: true }
+        )
+        .then((res) => {
+          setCurrentPage(_pag.current);
+          setPageSize(_pag.pageSize);
+        });
+    },
+    []
+  );
+
+  React.useEffect(() => {
+    onChange();
+  }, [onChange]);
+
+  return {
+    loading: service.isLoading,
+    dataSource,
+    onChange,
+    pagination,
+    columns,
+  };
 };
 
 const mapRouteCreator = (
@@ -736,6 +931,7 @@ export const Frontend = createPointer<Ark.MERN.React>(
     },
     useStore: useStoreCreator(moduleId, context),
     useContext: useContextCreator(context),
+    useTableService: useTableServiceCreator(moduleId, context),
     useComponent: (refId, componentCreator = null) => {
       return context.useDataFromContext(
         moduleId,
