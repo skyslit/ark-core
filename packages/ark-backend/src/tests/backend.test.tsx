@@ -869,7 +869,7 @@ describe('Data services', () => {
             BookModel.find({}),
             {
               input: {
-                filter: JSON.stringify({
+                query: JSON.stringify({
                   name: 'Test 21',
                 }),
               },
@@ -924,7 +924,7 @@ describe('Data services', () => {
             }),
             {
               input: {
-                filter: JSON.stringify({
+                query: JSON.stringify({
                   age: {
                     $lt: 40,
                   },
@@ -941,7 +941,7 @@ describe('Data services', () => {
             }),
             {
               input: {
-                filter: JSON.stringify({
+                query: JSON.stringify({
                   age: {
                     $lt: 40,
                   },
