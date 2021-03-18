@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.10.0](https://github.com/skyslit/ark/compare/v2.9.0...v2.10.0) (2021-03-18)
+
+
+### Features
+
+* added useTableService() in frontend ([0a8024d](https://github.com/skyslit/ark/commit/0a8024dc604effda58254fe303b15f95ebfacbd7))
+
+
+### Performance Improvements
+
+* moved invoke() inside useCallback ([448f789](https://github.com/skyslit/ark/commit/448f789b4d451a4cb92d48f92a505f17dcfab57b))
+
+
+
+
+
 # [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
 
 

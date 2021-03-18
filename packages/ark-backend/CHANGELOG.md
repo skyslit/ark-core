@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.10.0](https://github.com/skyslit/ark/compare/v2.9.0...v2.10.0) (2021-03-18)
+
+
+### Bug Fixes
+
+* added default table limit to 30 ([72e7877](https://github.com/skyslit/ark/commit/72e7877a2bdfd57c5625b806ad850f9c6b234c4a))
+* changed documentQueryToServiceResponse to read from input instead of query ([4ad47e7](https://github.com/skyslit/ark/commit/4ad47e724347aa0bca9ead42151e647d87c59b18))
+
+
+### Features
+
+* added documentQueryToServiceResponse() fn ([135c4b7](https://github.com/skyslit/ark/commit/135c4b7a4a53d0d7cd3a0412aeefdee9b0fc38d2))
+* added useTableService() in frontend ([0a8024d](https://github.com/skyslit/ark/commit/0a8024dc604effda58254fe303b15f95ebfacbd7))
+
+
+
+
+
 # [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
 
 
