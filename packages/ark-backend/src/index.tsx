@@ -1289,12 +1289,12 @@ const getServiceErrorMessage = (message: string, stat?: RunnerStat) => {
 
 /**
  * Converts document query to service response
- * @param {DocumentQuery<any, Document, {}>} query
+ * @param {DocumentQuery<any, Document, {}>} docQuery
  * @param {Request} req
  * @return {Promise<ServiceResponse<any, any>>}
  */
 export async function documentQueryToServiceResponse(
-  query: DocumentQuery<any, Document, {}>,
+  docQuery: DocumentQuery<any, Document, {}>,
   req: Request
 ): Promise<ServiceResponse<any, any>> {
   const response: ServiceResponse<any, any> = {
@@ -1305,7 +1305,7 @@ export async function documentQueryToServiceResponse(
     data: [],
   };
 
-  let filter: any = undefined;
+  let query: any = undefined;
   let sort: any = undefined;
   let select: any = undefined;
   let skip: number = undefined;
@@ -1314,8 +1314,47 @@ export async function documentQueryToServiceResponse(
   const input = req.input;
 
   try {
+    let tableFilter: any = undefined;
+
     if (input.filter) {
-      filter = JSON.parse(input.filter as any);
+      tableFilter = JSON.parse(input.filter as any);
+    }
+
+    if (tableFilter) {
+      let hasActiveFilter: boolean = false;
+
+      query = Object.keys(tableFilter).reduce(
+        (acc, item) => {
+          if (tableFilter[item]) {
+            hasActiveFilter = true;
+            console.log('ddd', tableFilter, item);
+            acc['$and'].push({
+              [item]: {
+                $in: tableFilter[item].map(
+                  (keyword: string) => new RegExp(keyword, 'i')
+                ),
+              },
+            });
+          }
+
+          return acc;
+        },
+        {
+          $and: [],
+        } as any
+      );
+
+      if (hasActiveFilter === false) {
+        query = undefined;
+      }
+    }
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  try {
+    if (input.query) {
+      query = JSON.parse(input.query as any);
     }
   } catch (e) {
     /** Do nothing */
@@ -1353,7 +1392,7 @@ export async function documentQueryToServiceResponse(
     /** Do nothing */
   }
 
-  const q = query.find(filter);
+  const q = docQuery.find(query);
   response.meta.totalCount = await q.countDocuments().exec();
   response.data = await q
     .sort(sort)
