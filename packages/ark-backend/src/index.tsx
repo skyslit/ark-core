@@ -1327,7 +1327,7 @@ export async function documentQueryToServiceResponse(
         (acc, item) => {
           if (tableFilter[item]) {
             hasActiveFilter = true;
-            console.log('ddd', tableFilter, item);
+
             acc['$and'].push({
               [item]: {
                 $in: tableFilter[item].map(
