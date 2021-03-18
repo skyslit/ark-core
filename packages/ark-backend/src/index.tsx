@@ -1309,7 +1309,7 @@ export async function documentQueryToServiceResponse(
   let sort: any = undefined;
   let select: any = undefined;
   let skip: number = undefined;
-  let limit: number = undefined;
+  let limit: number = 30;
 
   const input = req.input;
 
