@@ -52,7 +52,7 @@ type HttpVerbs =
 
 type ServerOpts = {
   port: number;
-  hostname: string;
+  hostname?: string;
   backlog?: number;
   listeningListener?: () => void;
 };
