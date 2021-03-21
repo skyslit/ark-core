@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.10.1](https://github.com/skyslit/ark/compare/v2.10.0...v2.10.1) (2021-03-21)
+
+
+### Bug Fixes
+
+* hostname is optional in server opts ([32909b5](https://github.com/skyslit/ark/commit/32909b51624337e62871654a5cabba3d35414e67))
+* NODE_PORT support added to init-project task ([2e9fb21](https://github.com/skyslit/ark/commit/2e9fb21e92769d3ed7a4bf5b8de299193f10f128))
+
+
+
+
+
 # [2.10.0](https://github.com/skyslit/ark/compare/v2.9.0...v2.10.0) (2021-03-18)
 
 
