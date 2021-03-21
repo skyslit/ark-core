@@ -488,6 +488,7 @@ export default (cwd_?: string) => {
                             ' ',
                             '_'
                           )}`,
+                          NODE_PORT: '3000',
                         },
                         /**
                          * code that goes inside runApp

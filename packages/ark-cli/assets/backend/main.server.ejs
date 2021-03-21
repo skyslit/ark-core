@@ -13,7 +13,6 @@ runApp(({<%- runAppPropDeps.join(', '); %>}) => {
   <%- runAppSnippets.join('\n\n'); %>
 
   useServer({
-    hostname: 'localhost',
-    port: 3000,
+    port: parseInt(useEnv("NODE_PORT")),
   });
 });
