@@ -92,6 +92,30 @@ type AccessPointOptions = {
   middleware: Array<Handler>;
 };
 
+type RemoteConfigAccessType = 'private' | 'public';
+
+export type RemoteConfig = {
+  privateConfig: {
+    [key: string]: any;
+  };
+  publicConfig: {
+    [key: string]: any;
+  };
+  createdAt?: number;
+  updatedAt?: number;
+} & Document;
+
+type RemoteConfigHook = {
+  load: () => Promise<RemoteConfig>;
+  sync: () => Promise<boolean>;
+  get: <T>(
+    access: RemoteConfigAccessType,
+    key: string,
+    defaultVal?: T
+  ) => Promise<T>;
+  put: <T>(access: RemoteConfigAccessType, key: string, val: T) => Promise<T>;
+};
+
 declare global {
   // eslint-disable-next-line no-unused-vars
   namespace Express {
@@ -122,6 +146,10 @@ declare global {
         ctx?: ContextScope<any>,
         htmlFileName?: string
       ) => WebAppRenderer;
+      useRemoteConfig: (
+        initialState?: Partial<RemoteConfig>,
+        dbName?: string
+      ) => RemoteConfigHook;
     }
     // eslint-disable-next-line no-unused-vars
     interface Data {
@@ -764,6 +792,102 @@ export const useServiceCreator: (
   );
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                   Backend                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ *
+ * @param {string} dbName
+ * @param {ApplicationContext} context
+ * @param {Partial<RemoteConfig>} initialState
+ * @return {Promise<RemoteConfig>}
+ */
+async function getRemoteConfig(
+  dbName: string,
+  context: ApplicationContext,
+  initialState?: Partial<RemoteConfig>
+): Promise<RemoteConfig> {
+  const remoteConfigModelName = getModelName('default', 'remote_config');
+
+  const mongooseConnection: Connection = context.getData(
+    'default',
+    `db/${dbName}`,
+    null
+  );
+
+  if (!mongooseConnection) {
+    throw new Error(
+      "Looks like you're trying to useModel before the database is available, or have you actually configured the database connection?"
+    );
+  }
+
+  let RemoteConfigModel: Model<RemoteConfig, any> = null;
+
+  try {
+    RemoteConfigModel = mongooseConnection.model<RemoteConfig>(
+      remoteConfigModelName
+    );
+  } catch (e) {
+    /** Do nothing */
+  }
+
+  let config: any = null;
+
+  if (!RemoteConfigModel) {
+    RemoteConfigModel = mongooseConnection.model<RemoteConfig>(
+      remoteConfigModelName,
+      new Schema(
+        {
+          privateConfig: {
+            type: Object,
+            required: false,
+            default: {},
+          },
+          publicConfig: {
+            type: Object,
+            required: false,
+            default: {},
+          },
+        },
+        {
+          timestamps: {
+            createdAt: 'createdAt',
+            updatedAt: 'updatedAt',
+          },
+        }
+      )
+    );
+  }
+
+  config = await new Promise((resolve, reject) => {
+    RemoteConfigModel.findOne({}, (err, config) => {
+      if (err) {
+        reject(err);
+      } else {
+        if (!config) {
+          config = new RemoteConfigModel(Object.assign({}, initialState));
+          config.save((err, config) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(config);
+            }
+          });
+        } else {
+          resolve(config);
+        }
+      }
+    });
+  });
+
+  if (!config) {
+    throw new Error('Error initializing new remote config slot');
+  }
+
+  return config;
+}
+
 export const Backend = createPointer<Partial<Ark.Backend>>(
   (moduleId, controller, context) => ({
     init: () => {
@@ -901,6 +1025,68 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         false,
         'pwa'
       );
+    },
+    useRemoteConfig: (initialState, dbName) => {
+      dbName = dbName ? dbName : 'default';
+
+      return {
+        load: async () => await getRemoteConfig(dbName, context, initialState),
+        sync: async () => {
+          const config = await getRemoteConfig(dbName, context, initialState);
+          if (config) {
+            return true;
+          }
+
+          return false;
+        },
+        get: async (access, key, defaultVal) => {
+          const config = await getRemoteConfig(dbName, context, initialState);
+
+          const accessor = `${access}Config`;
+
+          let result: any = undefined;
+
+          try {
+            // @ts-ignore
+            result = config[accessor][key];
+          } catch (e) {
+            /** Do nothing */
+          }
+
+          if (result === undefined) {
+            result = defaultVal;
+          }
+
+          return result;
+        },
+        put: async (access, key, val) => {
+          const config = await getRemoteConfig(dbName, context, initialState);
+          const accessor = `${access}Config`;
+
+          // @ts-ignore
+          if (!config[accessor]) {
+            // @ts-ignore
+            config[accessor] = {};
+          }
+
+          // @ts-ignore
+          config[accessor] = Object.assign({}, config[accessor], {
+            [key]: val,
+          });
+
+          await new Promise((resolve, reject) =>
+            config.save((err, config) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve(config);
+              }
+            })
+          );
+
+          return val;
+        },
+      };
     },
   })
 );
