@@ -1011,6 +1011,162 @@ describe('Data services', () => {
   });
 });
 
+describe('useRemoteConfig()', () => {
+  const mongod = new MongoMemoryServer();
+  let testDbConnectionString: string = '';
+
+  beforeEach(async (done) => {
+    testDbConnectionString = await mongod.getUri();
+    done();
+  }, 60000);
+
+  test('startup without error', (done) => {
+    const appContext = new ApplicationContext();
+
+    appContext
+      .activate(({ use, useModule }) => {
+        const { useDatabase } = use(Data);
+        useDatabase('default', testDbConnectionString);
+
+        useModule('test', async ({ use }) => {
+          const { useRemoteConfig } = use(Backend);
+
+          const { load } = useRemoteConfig();
+
+          const config = await load();
+
+          expect(config).toBeTruthy();
+          expect(config.publicConfig).toEqual({});
+          expect(config.privateConfig).toEqual({});
+        });
+      })
+      .catch(done)
+      .finally(() => {
+        // Perform assertion
+        appContext.deactivate().then(done);
+      });
+  });
+
+  test('sync without error', (done) => {
+    const appContext = new ApplicationContext();
+
+    appContext
+      .activate(({ use, useModule }) => {
+        const { useDatabase } = use(Data);
+        useDatabase('default', testDbConnectionString);
+
+        useModule('test', async ({ use }) => {
+          const { useRemoteConfig } = use(Backend);
+
+          const { sync } = useRemoteConfig();
+
+          const synced = await sync();
+
+          expect(synced).toBeTruthy();
+        });
+      })
+      .catch(done)
+      .finally(() => {
+        // Perform assertion
+        appContext.deactivate().then(done);
+      });
+  });
+
+  test('initial state should work', (done) => {
+    const appContext = new ApplicationContext();
+
+    appContext
+      .activate(({ use, useModule }) => {
+        const { useDatabase } = use(Data);
+        useDatabase('default', testDbConnectionString);
+
+        useModule('test', async ({ use }) => {
+          const { useRemoteConfig } = use(Backend);
+
+          const { load } = useRemoteConfig({
+            privateConfig: {
+              myPrivateSettings: 777,
+            },
+            publicConfig: {
+              enablePublicFeature: 'yes',
+            },
+          });
+
+          const config = await load();
+
+          expect(config).toBeTruthy();
+          expect(config.publicConfig.enablePublicFeature).toStrictEqual('yes');
+          expect(config.privateConfig.myPrivateSettings).toStrictEqual(777);
+        });
+      })
+      .catch(done)
+      .finally(() => {
+        // Perform assertion
+        appContext.deactivate().then(done);
+      });
+  });
+
+  test('put() should work as expected', (done) => {
+    const appContext = new ApplicationContext();
+
+    appContext
+      .activate(({ use, useModule }) => {
+        const { useDatabase } = use(Data);
+        useDatabase('default', testDbConnectionString);
+
+        useModule('test', async ({ use }) => {
+          const { useRemoteConfig } = use(Backend);
+
+          const { load, put, get } = useRemoteConfig({
+            privateConfig: {
+              myPrivateSettings: 777,
+            },
+            publicConfig: {
+              enablePublicFeature: 'yes',
+            },
+          });
+
+          const config = await load();
+
+          expect(config).toBeTruthy();
+          expect(config.publicConfig.enablePublicFeature).toStrictEqual('yes');
+          expect(config.privateConfig.myPrivateSettings).toStrictEqual(777);
+
+          let enablePublicFeature = await put(
+            'public',
+            'enablePublicFeature',
+            'no'
+          );
+          let myPrivateSettings = await put(
+            'private',
+            'myPrivateSettings',
+            333
+          );
+
+          enablePublicFeature = await get('public', 'enablePublicFeature');
+          myPrivateSettings = await get('private', 'myPrivateSettings');
+
+          expect(enablePublicFeature).toStrictEqual('no');
+          expect(myPrivateSettings).toStrictEqual(333);
+
+          myPrivateSettings = await put('private', 'myPrivateSettings', null);
+          myPrivateSettings = await get('private', 'myPrivateSettings');
+
+          expect(myPrivateSettings).toStrictEqual(null);
+        });
+      })
+      .catch(done)
+      .finally(() => {
+        // Perform assertion
+        appContext.deactivate().then(done);
+      });
+  });
+
+  afterEach(async () => {
+    await mongod.stop();
+  });
+});
+
 describe('Frontend services', () => {
   let context: ApplicationContext;
 
