@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.12.0](https://github.com/skyslit/ark/compare/v2.11.0...v2.12.0) (2021-04-04)
+
+
+### Features
+
+* added test utils functions for ark-backend ([4410440](https://github.com/skyslit/ark/commit/4410440d12eeedc3e8d828ac3d46a4650b6ec6e0))
+* added test utils functions for ark-frontend ([087a5b9](https://github.com/skyslit/ark/commit/087a5b9bfd654ff7d16ab709ed53d15329d6578c))
+
+
+
+
+
 # [2.11.0](https://github.com/skyslit/ark/compare/v2.10.1...v2.11.0) (2021-03-24)
 
 
