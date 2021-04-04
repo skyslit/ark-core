@@ -11,6 +11,8 @@ RUN unzip awscliv2.zip
 RUN ./aws/install
 
 RUN npm -g config set user root
+# Fix: workaround to be used with platform as linux/x86_64
+RUN npm config set unsafe-perm true
 RUN npm i fpz --global
 
 WORKDIR /app
