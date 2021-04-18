@@ -73,7 +73,7 @@ export class SPABuilder extends BuilderBase {
         filename: `_browser/[name].js`,
         path: path.resolve(cwd, 'build'),
         assetModuleFilename: './assets/[hash][ext][query]',
-        chunkFilename: '[name].[contenthash].js',
+        chunkFilename: '_browser/[name].[contenthash].js',
       },
       plugins: [
         new HTMLWebpackPlugin({

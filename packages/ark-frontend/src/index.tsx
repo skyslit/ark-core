@@ -144,6 +144,7 @@ declare global {
     namespace MERN {
       // eslint-disable-next-line no-unused-vars
       interface React {
+        renderMode: () => RenderMode;
         useStore: StoreHook;
         useComponent: <T = any>(
           refId: string,
@@ -267,6 +268,9 @@ export function makeApp(
   ctx: ApplicationContext = new ApplicationContext(),
   opts_: Partial<MakeAppOptions> = null
 ): Promise<React.FunctionComponent> {
+  // Set renderMode flag to context
+  ctx.setData('default', '__react___renderMode', mode);
+
   const opts: MakeAppOptions = Object.assign<
     MakeAppOptions,
     Partial<MakeAppOptions>
@@ -921,6 +925,14 @@ export const Routers = {
 export const Frontend = createPointer<Ark.MERN.React>(
   (moduleId, controller, context) => ({
     init: () => {},
+    renderMode: () => {
+      try {
+        return context.getData('default', '__react___renderMode');
+      } catch (e) {
+        /** Do nothing */
+      }
+      return 'csr';
+    },
     useService: useServiceCreator(moduleId, context),
     useVolumeAccessPoint: (refId: string) => {
       const ref = extractRef(refId, moduleId);
