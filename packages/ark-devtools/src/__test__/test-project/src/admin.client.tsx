@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { createContext, createModule } from '@skyslit/ark-core';
 import { createComponent, Frontend } from '@skyslit/ark-frontend';
 
+const HeavyComponent = React.lazy(() => import('./HeavyComponent'));
+
 const layoutCreator = createComponent(({ children }) => {
   return (
     <div>
@@ -15,8 +17,19 @@ const layoutCreator = createComponent(({ children }) => {
   );
 });
 
-const page1Creator = createComponent(() => {
-  return <div>Page 1 (Page 1 SSR Test)</div>;
+const page1Creator = createComponent((props) => {
+  const { renderMode } = props.use(Frontend);
+  const mode = renderMode();
+  return (
+    <div>
+      <span>Page 1 (Page 1 SSR Test)</span>
+      {mode === 'csr' ? (
+        <React.Suspense fallback={<div>Loading...</div>}>
+          <HeavyComponent />
+        </React.Suspense>
+      ) : null}
+    </div>
+  );
 });
 
 const page2Creator = createComponent(() => {
