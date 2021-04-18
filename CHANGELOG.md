@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.12.1](https://github.com/skyslit/ark/compare/v2.12.0...v2.12.1) (2021-04-18)
+
+
+### Bug Fixes
+
+* issue running local dev env on Apple Silicon processor ([7979002](https://github.com/skyslit/ark/commit/797900256d289b47eb0108e6ce0540f66bc079a9))
+* issue with code-splitting / lazy loading ([e22cdb6](https://github.com/skyslit/ark/commit/e22cdb6de4bd80588489e94ffe4c235f5774850e))
+
+
+
+
+
 # [2.12.0](https://github.com/skyslit/ark/compare/v2.11.0...v2.12.0) (2021-04-04)
 
 
