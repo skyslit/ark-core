@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.13.0](https://github.com/skyslit/ark/compare/v2.12.1...v2.13.0) (2021-04-20)
+
+
+### Features
+
+* added support for https server ([963ba33](https://github.com/skyslit/ark/commit/963ba33654843fff26413bc9aa9fe849dff900ac))
+
+
+
+
+
 ## [2.12.1](https://github.com/skyslit/ark/compare/v2.12.0...v2.12.1) (2021-04-18)
 
 **Note:** Version bump only for package @skyslit/ark-backend
