@@ -28,6 +28,7 @@ import {
   DocumentQuery,
 } from 'mongoose';
 import http from 'http';
+import https from 'https';
 import {
   makeApp,
   renderToString,
@@ -52,9 +53,12 @@ type HttpVerbs =
 
 type ServerOpts = {
   port: number;
+  securePort?: number;
   hostname?: string;
   backlog?: number;
   listeningListener?: () => void;
+  enableHttps?: boolean;
+  secureOptions?: Partial<https.ServerOptions>;
 };
 
 type ServiceAlias = 'service' | 'rest';
@@ -932,9 +936,12 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
         ? opts
         : {
             port: 3000,
+            securePort: 3443,
             hostname: undefined,
             backlog: undefined,
             listeningListener: undefined,
+            enableHttps: false,
+            secureOptions: undefined,
           };
       if (!context.existData(moduleId, 'http')) {
         const httpServer = context.setData(
@@ -956,6 +963,38 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
             opts.listeningListener
           );
         });
+
+        if (
+          typeof opts.enableHttps === 'boolean' &&
+          opts.enableHttps === true
+        ) {
+          const securePort = opts.securePort || 3443;
+          const httpsServer = context.setData(
+            moduleId,
+            'https',
+            https.createServer(opts.secureOptions, (req, res) => {
+              res.end('Hello\n');
+            })
+          );
+          controller.run(() => {
+            httpsServer.on('listening', () => {
+              console.log(`(HTTPS) Listening on port: ${securePort}`);
+              console.log('');
+            });
+            httpsServer.listen(
+              securePort,
+              undefined,
+              undefined,
+              opts.listeningListener
+            );
+          });
+
+          context.pushRollbackAction(() => {
+            httpsServer.removeAllListeners();
+            httpsServer.close();
+          });
+        }
+
         context.pushRollbackAction(() => {
           httpServer.removeAllListeners();
           httpServer.close();
