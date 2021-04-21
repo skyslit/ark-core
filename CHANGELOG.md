@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.13.1](https://github.com/skyslit/ark/compare/v2.13.0...v2.13.1) (2021-04-21)
+
+
+### Bug Fixes
+
+* https server not rendering application ([d408bb6](https://github.com/skyslit/ark/commit/d408bb628cfcd605977271a152d1caa50a3e2ada))
+
+
+
+
+
 # [2.13.0](https://github.com/skyslit/ark/compare/v2.12.1...v2.13.0) (2021-04-20)
 
 
