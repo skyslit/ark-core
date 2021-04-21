@@ -11,10 +11,12 @@ import {
 } from '../index';
 import { Connection } from 'mongoose';
 import supertest from 'supertest';
-import * as http from 'http';
+// import * as http from 'http';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createReactApp, Frontend } from '@skyslit/ark-frontend';
 import Joi from 'joi';
+import puppeteer from 'puppeteer';
+import fs from 'fs';
 
 declare global {
   // eslint-disable-next-line no-unused-vars
@@ -112,18 +114,93 @@ describe('utils', () => {
 });
 
 describe('Backend services', () => {
-  test('useServer() fn', (done) => {
+  test('useServer() fn with http', (done) => {
     const appContext = new ApplicationContext();
     appContext
-      .activate(({ use }) => {
+      .activate(({ use, useModule }) => {
         const { useServer } = use(Backend);
+
+        useModule('test', ({ use }) => {
+          const { useRoute } = use(Backend);
+          useRoute('get', '/', (req, res) => {
+            res.send('Hello from test server');
+          });
+        });
+
         useServer();
+      })
+      .then(() => {
+        return puppeteer.launch().then((browser) => {
+          return browser
+            .newPage()
+            .then(async (page) => {
+              await page.goto('http://localhost:3000');
+              const bodyHTML = await page.evaluate(
+                () => document.body.innerHTML
+              );
+              expect(bodyHTML).toContain('Hello from test server');
+            })
+            .then(() => {
+              return browser.close();
+            });
+        });
       })
       .catch(done)
       .finally(async () => {
-        expect(
-          appContext.getData<http.Server>('default', 'http').listening
-        ).toEqual(true);
+        await appContext.deactivate();
+        done();
+      });
+  });
+
+  test('useServer() fn with https', (done) => {
+    const appContext = new ApplicationContext();
+    appContext
+      .activate(({ use, useModule }) => {
+        const { useServer } = use(Backend);
+
+        useModule('test', ({ use }) => {
+          const { useRoute } = use(Backend);
+          useRoute('get', '/', (req, res) => {
+            res.send('Hello from test server');
+          });
+        });
+
+        useServer({
+          port: 3000,
+          securePort: 3443,
+          enableHttps: true,
+          secureOptions: {
+            key: fs.readFileSync(
+              path.join(__dirname, './local-ssl/private.key')
+            ),
+            cert: fs.readFileSync(
+              path.join(__dirname, './local-ssl/private.crt')
+            ),
+          },
+        });
+      })
+      .then(() => {
+        return puppeteer
+          .launch({
+            ignoreHTTPSErrors: true,
+          })
+          .then((browser) => {
+            return browser
+              .newPage()
+              .then(async (page) => {
+                await page.goto('https://localhost:3443');
+                const bodyHTML = await page.evaluate(
+                  () => document.body.innerHTML
+                );
+                expect(bodyHTML).toContain('Hello from test server');
+              })
+              .then(() => {
+                return browser.close();
+              });
+          });
+      })
+      .catch(done)
+      .finally(async () => {
         await appContext.deactivate();
         done();
       });
