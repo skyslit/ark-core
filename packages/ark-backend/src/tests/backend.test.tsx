@@ -275,6 +275,33 @@ describe('Backend services', () => {
         });
     });
 
+    test('response structure should be self managed', (done) => {
+      const testService = defineService('TEST_SERVICE', (opts) => {
+        opts.defineLogic((opts) => {
+          opts.args.res.send('Hello there');
+        });
+      });
+
+      const context = new ApplicationContext();
+      context
+        .activate(({ use }) => {
+          const { useService } = use(Backend);
+          useService(testService, {
+            controller: new ServiceController(),
+          });
+        })
+        .finally(() => {
+          supertest(context.getData('default', 'express'))
+            .post('/___service/default/TEST_SERVICE')
+            .expect(200)
+            .then((res) => {
+              // Expect to manually modify res
+              expect(res.text).toStrictEqual('Hello there');
+              done();
+            });
+        });
+    });
+
     test('should register in service controller', (done) => {
       const testService = defineService('TEST_SERVICE', (opts) => {
         opts.defineLogic((opts) => {
