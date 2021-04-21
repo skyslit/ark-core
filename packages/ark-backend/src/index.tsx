@@ -972,9 +972,10 @@ export const Backend = createPointer<Partial<Ark.Backend>>(
           const httpsServer = context.setData(
             moduleId,
             'https',
-            https.createServer(opts.secureOptions, (req, res) => {
-              res.end('Hello\n');
-            })
+            https.createServer(
+              opts.secureOptions,
+              context.getData<expressApp.Application>('default', 'express')
+            )
           );
           controller.run(() => {
             httpsServer.on('listening', () => {
