@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.14.0](https://github.com/skyslit/ark/compare/v2.13.1...v2.14.0) (2021-04-21)
+
+
+### Features
+
+* defineService can now handle the http response from logic ([61982a0](https://github.com/skyslit/ark/commit/61982a01e5d9121f89a0b0394739bb5578d55004))
+
+
+
+
+
 ## [2.13.1](https://github.com/skyslit/ark/compare/v2.13.0...v2.13.1) (2021-04-21)
 
 

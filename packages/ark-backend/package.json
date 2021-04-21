@@ -1,6 +1,6 @@
 {
   "name": "@skyslit/ark-backend",
-  "version": "2.13.1",
+  "version": "2.14.0",
   "description": "A business framework for building Ark based event driven backend application",
   "main": "./build/index.js",
   "private": false,
@@ -41,11 +41,11 @@
     "memfs": "^3.2.0",
     "mongodb-memory-server": "^6.9.2",
     "mongoose": "^5.10.15",
+    "puppeteer": "^8.0.0",
     "react": "^16.0.1",
     "react-dom": "^16.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "5.2.0",
-    "puppeteer": "^8.0.0"
+    "react-router-dom": "5.2.0"
   },
   "peerDependencies": {
     "express": "^4.17.1",
