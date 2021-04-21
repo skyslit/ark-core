@@ -786,7 +786,9 @@ export const useServiceCreator: (
         }
 
         if (stat) {
-          res.status(stat.responseCode).json(stat.response);
+          if (stat.isManagedResponse === true) {
+            res.status(stat.responseCode).json(stat.response);
+          }
         } else {
           // Pass thru if response is falsy
           next();
@@ -1233,7 +1235,7 @@ export type LogicDefinitionOptions = {
 
 export type LogicDefinition = (
   options: LogicDefinitionOptions
-) => ServiceResponse<any, any> | Promise<ServiceResponse<any, any>>;
+) => ServiceResponse<any, any> | Promise<ServiceResponse<any, any>> | void;
 
 export type CapabilityMeta = {
   serviceName: string;
@@ -1336,6 +1338,7 @@ type RunnerContext = {
 };
 
 type RunnerStat = {
+  isManagedResponse: boolean;
   result: ServiceResponse<any, any>;
   allowed: boolean;
   denied: boolean;
@@ -1783,6 +1786,7 @@ export function runService(
     };
 
     const stat: RunnerStat = {
+      isManagedResponse: true,
       result: null,
       allowed: true,
       denied: false,
@@ -1951,7 +1955,12 @@ export function runService(
                     },
                   })
                 ).then((response) => {
-                  stat.result = response;
+                  if (!response) {
+                    stat.isManagedResponse = false;
+                    stat.response = undefined;
+                  } else {
+                    stat.result = response;
+                  }
                   return stat.result;
                 });
               } else {

@@ -372,6 +372,32 @@ describe('definePre tests', () => {
   });
 });
 
+describe('defineLogic tests', () => {
+  test('defineLogic isManagedResponse should be false', async () => {
+    const TestService = defineService('TestService', (options) => {
+      options.defineLogic((opts) => {
+        return opts.success({
+          message: 'Hello World',
+        });
+      });
+    });
+
+    const output = await runService(TestService);
+    expect(output.isManagedResponse).toStrictEqual(true);
+  });
+
+  test('defineLogic isManagedResponse should be true', async () => {
+    const TestService = defineService('TestService', (options) => {
+      options.defineLogic((opts) => {
+        // Don't returning anything here should flag this instance as managed response
+      });
+    });
+
+    const output = await runService(TestService);
+    expect(output.isManagedResponse).toStrictEqual(false);
+  });
+});
+
 describe('defineRule test', () => {
   const TestServiceWithRuleChecking = defineService(
     'TestService',
