@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.15.0](https://github.com/skyslit/ark/compare/v2.14.0...v2.15.0) (2021-04-24)
+
+
+### Features
+
+* added navigation menu hook ([a8dc950](https://github.com/skyslit/ark/commit/a8dc9505cb06246224710f76300862bb3dee2f7e))
+
+
+
+
+
 ## [2.12.1](https://github.com/skyslit/ark/compare/v2.12.0...v2.12.1) (2021-04-18)
 
 

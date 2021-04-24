@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.15.0](https://github.com/skyslit/ark/compare/v2.14.0...v2.15.0) (2021-04-24)
+
+
+### Bug Fixes
+
+* updated caniuse-lite database ([e949549](https://github.com/skyslit/ark/commit/e94954924e0aeb7073ad7e4fdbbf2bb5e66d3c26))
+
+
+### Features
+
+* added navigation menu hook ([a8dc950](https://github.com/skyslit/ark/commit/a8dc9505cb06246224710f76300862bb3dee2f7e))
+
+
+
+
+
 # [2.14.0](https://github.com/skyslit/ark/compare/v2.13.1...v2.14.0) (2021-04-21)
 
 

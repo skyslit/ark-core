@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.15.0](https://github.com/skyslit/ark/compare/v2.14.0...v2.15.0) (2021-04-24)
+
+
+### Bug Fixes
+
+* updated caniuse-lite database ([e949549](https://github.com/skyslit/ark/commit/e94954924e0aeb7073ad7e4fdbbf2bb5e66d3c26))
+
+
+
+
+
 # [2.14.0](https://github.com/skyslit/ark/compare/v2.13.1...v2.14.0) (2021-04-21)
 
 **Note:** Version bump only for package @skyslit/ark-devtools
