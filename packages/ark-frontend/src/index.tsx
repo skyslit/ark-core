@@ -119,10 +119,44 @@ type MapRoute = (
   opts?: RouteProps
 ) => void;
 
-type RouteConfigItem = {
+type MenuItem = {
+  path: string | string[];
+  hasLink?: boolean;
+  isFlattened?: boolean;
+  label?: string;
+  icon?: any;
+  extras?: any;
+  hideInMenu?: boolean;
+};
+
+type MenuItemAddOn = {
+  submenu?: Array<SubRouteConfigItem>;
+};
+
+type SubRouteConfigItem = {
   layout?: any;
   Route?: 'public' | React.FunctionComponent<{}>;
-} & RouteProps;
+} & RouteProps &
+  MenuItem;
+
+type MenuHookOptions = {
+  currentPath: string;
+  refId: string;
+  itemRenderer: (props?: { data: MenuItem; children?: any }) => JSX.Element;
+  groupRenderer: (props?: {
+    data: MenuItem & MenuItemAddOn;
+    children?: any;
+  }) => JSX.Element;
+};
+
+type MenuHook = (
+  opts: MenuHookOptions
+) => {
+  menuItems: Array<JSX.Element>;
+  activeGroupPath: string;
+};
+
+export type RouteConfigItem = SubRouteConfigItem & MenuItemAddOn;
 
 export type ArkReactComponent<T> = (
   props: ComponentPropType & T
@@ -160,7 +194,11 @@ declare global {
         useContent: ContentHook;
         useTableService: TableHook;
         mapRoute: MapRoute;
-        useRouteConfig: (configCreator: () => Array<RouteConfigItem>) => void;
+        useRouteConfig: (
+          ref: string | (() => Array<RouteConfigItem>),
+          configCreator?: () => Array<RouteConfigItem>
+        ) => void;
+        useMenu: MenuHook;
         configureAuth: (opts: AuthConfiguration) => void;
         useAuthConfiguration: () => AuthConfiguration;
         resolveServiceUrl: (serviceId: string, moduleId?: string) => string;
@@ -240,7 +278,12 @@ export function initReactRouterApp(
   });
 }
 
-type MakeAppOptions = { url: string; initialState?: any };
+type MakeAppOptions = {
+  url: string;
+  initialState?: any;
+  Router?: any;
+  routerProps?: any;
+};
 
 // eslint-disable-next-line camelcase
 declare const ___hydrated_redux___: any;
@@ -278,6 +321,8 @@ export function makeApp(
     {
       url: undefined,
       initialState: {},
+      Router: BrowserRouter,
+      routerProps: {},
     },
     opts_
   );
@@ -312,7 +357,7 @@ export function makeApp(
           return <div>Application booting up...</div>;
         }
 
-        let Router: any = BrowserRouter;
+        let Router: any = opts.Router;
         let routerProps: any = {};
 
         if (mode === 'ssr') {
@@ -320,6 +365,13 @@ export function makeApp(
           routerProps = {
             location: opts ? opts.url : '',
             context,
+          };
+        }
+
+        if (opts.routerProps) {
+          routerProps = {
+            ...routerProps,
+            ...opts.routerProps,
           };
         }
 
@@ -845,6 +897,35 @@ const mapRouteCreator = (
   });
 };
 
+const addMenuItemToAccumulator = (
+  acc: Array<any>,
+  items: Array<RouteConfigItem>,
+  isFlattened: boolean = false
+) => {
+  acc.push(
+    ...items.map((i) => {
+      i.hasLink = i.component !== undefined && i.component !== null;
+      i.isFlattened = isFlattened;
+      return i;
+    })
+  );
+};
+
+export const flattenRouteConfig = (
+  input: Array<RouteConfigItem>
+): Array<RouteConfigItem> => {
+  return input.reduce((acc, item) => {
+    addMenuItemToAccumulator(acc, [item]);
+
+    // Add submenu items
+    if (Array.isArray(item.submenu) && item.submenu.length > 0) {
+      addMenuItemToAccumulator(acc, item.submenu, true);
+    }
+
+    return acc;
+  }, []);
+};
+
 export const Routers = {
   ProtectedRoute: createComponent(
     ({ component, use, currentModuleId, children, ...rest }) => {
@@ -979,28 +1060,140 @@ export const Frontend = createPointer<Ark.MERN.React>(
       );
     },
     mapRoute: mapRouteCreator(moduleId, context),
-    useRouteConfig: (configCreator) => {
+    useRouteConfig: (_ref, _configCreator) => {
+      const ref = typeof _ref === 'string' ? _ref : 'default';
+      const configCreator = typeof _ref === 'string' ? _configCreator : _ref;
+      const hasConfigCreator = configCreator === undefined ? false : true;
+
+      if (hasConfigCreator === false) {
+        return context.useDataFromContext(
+          'default',
+          ref,
+          undefined,
+          false,
+          'route_menu'
+        );
+      }
+
       controller.ensureInitializing();
       controller.run(() => {
+        const config =
+          hasConfigCreator === true
+            ? flattenRouteConfig(configCreator())
+            : undefined;
+        const menu: Array<MenuItem & MenuItemAddOn> = config.map((c) => ({
+          path: c.path,
+          extras: c.extras,
+          icon: c.icon,
+          label: c.label,
+          hasLink: c.hasLink,
+          isFlattened: c.isFlattened,
+          hideInMenu: c.hideInMenu,
+          submenu: c.submenu,
+        }));
+
+        context.useDataFromContext('default', ref, menu, false, 'route_menu');
+
         const routeConfigs = context.getData<RouteConfigItem[]>(
           'default',
           'routeConfigs',
           []
         );
         routeConfigs.push(
-          ...configCreator().map((item) => {
-            const RawComponent = item.component;
-            item.component = item.layout
-              ? (props: any) => (
-                  <item.layout {...props}>
-                    <RawComponent {...props} />
-                  </item.layout>
-                )
-              : item.component;
-            return item;
-          })
+          ...config
+            .filter((c) => c.hasLink === true)
+            .map((item) => {
+              const RawComponent = item.component;
+              item.component = item.layout
+                ? (props: any) => (
+                    <item.layout {...props}>
+                      <RawComponent {...props} />
+                    </item.layout>
+                  )
+                : item.component;
+              return item;
+            })
         );
       });
+
+      return null;
+    },
+    useMenu: (opts) => {
+      const ItemRenderer = opts.itemRenderer;
+      const GroupRenderer = opts.groupRenderer;
+
+      const menuItems = React.useMemo<Array<JSX.Element>>(() => {
+        let result = context.useDataFromContext<
+          Array<MenuItem & MenuItemAddOn>
+        >('default', opts.refId, undefined, false, 'route_menu');
+
+        if (Array.isArray(result) && result.length > 0) {
+          result = result
+            .filter((m) => m.isFlattened === false)
+            .filter(
+              (m) => m.hideInMenu === undefined || m.hideInMenu === false
+            );
+        } else {
+          result = [];
+        }
+
+        return result.reduce<Array<JSX.Element>>((acc, item, index) => {
+          const hasSubItem =
+            Array.isArray(item.submenu) && item.submenu.length > 0;
+
+          if (hasSubItem === true) {
+            acc.push(
+              <GroupRenderer key={item.path as string} data={item}>
+                {item.submenu.map((v) => (
+                  <ItemRenderer key={v.path as string} data={v} />
+                ))}
+              </GroupRenderer>
+            );
+          } else {
+            acc.push(<ItemRenderer key={item.path as string} data={item} />);
+          }
+
+          return acc;
+        }, []);
+      }, [opts.refId, ItemRenderer, GroupRenderer]);
+
+      const activeGroupPath: string = React.useMemo(() => {
+        let result = context.useDataFromContext<
+          Array<MenuItem & MenuItemAddOn>
+        >('default', opts.refId, undefined, false, 'route_menu');
+
+        if (Array.isArray(result) && result.length > 0) {
+          result = result
+            .filter((m) => m.isFlattened === false)
+            .filter(
+              (m) => m.hideInMenu === undefined || m.hideInMenu === false
+            );
+        } else {
+          result = [];
+        }
+
+        let i = 0;
+        for (i = 0; i < result.length; i++) {
+          if (
+            Array.isArray(result[i].submenu) &&
+            result[i].submenu.length > 0
+          ) {
+            let j = 0;
+            for (j = 0; j < result[i].submenu.length; j++) {
+              if (result[i].submenu[j].path === opts.currentPath) {
+                return result[i].path as string;
+              }
+            }
+          }
+        }
+
+        return undefined;
+      }, [opts.currentPath]);
+
+      return {
+        menuItems,
+        activeGroupPath,
+      };
     },
     useContent: (opts_) => {
       const opts: ContentHookOptions<any> = Object.assign<
