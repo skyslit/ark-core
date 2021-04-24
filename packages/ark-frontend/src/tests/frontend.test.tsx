@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, cleanup, act } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
-import { useHistory, Router } from 'react-router-dom';
+import { useHistory, Router, useRouteMatch } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import {
   createReactApp,
@@ -1147,6 +1147,133 @@ describe('navigation menu and breadcrumbs', () => {
           });
 
           expect(getByText(/404/i).textContent).toBe('404 Not Found');
+
+          done();
+        })
+        .catch(done);
+    });
+
+    test('should render menu items appropriately', (done) => {
+      const ctx = new ApplicationContext();
+
+      const testContext = createReactApp(({ use }) => {
+        const { useRouteConfig, useComponent } = use(Frontend);
+
+        useComponent('ProtectedRoute', Routers.ProtectedRoute);
+        useComponent('AuthRoute', Routers.AuthRoute);
+        useComponent(
+          'layout',
+          createComponent((props) => {
+            const match = useRouteMatch();
+            const { useMenu } = props.use(Frontend);
+            const { menuItems, activeGroupPath } = useMenu({
+              refId: 'default',
+              currentPath: match.path,
+              groupRenderer: (props) => (
+                <div>
+                  <span>{`group-${props.data.label}`}</span>
+                  {props.children}
+                </div>
+              ),
+              itemRenderer: (props) => <div>{props.data.label}</div>,
+            });
+
+            return (
+              <div>
+                <span>{`Active: ${activeGroupPath}`}</span>
+                <div className="menu">{menuItems}</div>
+                <div className="content">{props.children}</div>
+              </div>
+            );
+          })
+        );
+
+        useRouteConfig(() => [
+          {
+            path: '/sample',
+            label: 'Sample Group',
+            exact: true,
+            submenu: [
+              {
+                path: '/level-1',
+                label: 'Sample > Level 1',
+                component: () => <h1>Level 1 page</h1>,
+                layout: useComponent('layout'),
+              },
+            ],
+          },
+          {
+            path: '/test',
+            label: 'Test Group',
+            exact: true,
+            component: () => <h1>Test main page</h1>,
+            layout: useComponent('layout'),
+            submenu: [
+              {
+                path: '/tst/:id/level-1',
+                label: 'Test > Level 1',
+                layout: useComponent('layout'),
+                component: () => <h1>Test Level 1 page</h1>,
+              },
+            ],
+          },
+          {
+            path: '*',
+            label: '404 Page',
+            hideInMenu: true,
+            layout: useComponent('layout'),
+            component: () => <span>404 Not Found</span>,
+          },
+        ]);
+      });
+
+      const history = createMemoryHistory();
+      history.push('/sample');
+
+      makeApp('csr', testContext, ctx, {
+        Router,
+        routerProps: {
+          history,
+        },
+        initialState: {
+          ...reduxServiceStateSnapshot('___context', 'default', {
+            responseCode: 200,
+            response: {
+              meta: {
+                isAuthenticated: false,
+              },
+            },
+          }),
+        },
+      })
+        .then((App) => {
+          const { getByText } = render(<App />);
+          // Expect component and layout
+          expect(getByText(/group-Sample Group/i).textContent).toBeTruthy();
+          expect(getByText(/group-Test Group/i).textContent).toBeTruthy();
+          expect(getByText(/Sample > Level 1/i).textContent).toBeTruthy();
+          expect(getByText(/Test > Level 1/i).textContent).toBeTruthy();
+          expect(() => getByText(/404 Page/i)).toThrowError();
+
+          expect(getByText(/Active:/i).textContent).toStrictEqual(
+            'Active: undefined'
+          );
+
+          act(() => {
+            history.push('/level-1');
+          });
+
+          expect(getByText(/Active:/i).textContent).toStrictEqual(
+            'Active: /sample'
+          );
+
+          act(() => {
+            history.push('/tst/123/level-1');
+          });
+
+          expect(getByText(/Active:/i).textContent).toStrictEqual(
+            'Active: /test'
+          );
 
           done();
         })

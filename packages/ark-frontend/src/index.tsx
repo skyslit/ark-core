@@ -126,6 +126,7 @@ type MenuItem = {
   label?: string;
   icon?: any;
   extras?: any;
+  hideInMenu?: boolean;
 };
 
 type MenuItemAddOn = {
@@ -137,6 +138,23 @@ type SubRouteConfigItem = {
   Route?: 'public' | React.FunctionComponent<{}>;
 } & RouteProps &
   MenuItem;
+
+type MenuHookOptions = {
+  currentPath: string;
+  refId: string;
+  itemRenderer: (props?: { data: MenuItem; children?: any }) => JSX.Element;
+  groupRenderer: (props?: {
+    data: MenuItem & MenuItemAddOn;
+    children?: any;
+  }) => JSX.Element;
+};
+
+type MenuHook = (
+  opts: MenuHookOptions
+) => {
+  menuItems: Array<JSX.Element>;
+  activeGroupPath: string;
+};
 
 export type RouteConfigItem = SubRouteConfigItem & MenuItemAddOn;
 
@@ -180,6 +198,7 @@ declare global {
           ref: string | (() => Array<RouteConfigItem>),
           configCreator?: () => Array<RouteConfigItem>
         ) => void;
+        useMenu: MenuHook;
         configureAuth: (opts: AuthConfiguration) => void;
         useAuthConfiguration: () => AuthConfiguration;
         resolveServiceUrl: (serviceId: string, moduleId?: string) => string;
@@ -1062,11 +1081,15 @@ export const Frontend = createPointer<Ark.MERN.React>(
           hasConfigCreator === true
             ? flattenRouteConfig(configCreator())
             : undefined;
-        const menu: Array<MenuItem> = config.map((c) => ({
+        const menu: Array<MenuItem & MenuItemAddOn> = config.map((c) => ({
           path: c.path,
           extras: c.extras,
           icon: c.icon,
           label: c.label,
+          hasLink: c.hasLink,
+          isFlattened: c.isFlattened,
+          hideInMenu: c.hideInMenu,
+          submenu: c.submenu,
         }));
 
         context.useDataFromContext('default', ref, menu, false, 'route_menu');
@@ -1094,6 +1117,83 @@ export const Frontend = createPointer<Ark.MERN.React>(
       });
 
       return null;
+    },
+    useMenu: (opts) => {
+      const ItemRenderer = opts.itemRenderer;
+      const GroupRenderer = opts.groupRenderer;
+
+      const menuItems = React.useMemo<Array<JSX.Element>>(() => {
+        let result = context.useDataFromContext<
+          Array<MenuItem & MenuItemAddOn>
+        >('default', opts.refId, undefined, false, 'route_menu');
+
+        if (Array.isArray(result) && result.length > 0) {
+          result = result
+            .filter((m) => m.isFlattened === false)
+            .filter(
+              (m) => m.hideInMenu === undefined || m.hideInMenu === false
+            );
+        } else {
+          result = [];
+        }
+
+        return result.reduce<Array<JSX.Element>>((acc, item, index) => {
+          const hasSubItem =
+            Array.isArray(item.submenu) && item.submenu.length > 0;
+
+          if (hasSubItem === true) {
+            acc.push(
+              <GroupRenderer key={item.path as string} data={item}>
+                {item.submenu.map((v) => (
+                  <ItemRenderer key={v.path as string} data={v} />
+                ))}
+              </GroupRenderer>
+            );
+          } else {
+            acc.push(<ItemRenderer key={item.path as string} data={item} />);
+          }
+
+          return acc;
+        }, []);
+      }, [opts.refId, ItemRenderer, GroupRenderer]);
+
+      const activeGroupPath: string = React.useMemo(() => {
+        let result = context.useDataFromContext<
+          Array<MenuItem & MenuItemAddOn>
+        >('default', opts.refId, undefined, false, 'route_menu');
+
+        if (Array.isArray(result) && result.length > 0) {
+          result = result
+            .filter((m) => m.isFlattened === false)
+            .filter(
+              (m) => m.hideInMenu === undefined || m.hideInMenu === false
+            );
+        } else {
+          result = [];
+        }
+
+        let i = 0;
+        for (i = 0; i < result.length; i++) {
+          if (
+            Array.isArray(result[i].submenu) &&
+            result[i].submenu.length > 0
+          ) {
+            let j = 0;
+            for (j = 0; j < result[i].submenu.length; j++) {
+              if (result[i].submenu[j].path === opts.currentPath) {
+                return result[i].path as string;
+              }
+            }
+          }
+        }
+
+        return undefined;
+      }, [opts.currentPath]);
+
+      return {
+        menuItems,
+        activeGroupPath,
+      };
     },
     useContent: (opts_) => {
       const opts: ContentHookOptions<any> = Object.assign<
