@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, cleanup, act } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
-import { useHistory } from 'react-router-dom';
+import { useHistory, Router } from 'react-router-dom';
+import { createMemoryHistory } from 'history';
 import {
   createReactApp,
   Frontend,
@@ -9,7 +10,85 @@ import {
   makeApp,
   reduxServiceStateSnapshot,
   Routers,
+  flattenRouteConfig,
+  RouteConfigItem,
 } from '../index';
+
+describe('utils', () => {
+  test('flattenRouteConfig() should work as expected', () => {
+    const config: Array<RouteConfigItem> = [
+      {
+        path: '/',
+        label: 'Dashboard',
+        component: () => <h1>Main View</h1>,
+      },
+      {
+        path: '/menu-1',
+        label: 'Menu 1',
+        component: () => <h1>Menu 1</h1>,
+        submenu: [
+          {
+            path: '/menu-1/lvl-1',
+            label: 'Level 1',
+            component: () => <h1>Level 1</h1>,
+          },
+          {
+            path: '/menu-1/lvl-2',
+            label: 'Level 2',
+            component: () => <h1>Level 2</h1>,
+          },
+        ],
+      },
+      {
+        path: '/menu-2',
+        label: 'Menu 2',
+        component: () => <h1>Menu 2</h1>,
+      },
+      {
+        path: '/menu-3',
+        label: 'Menu 3',
+        submenu: [
+          {
+            path: '/menu-3/lvl-1',
+            label: 'Level 1',
+            component: () => <h1>Level 1</h1>,
+          },
+          {
+            path: '/menu-3/lvl-2',
+            label: 'Level 2',
+            component: () => <h1>Level 2</h1>,
+          },
+        ],
+      },
+    ];
+
+    const result = flattenRouteConfig(config);
+
+    expect(result[0].path).toStrictEqual('/');
+    expect(result[0].hasLink).toStrictEqual(true);
+    expect(result[0].isFlattened).toStrictEqual(false);
+
+    expect(result[1].path).toStrictEqual('/menu-1');
+    expect(result[1].hasLink).toStrictEqual(true);
+    expect(result[1].isFlattened).toStrictEqual(false);
+
+    expect(result[2].path).toStrictEqual('/menu-1/lvl-1');
+    expect(result[2].hasLink).toStrictEqual(true);
+    expect(result[2].isFlattened).toStrictEqual(true);
+
+    expect(result[3].path).toStrictEqual('/menu-1/lvl-2');
+    expect(result[3].hasLink).toStrictEqual(true);
+    expect(result[3].isFlattened).toStrictEqual(true);
+
+    expect(result[5].path).toStrictEqual('/menu-3');
+    expect(result[5].hasLink).toStrictEqual(false);
+    expect(result[5].isFlattened).toStrictEqual(false);
+
+    expect(result[6].path).toStrictEqual('/menu-3/lvl-1');
+    expect(result[6].hasLink).toStrictEqual(true);
+    expect(result[6].isFlattened).toStrictEqual(true);
+  });
+});
 
 describe('functionality tests', () => {
   let ctx: ApplicationContext;
@@ -983,6 +1062,95 @@ describe('functionality tests', () => {
           })
           .catch(done);
       });
+    });
+  });
+});
+
+describe('navigation menu and breadcrumbs', () => {
+  describe('navigation menu', () => {
+    test('should load sub menu', (done) => {
+      const ctx = new ApplicationContext();
+
+      const testContext = createReactApp(({ use }) => {
+        const { useRouteConfig, useComponent } = use(Frontend);
+
+        useComponent('ProtectedRoute', Routers.ProtectedRoute);
+        useComponent('AuthRoute', Routers.AuthRoute);
+
+        useRouteConfig(() => [
+          {
+            path: '/sample',
+            submenu: [
+              {
+                path: '/level-1',
+                component: () => <h1>Level 1 page</h1>,
+              },
+            ],
+          },
+          {
+            path: '/test',
+            component: () => <h1>Test main page</h1>,
+            submenu: [
+              {
+                path: '/tst/level-1',
+                component: () => <h1>Test Level 1 page</h1>,
+              },
+            ],
+          },
+          {
+            path: '*',
+            component: () => <span>404 Not Found</span>,
+          },
+        ]);
+      });
+
+      const history = createMemoryHistory();
+      history.push('/level-1');
+
+      makeApp('csr', testContext, ctx, {
+        Router,
+        routerProps: {
+          history,
+        },
+        initialState: {
+          ...reduxServiceStateSnapshot('___context', 'default', {
+            responseCode: 200,
+            response: {
+              meta: {
+                isAuthenticated: false,
+              },
+            },
+          }),
+        },
+      })
+        .then((App) => {
+          const { getByText } = render(<App />);
+          // Expect component and layout
+          expect(getByText(/Level 1/i).textContent).toBe('Level 1 page');
+
+          act(() => {
+            history.push('/tst/level-1');
+          });
+
+          expect(getByText(/Test Level/i).textContent).toBe(
+            'Test Level 1 page'
+          );
+
+          act(() => {
+            history.push('/test');
+          });
+
+          expect(getByText(/Test main/i).textContent).toBe('Test main page');
+
+          act(() => {
+            history.push('/');
+          });
+
+          expect(getByText(/404/i).textContent).toBe('404 Not Found');
+
+          done();
+        })
+        .catch(done);
     });
   });
 });
