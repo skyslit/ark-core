@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.16.0](https://github.com/skyslit/ark/compare/v2.15.0...v2.16.0) (2021-04-25)
+
+
+### Features
+
+* added deserializeUser function for authentication system ([78ab699](https://github.com/skyslit/ark/commit/78ab699c31d7ef6a48f32d60d87b46e4badb3a5d))
+
+
+
+
+
 # [2.15.0](https://github.com/skyslit/ark/compare/v2.14.0...v2.15.0) (2021-04-24)
 
 
