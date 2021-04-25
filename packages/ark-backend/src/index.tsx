@@ -90,6 +90,7 @@ type AuthOptions = {
   jwtSignOptions?: jwt.SignOptions;
   jwtVerifyOptions?: jwt.VerifyOptions;
   jwtDecodeOptions?: jwt.DecodeOptions;
+  deserializeUser?: (input: any) => any;
 };
 
 type AccessPointOptions = {
@@ -699,6 +700,20 @@ export const createAuthMiddleware = (authOpts: AuthOptions) => async (
     }
     req.user = identityPayload as any;
     req.isAuthenticated = identityPayload ? true : false;
+
+    try {
+      if (req.isAuthenticated === true && req.user) {
+        if (typeof authOpts.deserializeUser === 'function') {
+          const serializedUser = await Promise.resolve(
+            authOpts.deserializeUser(req.user)
+          );
+          if (serializedUser) {
+            req.user = serializedUser;
+          }
+        }
+      }
+    } catch (e) {}
+
     try {
       if (req.isAuthenticated === true) {
         if (Array.isArray(req.user.policies)) {
