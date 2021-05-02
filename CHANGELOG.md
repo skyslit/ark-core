@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.16.1](https://github.com/skyslit/ark/compare/v2.16.0...v2.16.1) (2021-05-02)
+
+
+### Bug Fixes
+
+* useTable service now reacts to change in service id ([d06f88f](https://github.com/skyslit/ark/commit/d06f88fcbf2a845732736633895cad52e8a9aced))
+
+
+
+
+
 # [2.16.0](https://github.com/skyslit/ark/compare/v2.15.0...v2.16.0) (2021-04-25)
 
 
