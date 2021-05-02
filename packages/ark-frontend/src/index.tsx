@@ -716,6 +716,7 @@ const useTableServiceCreator: (
 ) => TableHook = (modId: string, context: ApplicationContext) => (
   serviceId
 ) => {
+  let url: string = null;
   let defaultCurrentPage: number = 1;
   let defaultPageSize: number = 30;
   let disableSelect: boolean = false;
@@ -725,6 +726,7 @@ const useTableServiceCreator: (
 
   try {
     if (typeof serviceId === 'object') {
+      url = serviceId.serviceId;
       columns = serviceId.columns;
       additionalColumnNames = serviceId.additionalColumnNames;
       disableSelect =
@@ -854,7 +856,8 @@ const useTableServiceCreator: (
           setPageSize(_pag.pageSize);
         });
     },
-    []
+    // Fix: issue with table source not changing when service id is changed
+    [url]
   );
 
   React.useEffect(() => {
