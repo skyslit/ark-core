@@ -50,6 +50,33 @@ export class SPABuilder extends BuilderBase {
    * @return {Configuration}
    */
   getConfiguration({ cwd, mode }: ConfigurationOptions): Configuration {
+    const babelLoaderOptions = {
+      // Should not take any babelrc file located in the project root
+      babelrc: false,
+      sourceMaps: mode === 'development' ? 'inline' : false,
+      compact: mode === 'production',
+      presets: [
+        [
+          require.resolve('@babel/preset-env'),
+          {
+            targets: { browsers: ['last 2 versions'] },
+            modules: false,
+          },
+        ],
+        [
+          require.resolve('@babel/preset-typescript'),
+          { allowNamespaces: true },
+        ],
+        [require.resolve('@babel/preset-react')],
+      ],
+      cacheDirectory: true,
+      cacheCompression: false,
+      plugins: [
+        require.resolve('@babel/plugin-proposal-class-properties'),
+        require.resolve('@babel/plugin-syntax-dynamic-import'),
+      ],
+    };
+
     return {
       devtool: mode === 'development' ? 'source-map' : false,
       context: cwd,
@@ -102,32 +129,7 @@ export class SPABuilder extends BuilderBase {
             use: [
               {
                 loader: require.resolve('babel-loader'),
-                options: {
-                  // Should not take any babelrc file located in the project root
-                  babelrc: false,
-                  sourceMaps: mode === 'development' ? 'inline' : false,
-                  compact: mode === 'production',
-                  presets: [
-                    [
-                      require.resolve('@babel/preset-env'),
-                      {
-                        targets: { browsers: ['last 2 versions'] },
-                        modules: false,
-                      },
-                    ],
-                    [
-                      require.resolve('@babel/preset-typescript'),
-                      { allowNamespaces: true },
-                    ],
-                    [require.resolve('@babel/preset-react')],
-                  ],
-                  cacheDirectory: true,
-                  cacheCompression: false,
-                  plugins: [
-                    require.resolve('@babel/plugin-proposal-class-properties'),
-                    require.resolve('@babel/plugin-syntax-dynamic-import'),
-                  ],
-                },
+                options: babelLoaderOptions,
               },
             ],
           },
@@ -136,6 +138,7 @@ export class SPABuilder extends BuilderBase {
             use: [
               {
                 loader: require.resolve('babel-loader'),
+                options: babelLoaderOptions,
               },
               {
                 loader: require.resolve('@svgr/webpack'),
