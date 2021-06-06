@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.17.0](https://github.com/skyslit/ark/compare/v2.16.1...v2.17.0) (2021-06-06)
+
+
+### Features
+
+* added support for svg ([27313a8](https://github.com/skyslit/ark/commit/27313a8cc6de6634663ba2aada3c09e35d587051))
+
+
+
+
+
 ## [2.16.1](https://github.com/skyslit/ark/compare/v2.16.0...v2.16.1) (2021-05-02)
 
 
