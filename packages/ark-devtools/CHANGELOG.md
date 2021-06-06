@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.17.1](https://github.com/skyslit/ark/compare/v2.17.0...v2.17.1) (2021-06-06)
+
+
+### Bug Fixes
+
+* issue building svg ([7a3cc61](https://github.com/skyslit/ark/commit/7a3cc619e2c094f031da1199749ebee587205ce5))
+
+
+
+
+
 # [2.17.0](https://github.com/skyslit/ark/compare/v2.16.1...v2.17.0) (2021-06-06)
 
 
