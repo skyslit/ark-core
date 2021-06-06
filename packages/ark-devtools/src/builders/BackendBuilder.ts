@@ -121,7 +121,7 @@ export class BackendBuilder extends BuilderBase {
             ],
           },
           {
-            test: /\.(png|jpg|jpeg|gif)$/i,
+            test: /\.(png|jpg|jpeg|gif|woff2|woff)$/i,
             use: [
               {
                 loader: require.resolve('file-loader'),
