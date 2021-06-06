@@ -132,7 +132,22 @@ export class SPABuilder extends BuilderBase {
             ],
           },
           {
-            test: /\.(png|svg|jpg|jpeg|gif)$/i,
+            test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
+            use: [
+              {
+                loader: require.resolve('babel-loader'),
+              },
+              {
+                loader: require.resolve('@svgr/webpack'),
+                options: {
+                  babel: false,
+                  icon: true,
+                },
+              },
+            ],
+          },
+          {
+            test: /\.(png|jpg|jpeg|gif)$/i,
             use: [
               {
                 loader: require.resolve('file-loader'),
