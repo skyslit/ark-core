@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.17.2](https://github.com/skyslit/ark/compare/v2.17.1...v2.17.2) (2021-06-06)
+
+
+### Bug Fixes
+
+* issue with font installation ([c10986b](https://github.com/skyslit/ark/commit/c10986bd3a67e6d4642bead8cbc17b91d73591d8))
+
+
+
+
+
 ## [2.17.1](https://github.com/skyslit/ark/compare/v2.17.0...v2.17.1) (2021-06-06)
 
 
