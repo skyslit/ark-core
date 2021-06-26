@@ -43,10 +43,10 @@ jobs:
           npm run bootstrap
 
       - name: Install jest
-        run: npm install jest@^26.0.15 -g
+        run: npm install jest@^27.0.4 -g
 
       - name: Install lerna
-        run: npm install lerna@^3.22.1 -g
+        run: npm install lerna@^4.0.0 -g
 
       - name: Build
         run: npm run build
