@@ -3,127 +3,121 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
-# [2.12.0](https://github.com/skyslit/ark/compare/v2.11.0...v2.12.0) (2021-04-04)
+## [2.17.2](https://github.com/skyslit/ark/compare/v2.17.1...v2.17.2) (2021-06-06)
 
 **Note:** Version bump only for package fpz
 
+## [2.17.1](https://github.com/skyslit/ark/compare/v2.17.0...v2.17.1) (2021-06-06)
 
+**Note:** Version bump only for package fpz
 
+# [2.17.0](https://github.com/skyslit/ark/compare/v2.16.1...v2.17.0) (2021-06-06)
 
+**Note:** Version bump only for package fpz
+
+## [2.16.1](https://github.com/skyslit/ark/compare/v2.16.0...v2.16.1) (2021-05-02)
+
+**Note:** Version bump only for package fpz
+
+# [2.16.0](https://github.com/skyslit/ark/compare/v2.15.0...v2.16.0) (2021-04-25)
+
+**Note:** Version bump only for package fpz
+
+# [2.15.0](https://github.com/skyslit/ark/compare/v2.14.0...v2.15.0) (2021-04-24)
+
+**Note:** Version bump only for package fpz
+
+# [2.14.0](https://github.com/skyslit/ark/compare/v2.13.1...v2.14.0) (2021-04-21)
+
+**Note:** Version bump only for package fpz
+
+## [2.13.1](https://github.com/skyslit/ark/compare/v2.13.0...v2.13.1) (2021-04-21)
+
+**Note:** Version bump only for package fpz
+
+# [2.13.0](https://github.com/skyslit/ark/compare/v2.12.1...v2.13.0) (2021-04-20)
+
+**Note:** Version bump only for package fpz
+
+## [2.12.1](https://github.com/skyslit/ark/compare/v2.12.0...v2.12.1) (2021-04-18)
+
+### Bug Fixes
+
+- issue running local dev env on Apple Silicon processor ([7979002](https://github.com/skyslit/ark/commit/797900256d289b47eb0108e6ce0540f66bc079a9))
+
+# [2.12.0](https://github.com/skyslit/ark/compare/v2.11.0...v2.12.0) (2021-04-04)
+
+**Note:** Version bump only for package fpz
 
 # [2.11.0](https://github.com/skyslit/ark/compare/v2.10.1...v2.11.0) (2021-03-24)
 
 **Note:** Version bump only for package fpz
 
-
-
-
-
 ## [2.10.1](https://github.com/skyslit/ark/compare/v2.10.0...v2.10.1) (2021-03-21)
-
 
 ### Bug Fixes
 
-* NODE_PORT support added to init-project task ([2e9fb21](https://github.com/skyslit/ark/commit/2e9fb21e92769d3ed7a4bf5b8de299193f10f128))
-
-
-
-
+- NODE_PORT support added to init-project task ([2e9fb21](https://github.com/skyslit/ark/commit/2e9fb21e92769d3ed7a4bf5b8de299193f10f128))
 
 # [2.10.0](https://github.com/skyslit/ark/compare/v2.9.0...v2.10.0) (2021-03-18)
 
 **Note:** Version bump only for package fpz
 
-
-
-
-
 # [2.9.0](https://github.com/skyslit/ark/compare/v2.8.0...v2.9.0) (2021-03-14)
-
 
 ### Bug Fixes
 
-* aws cf full-env ecs service takes long time to deploy ([8e439bd](https://github.com/skyslit/ark/commit/8e439bd06b3c199529d0c1ba0feb78d8620cbd86))
-* issue with git credential helper ([f57b825](https://github.com/skyslit/ark/commit/f57b825a38f9f8f9b8daeb6bac0f1c905950960f))
-* revised cf full-env-template ([cec8d89](https://github.com/skyslit/ark/commit/cec8d895ddc793b2489210cd1d7ab0c3afdc65ec))
-* revised cf standard-env-template with improved security ([b25d209](https://github.com/skyslit/ark/commit/b25d209fff462864ede9effe2119f0d96ea9d2fc))
-
+- aws cf full-env ecs service takes long time to deploy ([8e439bd](https://github.com/skyslit/ark/commit/8e439bd06b3c199529d0c1ba0feb78d8620cbd86))
+- issue with git credential helper ([f57b825](https://github.com/skyslit/ark/commit/f57b825a38f9f8f9b8daeb6bac0f1c905950960f))
+- revised cf full-env-template ([cec8d89](https://github.com/skyslit/ark/commit/cec8d895ddc793b2489210cd1d7ab0c3afdc65ec))
+- revised cf standard-env-template with improved security ([b25d209](https://github.com/skyslit/ark/commit/b25d209fff462864ede9effe2119f0d96ea9d2fc))
 
 ### Features
 
-* added dev-env command in cli ([cb02e0c](https://github.com/skyslit/ark/commit/cb02e0cfba8d0ab9256014da38c3f185f78baff1))
-* added stack start and stop feature ([79676f8](https://github.com/skyslit/ark/commit/79676f82d0c7a08871eb3bc719eb8051d733509c))
-
-
-
-
+- added dev-env command in cli ([cb02e0c](https://github.com/skyslit/ark/commit/cb02e0cfba8d0ab9256014da38c3f185f78baff1))
+- added stack start and stop feature ([79676f8](https://github.com/skyslit/ark/commit/79676f82d0c7a08871eb3bc719eb8051d733509c))
 
 # [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
 
 **Note:** Version bump only for package fpz
 
-
-
-
-
 # [2.7.0](https://github.com/skyslit/ark/compare/v2.6.0...v2.7.0) (2021-03-07)
 
 **Note:** Version bump only for package fpz
 
-
-
-
-
 # [2.6.0](https://github.com/skyslit/ark/compare/v2.5.0...v2.6.0) (2021-03-04)
-
 
 ### Bug Fixes
 
-* aws > issue with loadbalancer securitygroup ([9020a89](https://github.com/skyslit/ark/commit/9020a891bd120dd1016b4350c12e972b7bd140fe))
-* optimised setup-devops aws command ([a8bf0e2](https://github.com/skyslit/ark/commit/a8bf0e265b90d475e4275d938683fc4ef9626d54))
-
+- aws > issue with loadbalancer securitygroup ([9020a89](https://github.com/skyslit/ark/commit/9020a891bd120dd1016b4350c12e972b7bd140fe))
+- optimised setup-devops aws command ([a8bf0e2](https://github.com/skyslit/ark/commit/a8bf0e265b90d475e4275d938683fc4ef9626d54))
 
 ### Features
 
-* added setup-devops command ([1d82e32](https://github.com/skyslit/ark/commit/1d82e329d461db3ac0516a48e983653b21882e43))
-
-
-
-
+- added setup-devops command ([1d82e32](https://github.com/skyslit/ark/commit/1d82e329d461db3ac0516a48e983653b21882e43))
 
 # [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
 
-
 ### Features
 
-* added docker support ([ff9d1cf](https://github.com/skyslit/ark/commit/ff9d1cfda7e5c30041bc3cc4cc6f497db9018554))
-* added process automation for module integration ([9e4fc2e](https://github.com/skyslit/ark/commit/9e4fc2ea111d98f96ac313074a500b8e013945e9))
-
-
-
-
+- added docker support ([ff9d1cf](https://github.com/skyslit/ark/commit/ff9d1cfda7e5c30041bc3cc4cc6f497db9018554))
+- added process automation for module integration ([9e4fc2e](https://github.com/skyslit/ark/commit/9e4fc2ea111d98f96ac313074a500b8e013945e9))
 
 # [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
 
-
 ### Bug Fixes
 
-* enabled minimiser in bundler ([7929755](https://github.com/skyslit/ark/commit/79297555b66c9ff38b61a7de80255c3229843944))
-* issue with image (png|jpg) import + scss import issue ([5ce80f8](https://github.com/skyslit/ark/commit/5ce80f83cb8d1a231879525dd5f2972ac1703685))
-* optimised cli interface and experience ([adbf61b](https://github.com/skyslit/ark/commit/adbf61be5b745ee4e725895516deada93d160b9f))
-* removed less loader + optimised bundler ufs + formatted evaluator error ([0388083](https://github.com/skyslit/ark/commit/03880839acc58111dee22bb48dc3ff0b98214648))
-* sourcemap enabled in webpack ([67c8c8a](https://github.com/skyslit/ark/commit/67c8c8a90567910f74602e08410faf60f9058017))
-* with multiple web app renderers ([04e4d93](https://github.com/skyslit/ark/commit/04e4d9365cef1d5795ce884fb68bea6702365b1b))
-* **devtools:** moved execa from dev dep to prod dep ([ab00e41](https://github.com/skyslit/ark/commit/ab00e411f279511ea64f29d8e1c4ee11afd13cd0))
-
+- enabled minimiser in bundler ([7929755](https://github.com/skyslit/ark/commit/79297555b66c9ff38b61a7de80255c3229843944))
+- issue with image (png|jpg) import + scss import issue ([5ce80f8](https://github.com/skyslit/ark/commit/5ce80f83cb8d1a231879525dd5f2972ac1703685))
+- optimised cli interface and experience ([adbf61b](https://github.com/skyslit/ark/commit/adbf61be5b745ee4e725895516deada93d160b9f))
+- removed less loader + optimised bundler ufs + formatted evaluator error ([0388083](https://github.com/skyslit/ark/commit/03880839acc58111dee22bb48dc3ff0b98214648))
+- sourcemap enabled in webpack ([67c8c8a](https://github.com/skyslit/ark/commit/67c8c8a90567910f74602e08410faf60f9058017))
+- with multiple web app renderers ([04e4d93](https://github.com/skyslit/ark/commit/04e4d9365cef1d5795ce884fb68bea6702365b1b))
+- **devtools:** moved execa from dev dep to prod dep ([ab00e41](https://github.com/skyslit/ark/commit/ab00e411f279511ea64f29d8e1c4ee11afd13cd0))
 
 ### Features
 
-* added support for code splitting ([91e097b](https://github.com/skyslit/ark/commit/91e097ba6fbb43afdb06b9da73ae370e696b0f08))
-
-
-
-
+- added support for code splitting ([91e097b](https://github.com/skyslit/ark/commit/91e097ba6fbb43afdb06b9da73ae370e696b0f08))
 
 # [2.3.0](https://github.com/skyslit/ark/compare/v2.2.4...v2.3.0) (2021-02-13)
 
