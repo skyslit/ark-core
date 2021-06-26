@@ -1248,13 +1248,15 @@ export const Frontend = createPointer<Ark.MERN.React>(
         setHasChanged(isEqual(baseContent, content) === false);
       }, [baseContent, content]);
 
-      const getCurrentValByKey = (key: string) => {
-        const traverseResult = traverse(content);
-        return traverseResult.get(key.split('.'));
-      };
-
       let isBatchModeEnabled: boolean = false;
       let batchContent: any = null;
+
+      const getCurrentValByKey = (key: string) => {
+        const traverseResult = traverse(
+          isBatchModeEnabled === true ? batchContent : content
+        );
+        return traverseResult.get(key.split('.'));
+      };
 
       const updateKey = (key: string, val: any) => {
         let latest: any = null;
