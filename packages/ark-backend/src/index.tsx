@@ -165,7 +165,7 @@ declare global {
       ) => void;
       useModel: <T>(
         name: string,
-        schema?: SchemaDefinition | (() => Schema),
+        schema?: SchemaDefinition<any> | (() => Schema),
         dbName?: keyof Ark.PackageDatabases
       ) => Model<T & Document>;
       useVolume: (ref?: string, vol?: IArkVolume) => IArkVolume;
@@ -596,7 +596,7 @@ export const Data = createPointer<Partial<Ark.Data>>(
     },
     useModel: <T extends unknown>(
       refId: string,
-      schema?: SchemaDefinition | (() => Schema),
+      schema?: SchemaDefinition<any> | (() => Schema),
       dbName: keyof Ark.PackageDatabases = 'default'
     ) => {
       const modelName = getModelName(moduleId, refId);
