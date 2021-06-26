@@ -5,292 +5,185 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## [2.17.2](https://github.com/skyslit/ark/compare/v2.17.1...v2.17.2) (2021-06-06)
 
-
 ### Bug Fixes
 
-* issue with font installation ([c10986b](https://github.com/skyslit/ark/commit/c10986bd3a67e6d4642bead8cbc17b91d73591d8))
-
-
-
-
+- issue with font installation ([c10986b](https://github.com/skyslit/ark/commit/c10986bd3a67e6d4642bead8cbc17b91d73591d8))
 
 ## [2.17.1](https://github.com/skyslit/ark/compare/v2.17.0...v2.17.1) (2021-06-06)
 
-
 ### Bug Fixes
 
-* issue building svg ([7a3cc61](https://github.com/skyslit/ark/commit/7a3cc619e2c094f031da1199749ebee587205ce5))
-
-
-
-
+- issue building svg ([7a3cc61](https://github.com/skyslit/ark/commit/7a3cc619e2c094f031da1199749ebee587205ce5))
 
 # [2.17.0](https://github.com/skyslit/ark/compare/v2.16.1...v2.17.0) (2021-06-06)
 
-
 ### Features
 
-* added support for svg ([27313a8](https://github.com/skyslit/ark/commit/27313a8cc6de6634663ba2aada3c09e35d587051))
-
-
-
-
+- added support for svg ([27313a8](https://github.com/skyslit/ark/commit/27313a8cc6de6634663ba2aada3c09e35d587051))
 
 ## [2.16.1](https://github.com/skyslit/ark/compare/v2.16.0...v2.16.1) (2021-05-02)
 
-
 ### Bug Fixes
 
-* useTable service now reacts to change in service id ([d06f88f](https://github.com/skyslit/ark/commit/d06f88fcbf2a845732736633895cad52e8a9aced))
-
-
-
-
+- useTable service now reacts to change in service id ([d06f88f](https://github.com/skyslit/ark/commit/d06f88fcbf2a845732736633895cad52e8a9aced))
 
 # [2.16.0](https://github.com/skyslit/ark/compare/v2.15.0...v2.16.0) (2021-04-25)
 
-
 ### Features
 
-* added deserializeUser function for authentication system ([78ab699](https://github.com/skyslit/ark/commit/78ab699c31d7ef6a48f32d60d87b46e4badb3a5d))
-
-
-
-
+- added deserializeUser function for authentication system ([78ab699](https://github.com/skyslit/ark/commit/78ab699c31d7ef6a48f32d60d87b46e4badb3a5d))
 
 # [2.15.0](https://github.com/skyslit/ark/compare/v2.14.0...v2.15.0) (2021-04-24)
 
-
 ### Bug Fixes
 
-* updated caniuse-lite database ([e949549](https://github.com/skyslit/ark/commit/e94954924e0aeb7073ad7e4fdbbf2bb5e66d3c26))
-
+- updated caniuse-lite database ([e949549](https://github.com/skyslit/ark/commit/e94954924e0aeb7073ad7e4fdbbf2bb5e66d3c26))
 
 ### Features
 
-* added navigation menu hook ([a8dc950](https://github.com/skyslit/ark/commit/a8dc9505cb06246224710f76300862bb3dee2f7e))
-
-
-
-
+- added navigation menu hook ([a8dc950](https://github.com/skyslit/ark/commit/a8dc9505cb06246224710f76300862bb3dee2f7e))
 
 # [2.14.0](https://github.com/skyslit/ark/compare/v2.13.1...v2.14.0) (2021-04-21)
 
-
 ### Features
 
-* defineService can now handle the http response from logic ([61982a0](https://github.com/skyslit/ark/commit/61982a01e5d9121f89a0b0394739bb5578d55004))
-
-
-
-
+- defineService can now handle the http response from logic ([61982a0](https://github.com/skyslit/ark/commit/61982a01e5d9121f89a0b0394739bb5578d55004))
 
 ## [2.13.1](https://github.com/skyslit/ark/compare/v2.13.0...v2.13.1) (2021-04-21)
 
-
 ### Bug Fixes
 
-* https server not rendering application ([d408bb6](https://github.com/skyslit/ark/commit/d408bb628cfcd605977271a152d1caa50a3e2ada))
-
-
-
-
+- https server not rendering application ([d408bb6](https://github.com/skyslit/ark/commit/d408bb628cfcd605977271a152d1caa50a3e2ada))
 
 # [2.13.0](https://github.com/skyslit/ark/compare/v2.12.1...v2.13.0) (2021-04-20)
 
-
 ### Features
 
-* added support for https server ([963ba33](https://github.com/skyslit/ark/commit/963ba33654843fff26413bc9aa9fe849dff900ac))
-
-
-
-
+- added support for https server ([963ba33](https://github.com/skyslit/ark/commit/963ba33654843fff26413bc9aa9fe849dff900ac))
 
 ## [2.12.1](https://github.com/skyslit/ark/compare/v2.12.0...v2.12.1) (2021-04-18)
 
-
 ### Bug Fixes
 
-* issue running local dev env on Apple Silicon processor ([7979002](https://github.com/skyslit/ark/commit/797900256d289b47eb0108e6ce0540f66bc079a9))
-* issue with code-splitting / lazy loading ([e22cdb6](https://github.com/skyslit/ark/commit/e22cdb6de4bd80588489e94ffe4c235f5774850e))
-
-
-
-
+- issue running local dev env on Apple Silicon processor ([7979002](https://github.com/skyslit/ark/commit/797900256d289b47eb0108e6ce0540f66bc079a9))
+- issue with code-splitting / lazy loading ([e22cdb6](https://github.com/skyslit/ark/commit/e22cdb6de4bd80588489e94ffe4c235f5774850e))
 
 # [2.12.0](https://github.com/skyslit/ark/compare/v2.11.0...v2.12.0) (2021-04-04)
 
-
 ### Features
 
-* added test utils functions for ark-backend ([4410440](https://github.com/skyslit/ark/commit/4410440d12eeedc3e8d828ac3d46a4650b6ec6e0))
-* added test utils functions for ark-frontend ([087a5b9](https://github.com/skyslit/ark/commit/087a5b9bfd654ff7d16ab709ed53d15329d6578c))
-
-
-
-
+- added test utils functions for ark-backend ([4410440](https://github.com/skyslit/ark/commit/4410440d12eeedc3e8d828ac3d46a4650b6ec6e0))
+- added test utils functions for ark-frontend ([087a5b9](https://github.com/skyslit/ark/commit/087a5b9bfd654ff7d16ab709ed53d15329d6578c))
 
 # [2.11.0](https://github.com/skyslit/ark/compare/v2.10.1...v2.11.0) (2021-03-24)
 
-
 ### Features
 
-* added support for useRemoteConfig() ([8827fdd](https://github.com/skyslit/ark/commit/8827fdd81d3d08125834b524b1a3881df170058a))
-
-
-
-
+- added support for useRemoteConfig() ([8827fdd](https://github.com/skyslit/ark/commit/8827fdd81d3d08125834b524b1a3881df170058a))
 
 ## [2.10.1](https://github.com/skyslit/ark/compare/v2.10.0...v2.10.1) (2021-03-21)
 
-
 ### Bug Fixes
 
-* hostname is optional in server opts ([32909b5](https://github.com/skyslit/ark/commit/32909b51624337e62871654a5cabba3d35414e67))
-* NODE_PORT support added to init-project task ([2e9fb21](https://github.com/skyslit/ark/commit/2e9fb21e92769d3ed7a4bf5b8de299193f10f128))
-
-
-
-
+- hostname is optional in server opts ([32909b5](https://github.com/skyslit/ark/commit/32909b51624337e62871654a5cabba3d35414e67))
+- NODE_PORT support added to init-project task ([2e9fb21](https://github.com/skyslit/ark/commit/2e9fb21e92769d3ed7a4bf5b8de299193f10f128))
 
 # [2.10.0](https://github.com/skyslit/ark/compare/v2.9.0...v2.10.0) (2021-03-18)
 
-
 ### Bug Fixes
 
-* added default table limit to 30 ([72e7877](https://github.com/skyslit/ark/commit/72e7877a2bdfd57c5625b806ad850f9c6b234c4a))
-* changed documentQueryToServiceResponse to read from input instead of query ([4ad47e7](https://github.com/skyslit/ark/commit/4ad47e724347aa0bca9ead42151e647d87c59b18))
-
+- added default table limit to 30 ([72e7877](https://github.com/skyslit/ark/commit/72e7877a2bdfd57c5625b806ad850f9c6b234c4a))
+- changed documentQueryToServiceResponse to read from input instead of query ([4ad47e7](https://github.com/skyslit/ark/commit/4ad47e724347aa0bca9ead42151e647d87c59b18))
 
 ### Features
 
-* added documentQueryToServiceResponse() fn ([135c4b7](https://github.com/skyslit/ark/commit/135c4b7a4a53d0d7cd3a0412aeefdee9b0fc38d2))
-* added useTableService() in frontend ([0a8024d](https://github.com/skyslit/ark/commit/0a8024dc604effda58254fe303b15f95ebfacbd7))
-
+- added documentQueryToServiceResponse() fn ([135c4b7](https://github.com/skyslit/ark/commit/135c4b7a4a53d0d7cd3a0412aeefdee9b0fc38d2))
+- added useTableService() in frontend ([0a8024d](https://github.com/skyslit/ark/commit/0a8024dc604effda58254fe303b15f95ebfacbd7))
 
 ### Performance Improvements
 
-* moved invoke() inside useCallback ([448f789](https://github.com/skyslit/ark/commit/448f789b4d451a4cb92d48f92a505f17dcfab57b))
-
-
-
-
+- moved invoke() inside useCallback ([448f789](https://github.com/skyslit/ark/commit/448f789b4d451a4cb92d48f92a505f17dcfab57b))
 
 # [2.9.0](https://github.com/skyslit/ark/compare/v2.8.0...v2.9.0) (2021-03-14)
 
-
 ### Bug Fixes
 
-* aws cf full-env ecs service takes long time to deploy ([8e439bd](https://github.com/skyslit/ark/commit/8e439bd06b3c199529d0c1ba0feb78d8620cbd86))
-* issue with git credential helper ([f57b825](https://github.com/skyslit/ark/commit/f57b825a38f9f8f9b8daeb6bac0f1c905950960f))
-* revised cf full-env-template ([cec8d89](https://github.com/skyslit/ark/commit/cec8d895ddc793b2489210cd1d7ab0c3afdc65ec))
-* revised cf standard-env-template with improved security ([b25d209](https://github.com/skyslit/ark/commit/b25d209fff462864ede9effe2119f0d96ea9d2fc))
-
+- aws cf full-env ecs service takes long time to deploy ([8e439bd](https://github.com/skyslit/ark/commit/8e439bd06b3c199529d0c1ba0feb78d8620cbd86))
+- issue with git credential helper ([f57b825](https://github.com/skyslit/ark/commit/f57b825a38f9f8f9b8daeb6bac0f1c905950960f))
+- revised cf full-env-template ([cec8d89](https://github.com/skyslit/ark/commit/cec8d895ddc793b2489210cd1d7ab0c3afdc65ec))
+- revised cf standard-env-template with improved security ([b25d209](https://github.com/skyslit/ark/commit/b25d209fff462864ede9effe2119f0d96ea9d2fc))
 
 ### Features
 
-* added dev-env command in cli ([cb02e0c](https://github.com/skyslit/ark/commit/cb02e0cfba8d0ab9256014da38c3f185f78baff1))
-* added stack start and stop feature ([79676f8](https://github.com/skyslit/ark/commit/79676f82d0c7a08871eb3bc719eb8051d733509c))
-
-
-
-
+- added dev-env command in cli ([cb02e0c](https://github.com/skyslit/ark/commit/cb02e0cfba8d0ab9256014da38c3f185f78baff1))
+- added stack start and stop feature ([79676f8](https://github.com/skyslit/ark/commit/79676f82d0c7a08871eb3bc719eb8051d733509c))
 
 # [2.8.0](https://github.com/skyslit/ark/compare/v2.7.0...v2.8.0) (2021-03-10)
 
-
 ### Features
 
-* added localstorage feature in useConnect() ([b962a69](https://github.com/skyslit/ark/commit/b962a69d467290db3e6cb84b088e9684de943ad8))
-* useVolumeAccessPoint implemented ([4940f71](https://github.com/skyslit/ark/commit/4940f71b854c37f52cd0e65812bc8f1edca63aed))
-* useVolumeAccessPoint() implemented on frontend ([44ffde2](https://github.com/skyslit/ark/commit/44ffde23bb28c8fd4eec75fbc13d4c41834c589d))
-
-
-
-
+- added localstorage feature in useConnect() ([b962a69](https://github.com/skyslit/ark/commit/b962a69d467290db3e6cb84b088e9684de943ad8))
+- useVolumeAccessPoint implemented ([4940f71](https://github.com/skyslit/ark/commit/4940f71b854c37f52cd0e65812bc8f1edca63aed))
+- useVolumeAccessPoint() implemented on frontend ([44ffde2](https://github.com/skyslit/ark/commit/44ffde23bb28c8fd4eec75fbc13d4c41834c589d))
 
 # [2.7.0](https://github.com/skyslit/ark/compare/v2.6.0...v2.7.0) (2021-03-07)
 
-
 ### Features
 
-* file upload and fs volume support added ([07263aa](https://github.com/skyslit/ark/commit/07263aaa5a7004d5ed8f093ffd252cad69c8f793))
-
-
-
-
+- file upload and fs volume support added ([07263aa](https://github.com/skyslit/ark/commit/07263aaa5a7004d5ed8f093ffd252cad69c8f793))
 
 # [2.6.0](https://github.com/skyslit/ark/compare/v2.5.0...v2.6.0) (2021-03-04)
 
-
 ### Bug Fixes
 
-* aws > issue with loadbalancer securitygroup ([9020a89](https://github.com/skyslit/ark/commit/9020a891bd120dd1016b4350c12e972b7bd140fe))
-* optimised setup-devops aws command ([a8bf0e2](https://github.com/skyslit/ark/commit/a8bf0e265b90d475e4275d938683fc4ef9626d54))
-
+- aws > issue with loadbalancer securitygroup ([9020a89](https://github.com/skyslit/ark/commit/9020a891bd120dd1016b4350c12e972b7bd140fe))
+- optimised setup-devops aws command ([a8bf0e2](https://github.com/skyslit/ark/commit/a8bf0e265b90d475e4275d938683fc4ef9626d54))
 
 ### Features
 
-* added setup-devops command ([1d82e32](https://github.com/skyslit/ark/commit/1d82e329d461db3ac0516a48e983653b21882e43))
-
-
-
-
+- added setup-devops command ([1d82e32](https://github.com/skyslit/ark/commit/1d82e329d461db3ac0516a48e983653b21882e43))
 
 # [2.5.0](https://github.com/skyslit/ark/compare/v2.4.0...v2.5.0) (2021-02-24)
 
-
 ### Bug Fixes
 
-* issue with uriEncode bearer token ([81c42e1](https://github.com/skyslit/ark/commit/81c42e1d64e21fa12e5ef56ef51de7d517f9a51e))
-* serviceId cannot be used in refId format ([c272b9f](https://github.com/skyslit/ark/commit/c272b9f03dd109920f17d3b8f70c266125f38f83))
-* split chunk size revised to 5mb ([9410c7c](https://github.com/skyslit/ark/commit/9410c7c8a81522471f507c89d3770c442ac3100f))
-
+- issue with uriEncode bearer token ([81c42e1](https://github.com/skyslit/ark/commit/81c42e1d64e21fa12e5ef56ef51de7d517f9a51e))
+- serviceId cannot be used in refId format ([c272b9f](https://github.com/skyslit/ark/commit/c272b9f03dd109920f17d3b8f70c266125f38f83))
+- split chunk size revised to 5mb ([9410c7c](https://github.com/skyslit/ark/commit/9410c7c8a81522471f507c89d3770c442ac3100f))
 
 ### Features
 
-* added docker support ([ff9d1cf](https://github.com/skyslit/ark/commit/ff9d1cfda7e5c30041bc3cc4cc6f497db9018554))
-* added process automation for module integration ([9e4fc2e](https://github.com/skyslit/ark/commit/9e4fc2ea111d98f96ac313074a500b8e013945e9))
-* added useEnv feature to support environment variables ([b8e4af2](https://github.com/skyslit/ark/commit/b8e4af2424f4fb345574b137ba2939a6359c0baa))
-* added volume support in backend ([d0f5a09](https://github.com/skyslit/ark/commit/d0f5a0976b41a1b2a7705511bd7e6a513050f132))
-
-
-
-
+- added docker support ([ff9d1cf](https://github.com/skyslit/ark/commit/ff9d1cfda7e5c30041bc3cc4cc6f497db9018554))
+- added process automation for module integration ([9e4fc2e](https://github.com/skyslit/ark/commit/9e4fc2ea111d98f96ac313074a500b8e013945e9))
+- added useEnv feature to support environment variables ([b8e4af2](https://github.com/skyslit/ark/commit/b8e4af2424f4fb345574b137ba2939a6359c0baa))
+- added volume support in backend ([d0f5a09](https://github.com/skyslit/ark/commit/d0f5a0976b41a1b2a7705511bd7e6a513050f132))
 
 # [2.4.0](https://github.com/skyslit/ark/compare/v2.3.0...v2.4.0) (2021-02-21)
 
-
 ### Bug Fixes
 
-* added body parser middleware to support json and url-encoded forms ([81b67f5](https://github.com/skyslit/ark/commit/81b67f5284b3d34c06e9157876892b60e692aa70))
-* API error is not visible in redux state ([7d09548](https://github.com/skyslit/ark/commit/7d0954823ec296825656fcc47c4e48dfe9127d7f))
-* enabled minimiser in bundler ([7929755](https://github.com/skyslit/ark/commit/79297555b66c9ff38b61a7de80255c3229843944))
-* issue that always take to pre-defined login url ([46d7167](https://github.com/skyslit/ark/commit/46d7167e5cc0bc64256667e6283641ad502b8473))
-* issue with data model in  useService() ([27bedb1](https://github.com/skyslit/ark/commit/27bedb1de8c7ae762a87080415ade44e99853e68))
-* issue with husky hook ([e881139](https://github.com/skyslit/ark/commit/e881139ff1937a5d69792049069405203e31ab8a))
-* issue with image (png|jpg) import + scss import issue ([5ce80f8](https://github.com/skyslit/ark/commit/5ce80f83cb8d1a231879525dd5f2972ac1703685))
-* issue with typescript version ([c5263d9](https://github.com/skyslit/ark/commit/c5263d9d121f6a0e16f864bdac412865268b5645))
-* optimised cli interface and experience ([adbf61b](https://github.com/skyslit/ark/commit/adbf61be5b745ee4e725895516deada93d160b9f))
-* removed less loader + optimised bundler ufs + formatted evaluator error ([0388083](https://github.com/skyslit/ark/commit/03880839acc58111dee22bb48dc3ff0b98214648))
-* removed unnecessary console.log ([b3c98ec](https://github.com/skyslit/ark/commit/b3c98ec02696012025367c5fb2836e6b624ee4dd))
-* removeItemAt is undefined ([4213719](https://github.com/skyslit/ark/commit/421371976b5ac8ec2721e34bf157bee18fe9a1f2))
-* sourcemap enabled in webpack ([67c8c8a](https://github.com/skyslit/ark/commit/67c8c8a90567910f74602e08410faf60f9058017))
-* types issue in web app renderer ([10ea7b1](https://github.com/skyslit/ark/commit/10ea7b1cfe59ed5dcaafe54095bf55483289aa62))
-* typescript init not working on windows ([605a76e](https://github.com/skyslit/ark/commit/605a76e2d8eb83ee355e27d84cabf14b3519cdc6))
-* with multiple web app renderers ([04e4d93](https://github.com/skyslit/ark/commit/04e4d9365cef1d5795ce884fb68bea6702365b1b))
-* **devtools:** moved execa from dev dep to prod dep ([ab00e41](https://github.com/skyslit/ark/commit/ab00e411f279511ea64f29d8e1c4ee11afd13cd0))
-
+- added body parser middleware to support json and url-encoded forms ([81b67f5](https://github.com/skyslit/ark/commit/81b67f5284b3d34c06e9157876892b60e692aa70))
+- API error is not visible in redux state ([7d09548](https://github.com/skyslit/ark/commit/7d0954823ec296825656fcc47c4e48dfe9127d7f))
+- enabled minimiser in bundler ([7929755](https://github.com/skyslit/ark/commit/79297555b66c9ff38b61a7de80255c3229843944))
+- issue that always take to pre-defined login url ([46d7167](https://github.com/skyslit/ark/commit/46d7167e5cc0bc64256667e6283641ad502b8473))
+- issue with data model in useService() ([27bedb1](https://github.com/skyslit/ark/commit/27bedb1de8c7ae762a87080415ade44e99853e68))
+- issue with husky hook ([e881139](https://github.com/skyslit/ark/commit/e881139ff1937a5d69792049069405203e31ab8a))
+- issue with image (png|jpg) import + scss import issue ([5ce80f8](https://github.com/skyslit/ark/commit/5ce80f83cb8d1a231879525dd5f2972ac1703685))
+- issue with typescript version ([c5263d9](https://github.com/skyslit/ark/commit/c5263d9d121f6a0e16f864bdac412865268b5645))
+- optimised cli interface and experience ([adbf61b](https://github.com/skyslit/ark/commit/adbf61be5b745ee4e725895516deada93d160b9f))
+- removed less loader + optimised bundler ufs + formatted evaluator error ([0388083](https://github.com/skyslit/ark/commit/03880839acc58111dee22bb48dc3ff0b98214648))
+- removed unnecessary console.log ([b3c98ec](https://github.com/skyslit/ark/commit/b3c98ec02696012025367c5fb2836e6b624ee4dd))
+- removeItemAt is undefined ([4213719](https://github.com/skyslit/ark/commit/421371976b5ac8ec2721e34bf157bee18fe9a1f2))
+- sourcemap enabled in webpack ([67c8c8a](https://github.com/skyslit/ark/commit/67c8c8a90567910f74602e08410faf60f9058017))
+- types issue in web app renderer ([10ea7b1](https://github.com/skyslit/ark/commit/10ea7b1cfe59ed5dcaafe54095bf55483289aa62))
+- typescript init not working on windows ([605a76e](https://github.com/skyslit/ark/commit/605a76e2d8eb83ee355e27d84cabf14b3519cdc6))
+- with multiple web app renderers ([04e4d93](https://github.com/skyslit/ark/commit/04e4d9365cef1d5795ce884fb68bea6702365b1b))
+- **devtools:** moved execa from dev dep to prod dep ([ab00e41](https://github.com/skyslit/ark/commit/ab00e411f279511ea64f29d8e1c4ee11afd13cd0))
 
 ### Features
 
-* added support for code splitting ([91e097b](https://github.com/skyslit/ark/commit/91e097ba6fbb43afdb06b9da73ae370e696b0f08))
-* added useContent hook feature ([7adfa7d](https://github.com/skyslit/ark/commit/7adfa7ded6f0bb21b8c2f07d530b85d4ce84a767))
-
-
-
-
+- added support for code splitting ([91e097b](https://github.com/skyslit/ark/commit/91e097ba6fbb43afdb06b9da73ae370e696b0f08))
+- added useContent hook feature ([7adfa7d](https://github.com/skyslit/ark/commit/7adfa7ded6f0bb21b8c2f07d530b85d4ce84a767))
 
 # [2.3.0](https://github.com/skyslit/ark/compare/v2.2.4...v2.3.0) (2021-02-13)
 

@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ */
+
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { createModule, ApplicationContext } from '@skyslit/ark-core';

@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ */
+
 import React from 'react';
 import { render, cleanup, act } from '@testing-library/react';
 import { ApplicationContext, createModule } from '@skyslit/ark-core';
@@ -495,6 +499,16 @@ describe('functionality tests', () => {
             <button
               onClick={() => {
                 runBatch(() => {
+                  pushItem('emptyArrayToPush', 100);
+                  pushItem('emptyArrayToPush', 200);
+                });
+              }}
+            >
+              Push multiple items
+            </button>
+            <button
+              onClick={() => {
+                runBatch(() => {
                   removeItemAt('itemsToRemoveFrom', 3);
                 });
               }}
@@ -508,6 +522,7 @@ describe('functionality tests', () => {
                   keyA: 1,
                   keyB: 2,
                   items: [1, 2, 3],
+                  emptyArrayToPush: [],
                   itemsToRemoveFrom: ['a', 'b', 'c', 'd', 'e'],
                   innerObj: {
                     collection: [
@@ -717,6 +732,17 @@ describe('functionality tests', () => {
               getByTestId('output').getElementsByTagName('code')[0].textContent
             ).itemsToRemoveFrom
           ).toEqual(['a', 'b', 'c', 'e']);
+
+          act(() => {
+            // Click `Push multiple items` button
+            getByText('Push multiple items').click();
+          });
+
+          expect(
+            JSON.parse(
+              getByTestId('output').getElementsByTagName('code')[0].textContent
+            ).emptyArrayToPush
+          ).toEqual([100, 200]);
         })
         .then(() => {
           done();

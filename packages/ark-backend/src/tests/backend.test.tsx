@@ -813,9 +813,8 @@ describe('Data services', () => {
   const mongod = new MongoMemoryServer();
   let testDbConnectionString: string = '';
 
-  beforeAll(async (done) => {
+  beforeAll(async () => {
     testDbConnectionString = await mongod.getUri();
-    done();
   }, 60000);
 
   test('useDatabase() fn', (done) => {
@@ -1119,9 +1118,8 @@ describe('useRemoteConfig()', () => {
   const mongod = new MongoMemoryServer();
   let testDbConnectionString: string = '';
 
-  beforeEach(async (done) => {
+  beforeEach(async () => {
     testDbConnectionString = await mongod.getUri();
-    done();
   }, 60000);
 
   test('startup without error', (done) => {
