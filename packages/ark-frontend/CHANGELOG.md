@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.17.3](https://github.com/skyslit/ark/compare/v2.17.2...v2.17.3) (2021-06-26)
+
+
+### Bug Fixes
+
+* pushItem not working as expected when used inside runBatch ([85c0124](https://github.com/skyslit/ark/commit/85c0124f97d8bd7c8faf444841e766258689ab12))
+* vulnerablities ([fcf36d2](https://github.com/skyslit/ark/commit/fcf36d2205bd1a4d0f4b58d95b373de666c164f1))
+
+
+
+
+
 ## [2.16.1](https://github.com/skyslit/ark/compare/v2.16.0...v2.16.1) (2021-05-02)
 
 ### Bug Fixes

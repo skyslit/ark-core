@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.17.3](https://github.com/skyslit/ark/compare/v2.17.2...v2.17.3) (2021-06-26)
+
+
+### Bug Fixes
+
+* vulnerablities ([fcf36d2](https://github.com/skyslit/ark/commit/fcf36d2205bd1a4d0f4b58d95b373de666c164f1))
+
+
+
+
+
 ## [2.17.2](https://github.com/skyslit/ark/compare/v2.17.1...v2.17.2) (2021-06-06)
 
 ### Bug Fixes

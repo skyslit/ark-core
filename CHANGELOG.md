@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.17.3](https://github.com/skyslit/ark/compare/v2.17.2...v2.17.3) (2021-06-26)
+
+
+### Bug Fixes
+
+* pushItem not working as expected when used inside runBatch ([85c0124](https://github.com/skyslit/ark/commit/85c0124f97d8bd7c8faf444841e766258689ab12))
+* type issue with updated mongoose package ([edc05c2](https://github.com/skyslit/ark/commit/edc05c2f169e4dde6e908e874d4a7886f9ee2a6f))
+* vulnerablities ([fcf36d2](https://github.com/skyslit/ark/commit/fcf36d2205bd1a4d0f4b58d95b373de666c164f1))
+* vulnerablities ([bb6c60b](https://github.com/skyslit/ark/commit/bb6c60b9c8757b7b468cd2b93acd839599da8638))
+
+
+
+
+
 ## [2.17.2](https://github.com/skyslit/ark/compare/v2.17.1...v2.17.2) (2021-06-06)
 
 ### Bug Fixes

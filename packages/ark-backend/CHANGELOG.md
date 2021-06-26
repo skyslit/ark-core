@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.17.3](https://github.com/skyslit/ark/compare/v2.17.2...v2.17.3) (2021-06-26)
+
+
+### Bug Fixes
+
+* type issue with updated mongoose package ([edc05c2](https://github.com/skyslit/ark/commit/edc05c2f169e4dde6e908e874d4a7886f9ee2a6f))
+* vulnerablities ([fcf36d2](https://github.com/skyslit/ark/commit/fcf36d2205bd1a4d0f4b58d95b373de666c164f1))
+* vulnerablities ([bb6c60b](https://github.com/skyslit/ark/commit/bb6c60b9c8757b7b468cd2b93acd839599da8638))
+
+
+
+
+
 ## [2.16.1](https://github.com/skyslit/ark/compare/v2.16.0...v2.16.1) (2021-05-02)
 
 **Note:** Version bump only for package @skyslit/ark-backend
