@@ -40,12 +40,12 @@
     "joi": "17.3.0",
     "memfs": "^3.2.0",
     "mongodb-memory-server": "^6.9.2",
-    "mongoose": "^5.10.15",
+    "mongoose": "^5.12.15",
+    "puppeteer": "^8.0.0",
     "react": "^16.0.1",
     "react-dom": "^16.0.1",
     "react-helmet-async": "^1.0.7",
-    "react-router-dom": "5.2.0",
-    "puppeteer": "^8.0.0"
+    "react-router-dom": "5.2.0"
   },
   "peerDependencies": {
     "express": "^4.17.1",
