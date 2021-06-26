@@ -211,6 +211,92 @@ declare global {
 /*                                  Utilities                                 */
 /* -------------------------------------------------------------------------- */
 
+const idResolutionExpressions = {
+  default: () => /^\[.*\]/gm,
+};
+
+/**
+ * Resolves a complete object address to the current index
+ * @param {traverse.Traverse<any>} traverseResult
+ * @param {string} inputAddress
+ * @return {string}
+ */
+export function resolveAddressForTraversal(
+  traverseResult: traverse.Traverse<any>,
+  inputAddress: string
+): string {
+  const pathParts = inputAddress.split('.');
+
+  let i = 1;
+  for (i; i < pathParts.length; i++) {
+    const currentPath = pathParts[i];
+    if (idResolutionExpressions.default().test(currentPath) === true) {
+      const parentAddress = pathParts.slice(0, i);
+      const resolvedId = resolveIndexFromTraversalResult(
+        traverseResult,
+        resolveTraversalAddressFromPath(parentAddress),
+        currentPath
+      );
+      pathParts[i] = String(resolvedId);
+    }
+  }
+
+  return resolveTraversalAddressFromPath(pathParts);
+}
+
+/**
+ * Resolves traversal paths to address
+ * @param {string[]} paths
+ * @return {string}
+ */
+export function resolveTraversalAddressFromPath(paths: string[]): string {
+  return paths.join('.');
+}
+
+/**
+ * Resolves index of array item from the ID template
+ * @param {traverse.Traverse<any>} traverseResult
+ * @param {string} path
+ * @param {string} query
+ * @return {number}
+ */
+export function resolveIndexFromTraversalResult(
+  traverseResult: traverse.Traverse<any>,
+  path: string,
+  query: string
+): number {
+  let id: string = null;
+
+  try {
+    const results = idResolutionExpressions.default().exec(query);
+    if (results && results.length > 0) {
+      id = results[0].replace('[', '').replace(']', '');
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  const target = traverseResult.get(path.split('.'));
+  if (Array.isArray(target) && target.length > 0) {
+    const index = target.findIndex((t) => {
+      try {
+        if (t.id) {
+          if (String(t.id) === String(id)) {
+            return true;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      return false;
+    });
+
+    return index;
+  }
+
+  return -1;
+}
+
 /**
  * Resolve service Id to URL
  * @param {string} serviceId
@@ -1271,7 +1357,7 @@ export const Frontend = createPointer<Ark.MERN.React>(
         const paths = traverseResult.paths().filter((p) => p.length > 0);
         let i = 0;
         for (i = 0; i < paths.length; i++) {
-          const address = paths[i].join('.');
+          const address = resolveTraversalAddressFromPath(paths[i]);
           if (address === key) {
             traverseResult.set(paths[i], val);
             break;
