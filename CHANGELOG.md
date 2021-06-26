@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.18.0](https://github.com/skyslit/ark/compare/v2.17.3...v2.18.0) (2021-06-26)
+
+
+### Features
+
+* runBatch now provides batchContent in args ([258c7a4](https://github.com/skyslit/ark/commit/258c7a42de09bfec34836d4ff5a54ac462046409))
+
+
+
+
+
 ## [2.17.3](https://github.com/skyslit/ark/compare/v2.17.2...v2.17.3) (2021-06-26)
 
 
