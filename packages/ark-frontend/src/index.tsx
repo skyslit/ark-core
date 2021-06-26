@@ -99,7 +99,7 @@ type ContentHook = <T>(
   isAvailable: boolean;
   hasChanged: boolean;
   content: T;
-  runBatch: (fn: () => void) => void;
+  runBatch: (fn: (batchContent: T) => void) => void;
   markAsSaved: () => void;
   setContent: (content: T) => void;
   updateKey: (key: string, val: T) => void;
@@ -1289,10 +1289,10 @@ export const Frontend = createPointer<Ark.MERN.React>(
         isAvailable: content !== null && content !== undefined,
         hasChanged,
         content,
-        runBatch: (fn: () => void) => {
+        runBatch: (fn: (content: any) => void) => {
           isBatchModeEnabled = true;
           batchContent = cloneDeep(content);
-          fn && fn();
+          fn && fn(batchContent);
           isBatchModeEnabled = false;
           setContentToState(batchContent);
           batchContent = null;
