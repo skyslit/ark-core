@@ -227,7 +227,7 @@ export function resolveAddressForTraversal(
 ): string {
   const pathParts = inputAddress.split('.');
 
-  let i = 1;
+  let i = 0;
   for (i; i < pathParts.length; i++) {
     const currentPath = pathParts[i];
     if (idResolutionExpressions.default().test(currentPath) === true) {
@@ -276,7 +276,8 @@ export function resolveIndexFromTraversalResult(
     console.error(e);
   }
 
-  const target = traverseResult.get(path.split('.'));
+  const target = traverseResult.get(path.split('.').filter(Boolean));
+
   if (Array.isArray(target) && target.length > 0) {
     const index = target.findIndex((t) => {
       try {

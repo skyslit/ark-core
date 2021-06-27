@@ -35,12 +35,36 @@ test('common usage', () => {
       },
     ],
   };
+
   const traverseResult = traverse(data);
   const output = resolveAddressForTraversal(
     traverseResult,
     'links.[l-200].subLinks.[s-300]'
   );
-  console.log(output);
+
+  expect(output).toStrictEqual('links.1.subLinks.2');
+});
+
+test('root usage', () => {
+  const data: any = [
+    {
+      id: 's-100',
+      text: '100',
+    },
+    {
+      id: 's-200',
+      text: '200',
+    },
+    {
+      id: 's-300',
+      text: '300',
+    },
+  ];
+
+  const traverseResult = traverse(data);
+  const output = resolveAddressForTraversal(traverseResult, '[s-200]');
+
+  expect(output).toStrictEqual('1');
 });
 
 test('should return 2', () => {
