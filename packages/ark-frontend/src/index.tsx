@@ -106,7 +106,7 @@ type ContentHook = <T>(
   pushItem: (key: string, val: any) => void;
   unshiftItem: (key: string, val: any) => void;
   removeItemAt: (key: string, index: any) => void;
-  insertItem: (key: string, indexToInsert: number, val: any) => void;
+  insertItem: (key: string, indexToInsert: number | string, val: any) => void;
   saveLocally: () => void;
   hasLocalData: () => boolean;
   reset: () => void;
@@ -266,6 +266,10 @@ export function resolveIndexFromTraversalResult(
   query: string
 ): number {
   let id: string = null;
+
+  if (idResolutionExpressions.default().test(query) === false) {
+    return Number(query);
+  }
 
   try {
     const results = idResolutionExpressions.default().exec(query);
@@ -1338,11 +1342,24 @@ export const Frontend = createPointer<Ark.MERN.React>(
       let isBatchModeEnabled: boolean = false;
       let batchContent: any = null;
 
-      const getCurrentValByKey = (key: string) => {
+      const getCurrentValByKey = (
+        key: string,
+        ejectTraverseResult: boolean = false
+      ) => {
         const traverseResult = traverse(
           isBatchModeEnabled === true ? batchContent : content
         );
-        return traverseResult.get(key.split('.'));
+        const resolvedKey = resolveAddressForTraversal(traverseResult, key);
+
+        if (ejectTraverseResult === true) {
+          return {
+            val: traverseResult.get(resolvedKey.split('.')),
+            traverseResult,
+            resolvedKey,
+          };
+        }
+
+        return traverseResult.get(resolvedKey.split('.'));
       };
 
       const updateKey = (key: string, val: any) => {
@@ -1355,11 +1372,12 @@ export const Frontend = createPointer<Ark.MERN.React>(
         }
 
         const traverseResult = traverse(latest);
+        const resolvedKey = resolveAddressForTraversal(traverseResult, key);
         const paths = traverseResult.paths().filter((p) => p.length > 0);
         let i = 0;
         for (i = 0; i < paths.length; i++) {
           const address = resolveTraversalAddressFromPath(paths[i]);
-          if (address === key) {
+          if (address === resolvedKey) {
             traverseResult.set(paths[i], val);
             break;
           }
@@ -1398,12 +1416,17 @@ export const Frontend = createPointer<Ark.MERN.React>(
           setHasChanged(false);
         },
         insertItem: (key, indexToInsert, val) => {
-          const item = getCurrentValByKey(key);
-          if (Array.isArray(item)) {
+          const item = getCurrentValByKey(key, true);
+          const resolvedIndex = resolveIndexFromTraversalResult(
+            item.traverseResult,
+            item.resolvedKey,
+            String(indexToInsert)
+          );
+          if (Array.isArray(item.val)) {
             updateKey(key, [
-              ...item.slice(0, indexToInsert),
+              ...item.val.slice(0, resolvedIndex),
               val,
-              ...item.slice(indexToInsert, item.length),
+              ...item.val.slice(resolvedIndex, item.val.length),
             ]);
           } else {
             throw new Error(
@@ -1432,11 +1455,16 @@ export const Frontend = createPointer<Ark.MERN.React>(
           }
         },
         removeItemAt: (key, index) => {
-          const item = getCurrentValByKey(key);
-          if (Array.isArray(item)) {
+          const item = getCurrentValByKey(key, true);
+          const resolvedIndex = resolveIndexFromTraversalResult(
+            item.traverseResult,
+            item.resolvedKey,
+            index
+          );
+          if (Array.isArray(item.val)) {
             updateKey(
               key,
-              item.filter((x, i) => i !== index)
+              item.val.filter((x: any, i: number) => i !== resolvedIndex)
             );
           } else {
             throw new Error(
