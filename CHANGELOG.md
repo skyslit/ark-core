@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.19.0](https://github.com/skyslit/ark/compare/v2.18.0...v2.19.0) (2021-06-27)
+
+
+### Features
+
+* added index resolver ([c11dc96](https://github.com/skyslit/ark/commit/c11dc961e8ed7615463fc47385d85b83bbb74176))
+* traverse path resolver added ([4691d34](https://github.com/skyslit/ark/commit/4691d34c159d09f8ce1445897e488f312f09169f))
+
+
+
+
+
 # [2.18.0](https://github.com/skyslit/ark/compare/v2.17.3...v2.18.0) (2021-06-26)
 
 
